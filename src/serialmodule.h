@@ -23,12 +23,15 @@ extern "C" {
 	#define LLU				unsigned long long
 #endif
 
+DLL_API_SERIAL_MODULE int
+	serial_module_init(void*);
+DLL_API_SERIAL_MODULE int
+	serial_module_close(void*);
+
+
 #ifdef __cplusplus
 }
 #endif
 
-DLL_API_SERIAL_MODULE int 
-	serial_module_init(void *);
-DLL_API_SERIAL_MODULE int
-	serial_module_close(void*);
+
 #endif
