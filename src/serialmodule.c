@@ -15,6 +15,7 @@
     #include <fcntl.h> /* For O_* constants */
     #include <errno.h>
 #endif
+#define SPSERIAL_BUFFER_SIZE        2048
 
 //#ifndef UNIX_LINUX
 //    #include <Windows.h>
@@ -55,7 +56,7 @@ typedef struct __SP_SERIAL_INFO_ST__ {
     char
         port_name[32];
     void*
-        trigger;
+        hEvent;
 #ifndef UNIX_LINUX
     void*
 #else
@@ -64,6 +65,8 @@ typedef struct __SP_SERIAL_INFO_ST__ {
         handle;
     void*
         mtx_off;
+    SPSERIAL_module_cb
+        cb;
 } SP_SERIAL_INFO_ST;
 
 
@@ -83,6 +86,8 @@ static void*
 
 static int
     spserial_module_openport(void*);
+static int 
+    spserial_operating_routine(SP_SERIAL_INFO_ST*);
 
 int spserial_module_create(void *obj) 
 {
@@ -185,8 +190,8 @@ int
              spllog(SPL_LOG_ERROR, "SetCommState: %lu", dwError);
              ret = SPSERIAL_PORT_SETCOMMSTATE;
          }
-         p->trigger = CreateEvent(0, TRUE, FALSE, 0);
-         if (!p->trigger) {
+         p->hEvent = CreateEvent(0, TRUE, FALSE, 0);
+         if (!p->hEvent) {
              DWORD dwError = GetLastError();
              spllog(SPL_LOG_ERROR, "CreateEvent: %lu", dwError);
              ret = SPSERIAL_PORT_CREATEEVENT;
@@ -253,6 +258,7 @@ int spserial_module_isoff(SP_SERIAL_INFO_ST* obj) {
     ret = obj->isoff;
     return ret;
 }
+
 /*===========================================================================================================================*/
 #ifndef UNIX_LINUX
 DWORD WINAPI
@@ -273,13 +279,68 @@ void*
         ret = spserial_module_openport(p);
         if (ret) {
         }
+        DWORD dwError = 0;
+        DWORD dwEvtMask = 0, flags = 0, bytesRead = 0;;
+        OVERLAPPED olRead = { 0 };
+        BOOL rs = FALSE;
+        int count = 0, cbInQue = 0;
+        char readBuffer[SPSERIAL_BUFFER_SIZE + 1];
+        COMSTAT csta = { 0 };
+        olRead.hEvent = p->hEvent;
+        flags = EV_RXCHAR | EV_BREAK | EV_RXFLAG;
+        
         while (1) {
             isoff = spserial_module_isoff(p);
             if (isoff) {
                 break;
             }
+            dwEvtMask = 0;
+            rs = WaitCommEvent(p->handle, &dwEvtMask, &olRead);
+            if (!rs) {
+                DWORD dwRet = GetLastError();
+                if (ERROR_IO_PENDING != dwRet) {
+                    ++count;
+                }
+                if (count > 3) {
+                    break;
+                }
+            }
+            memset(&csta, 0, sizeof(csta));
+            ClearCommError(p->handle, &dwError, &csta);
+            if (csta.cbInQue > 0) {
+                cbInQue = csta.cbInQue;
+                bytesRead = 0;
+                memset(readBuffer, 0, sizeof(readBuffer));
+                rs = ReadFile(p->handle, readBuffer, SPSERIAL_BUFFER_SIZE, &bytesRead, &olRead);
+                memset(&csta, 0, sizeof(csta));
+                ClearCommError(p->handle, &dwError, &csta);
+                if (csta.cbInQue > 0) {
+                    spllog(SPL_LOG_ERROR, "Read Com not finished!!!");
+                }
+                else {
+                    if (p->cb) {
+                        int n = 1 + sizeof(SPSERIAL_MODULE_EVENT) + cbInQue;
+                        SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*)malloc(n);
+                        memset(evt, 0, n);
+                        evt->total = n;
+                        evt->type = SPSERIAL_EVENT_READ_BUF;
+                        evt->pl = cbInQue;
+                        evt->pc = 0;
+                        memcpy(evt->data, readBuffer, cbInQue);
+                        p->cb(evt);
+                    }
+                }
+            }
+            
         }
+        p->is_retry = 1;
     }
     return 0;
+}
+/*===========================================================================================================================*/
+int spserial_operating_routine(SP_SERIAL_INFO_ST*p) {
+    int ret = 0;
+
+    return ret;
 }
 /*===========================================================================================================================*/

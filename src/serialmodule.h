@@ -22,7 +22,7 @@ extern "C" {
 #ifndef LLU
 	#define LLU				unsigned long long
 #endif
-
+	typedef int (*SPSERIAL_module_cb)(void*);
 	typedef enum {
 		SPSERIAL_PORT_OK,
 		SPSERIAL_PORT_INFO_NULL,
@@ -39,11 +39,25 @@ extern "C" {
 
 		SPSERIAL_PORT_PEAK,
 	} SERIAL_PORT_ERR;
+
+	typedef enum {
+		SPSERIAL_EVENT_READ_BUF,
+	} SPSERIAL_MODULE_EVENT;
+
+	typedef struct __SP_SERIAL_GENERIC_ST__ {
+		int total;
+		int pl;
+		int pc;
+		int type;
+		char data[0];
+	} SP_SERIAL_GENERIC_ST;
 	typedef struct __SP_SERIAL_INPUT_ST__ {
 		int
 			baudrate;
 		char
 			port_name[32];
+		SPSERIAL_module_cb
+			cb;
 	} SP_SERIAL_INPUT_ST;
 
 DLL_API_SERIAL_MODULE int
