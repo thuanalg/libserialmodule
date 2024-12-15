@@ -3,7 +3,7 @@ project(serial_module_project)
 set(SOURCE_LIB_MODULE_FILES serialmodule.c serialmodule.h)
 set(SOURCE_TEST_MODULR_FILES main.c)
 set(SOURCE_SIMPLELOG_LIB_FILES simplelog/simplelog.c 
-	simplelog/simplelog.h simplelog/simplelog_config.h)	
+	simplelog/simplelog.h )	
 
 # Add executable target with source files listed in SOURCE_FILES variable
 

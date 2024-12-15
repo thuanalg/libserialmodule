@@ -23,6 +23,31 @@ extern "C" {
 	#define LLU				unsigned long long
 #endif
 
+	typedef enum {
+		SPSERIAL_PORT_OK,
+		SPSERIAL_PORT_INFO_NULL,
+		SPSERIAL_PORT_OPEN,
+		SPSERIAL_PORT_COMMSTATE,
+		SPSERIAL_PORT_GETCOMMSTATE,
+		SPSERIAL_PORT_SETCOMMSTATE,
+		SPSERIAL_PORT_CREATEEVENT,
+		SPSERIAL_PORT_SETCOMMTIMEOUTS,
+
+		SPSERIAL_PORT_PEAK,
+	} SERIAL_PORT_ERR;
+	typedef struct __SP_SERIAL_INFO_ST__ {
+		int 
+			baudrate;
+		char 
+			port_name[32];
+		void* 
+			trigger;
+#ifndef UNIX_LINUX
+		void* 
+#else
+#endif
+		handle;
+	} SP_SERIAL_INFO_ST;
 DLL_API_SERIAL_MODULE int
 	serial_module_init(void*);
 DLL_API_SERIAL_MODULE int

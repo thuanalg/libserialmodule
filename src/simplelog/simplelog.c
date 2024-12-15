@@ -2,14 +2,11 @@
 /*===============================================================================================================*/
 /* Email:														
 *		<nguyenthaithuanalg@gmail.com> - Nguyễn Thái Thuận
-* Mobile: 
-*		<+084.799.324.179>
-* Skype:
-*		<nguyenthaithuanalg>
 * Date:														
 *		<2024-July-14>
 * The lasted modified date:									
-*		<2024-August-17>
+*		<2024-Aug-22>
+*		<2024-DEC-13>
 * Decription:													
 *		The (only) main file to implement simple log.
 */
@@ -22,21 +19,30 @@
 #include <time.h>
 #ifndef UNIX_LINUX
 	#include <Windows.h>
-	#define YEAR_PADDING				0
-	#define MONTH_PADDING				0
+	#define YEAR_PADDING								0
+	#define MONTH_PADDING								0
 #else
 	#include <sys/types.h>
 	#include <sys/stat.h>
 	#include <pthread.h>
 	#include <semaphore.h>
 	#include <unistd.h>
+	#include <sys/mman.h>
+	#include <sys/stat.h> /* For mode constants */
+	#include <fcntl.h> /* For O_* constants */
 	#include <errno.h>
 
-	#define YEAR_PADDING				1900
-	#define MONTH_PADDING				1
+	#define YEAR_PADDING								1900
+	#define MONTH_PADDING								1
+
+	#define SPL_LOG_UNIX__SHARED_MODE					(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)	
+	#define SPL_LOG_UNIX_CREATE_MODE					(O_CREAT | O_RDWR | O_EXCL)	
+	#define SPL_LOG_UNIX_OPEN_MODE						(O_RDWR | O_EXCL)	
+	#define SPL_LOG_UNIX_PROT_FLAGS						(PROT_READ | PROT_WRITE | PROT_EXEC)		
+
 #endif
 
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 
 #define spl_malloc(__nn__, __obj__, __type__) { (__obj__) = (__type__*) malloc(__nn__); if(__obj__) \
 	{spl_console_log("Malloc: 0x%p\n", (__obj__)); memset((__obj__), 0, (__nn__));} \
@@ -45,10 +51,8 @@
 #define spl_free(__obj__) \
 	{ spl_console_log("Free: 0x:%p.\n", (__obj__)); free(__obj__); ; (__obj__) = 0;} 
 
-#define SPL_FCLOSE(__fp__, __n) { if(__fp__){ (__n) = fclose((FILE*)(__fp__)) ; if(__n) { spl_fclose_err(__n, __fp__); } \
-	else { spl_console_log("Close FILE 0x%p DONE.", (__fp__));;(__fp__) = 0;;}}}
-
-#define SPL_FFLUSH(__fp__, __n) { if(__fp__){ (__n) = fflush((FILE*)(__fp__)) ; if(__n) { spl_fflush_err(__n, __fp__); }}}
+#define FFCLOSE(fp, __n) \
+	{if((FILE*)fp){ (__n) = fclose((FILE*)fp) ;spl_console_log("Close FILE 0x%p, error code: %d, %s.\n", (fp), (__n), (__n) ? "FAILED": "DONE"); if(!__n) { (fp) = 0;}}}
 
 #define FFOPEN(__fp, __path, __mode) \
 	{ (__fp) = fopen((__path), (__mode));spl_console_log("Open FILE error code: 0x%p, %s.\n", (__fp), (__fp) ? "DONE": "FAILED"); }
@@ -58,7 +62,7 @@
 
 #ifndef UNIX_LINUX
 	#define SPL_CloseHandle(__obj) \
-		{ int bl = CloseHandle((__obj)); spl_console_log("CloseHandle %s", bl ? "DONE": "ERROR");}
+		{ if (__obj ) { int bl = CloseHandle((__obj)); spl_console_log("CloseHandle %s", bl ? "DONE": "ERROR"); (__obj) = 0;}}
 #else
 	#define SPL_sem_wait(__obj) \
 		sem_wait((sem_t*)(__obj))
@@ -72,8 +76,10 @@
 		{ (__err) = pthread_mutex_lock((pthread_mutex_t*)(__obj)); if((__err)) spl_console_log("pthread_mutex_lock errcode: %d. %s\n", (__err), (__err) ? "FALIED": "DONE");}
 	#define SPL_pthread_mutex_unlock(__obj, __err) \
 		{ (__err) = pthread_mutex_unlock((pthread_mutex_t*)(__obj)); if((__err)) spl_console_log("pthread_mutex_unlock errcode: %d. %s\n", (__err), (__err) ? "FALIED": "DONE");}
+	#define spl_shm_unlink(__name__, __err__) { __err__ = shm_unlink(__name__); \
+		if(__err__) {spl_console_log("shm_unlink: err: %d, errno: %d, text: %s, name: %s.", __err__, errno, strerror(errno), __name__);}}
 #endif
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 
 #define	SPLOG_PATHFOLDR \
 	"pathfoder="
@@ -87,6 +93,10 @@
 	"topic="
 #define	SPLOG_END_CFG \
 	"end_configuring="
+#define	SPLOG_PROCESS_MODE \
+	"process_mode="
+#define	SPLOG_SHARED_KEY \
+	"shared_key="
 
 #define SPL_FILE_NAME_FMT \
 	"%s\\%s\\%s_%.8d.log"
@@ -110,7 +120,7 @@
 
 
 #define				SPL_MEMO_PADDING				2
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 
 typedef 
 struct __GENERIC_DATA__ {
@@ -132,16 +142,55 @@ struct __GENERIC_DATA__ {
 #define spl_uint			unsigned int
 
 typedef struct __spl_local_time_st__ {
-	spl_uint	year;
-	spl_uchar	month;
-	spl_uchar	day;
-	spl_uchar	hour;
-	spl_uchar	minute;
-	spl_uchar	sec;
-	spl_uint	ms;						/*Millisecond*/
+	spl_uint	
+		year;
+		/*Comment here*/
+	spl_uchar	
+		month;
+		/*Comment here*/
+	spl_uchar	
+		day;
+		/*Comment here*/
+	spl_uchar	
+		hour;
+		/*Comment here*/
+	spl_uchar	
+		minute;
+		/*Comment here*/
+	spl_uchar	
+		sec;
+		/*Comment here*/
+	spl_uint	
+		ms;						
+		/*Millisecond*/
 } spl_local_time_st;
 
 #define SPL_TOPIC_SIZE		32
+
+typedef struct __SHARED_DATA_ST__ {
+	LLU 
+		pre_tnow;
+		/*Must be sync*/
+	spl_uchar 
+		is_master_off;
+		/*Must be sync, is used for cross processes.*/
+#ifndef UNIX_LINUX
+
+#else
+	pthread_mutex_t
+		mtx_rw;
+		/*mtx_rw: */
+	pthread_mutex_t
+		mtx_off;
+		/*mtx_off: */
+	sem_t
+		sem_off;
+		/*sem_off: Need to close handle*/
+	sem_t
+		sem_rwfile;
+		/*sem_rwfile: Need to close handle*/
+#endif		
+} SHARED_DATA_ST;
 
 typedef
 struct __SIMPLE_LOG_TOPIC_ST__ {
@@ -166,6 +215,17 @@ typedef
 struct __SIMPLE_LOG_ST__ {
 	int	
 		llevel;
+		/*llevel is from [0 - 6].*/
+
+	int
+		process_mode;
+		/*process_mode is applied for multi-processes.*/
+	char
+		shared_key[128];
+		/*shared_key is applied for multi-processes, if process_mode=1.*/
+	int
+		creating_mode;
+		/*process_mode is applied for multi-processes, apply for creating process..*/
 	int
 		file_limit_size;
 		/*Limitation of each log file. No nead SYNC.*/
@@ -179,7 +239,7 @@ struct __SIMPLE_LOG_ST__ {
 		folder[1024];
 		/*Path of genera folder. No nead SYNC.*/
 	char
-		off;					
+		off_slave;					
 		/*Must be sync*/
 	void*
 		mtx;					
@@ -199,6 +259,9 @@ struct __SIMPLE_LOG_ST__ {
 	FILE*
 		fp;						
 		/*fp: Need to close*/
+	SHARED_DATA_ST*
+		shared_supplement;
+		/*shared_supplement: access by multi-threads, multi-processes. Belong to buffer. Must be sync: pre_tnow.*/
 
 	generic_dta_st*
 		buf;
@@ -218,6 +281,16 @@ struct __SIMPLE_LOG_ST__ {
 	char
 		path_template[1024];
 		/*In a thread of logger, NO NEED SYNC.*/
+#ifndef UNIX_LINUX
+	void*
+		/*Applied for process mode of Windows.*/
+#else
+	int 
+		/*Applied for process mode of Linux.*/
+#endif		
+		whRWBufferMapFile;
+		
+	
 } SIMPLE_LOG_ST;
 
 typedef enum 
@@ -232,13 +305,15 @@ __CHANGE_NAME_E__ {
 	SPL_CHANGE_FINISH
 } __CHANGE_NAME_E__;
 
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 static const char* __splog_pathfolder[] = { 
 		SPLOG_PATHFOLDR, 
 		SPLOG_LEVEL, 
 		SPLOG_BUFF_SIZE, 
 		SPLOG_ROT_SIZE, 
 		SPLOG_TOPIC, 
+		SPLOG_PROCESS_MODE,
+		SPLOG_SHARED_KEY,
 		SPLOG_END_CFG,
 		0 
 };
@@ -246,12 +321,12 @@ static const char* __splog_pathfolder[] = {
 static	SIMPLE_LOG_ST
 	__simple_log_static__;;
 
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 
 static int	
 	spl_init_log_parse(char* buff, char* key, char *);
 static void*
-	spl_sem_create(int ini);
+	spl_sem_create(int ini, char*);
 static int	
 	spl_verify_folder(char* folder);
 static int	
@@ -278,14 +353,22 @@ static int
 #else
 	static void*
 		spl_written_thread_routine(void*);
+	static int
+		spl_init_mtx_shm(void *);
+	static int
+		spl_init_sem_shm(void *);		
 #endif
 
-static int 
-	spl_fclose_err(int t, void *fpp);
 static int
-	spl_fflush_err(int t, void *fpp);
+	spl_shm_region(SIMPLE_LOG_ST* t);
+static int
+	spl_create_sync(SIMPLE_LOG_ST* t);
+static int
+	spl_shm_clear_shared_region(SIMPLE_LOG_ST* t);
+//void* 
+//	spl_mutex_create(char* name);
 
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_local_time_now(spl_local_time_st*stt) {
 	int ret = 0;
 #ifndef UNIX_LINUX
@@ -338,29 +421,44 @@ int spl_local_time_now(spl_local_time_st*stt) {
 	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_set_log_levwel(int val) {
 	__simple_log_static__.llevel = val;
 	return 0;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_get_log_levwel() {
 	return __simple_log_static__.llevel;
 }
-/*===========================================================================================================================*/
-int spl_set_off(int isoff) {
+/*=================================================================================================================================================*/
+int spl_set_off(int isoff, int is_master) {
 	int ret = 0;
-	spl_mutex_lock(__simple_log_static__.mtx_off);
-	do {
-		__simple_log_static__.off = isoff;
-	} while (0);
-	spl_mutex_unlock(__simple_log_static__.mtx_off);
+	int raise_off = 0;
+	spl_mutex_lock(__simple_log_static__.mtx);
+		do {
+			if(is_master) {
+				__simple_log_static__.shared_supplement->is_master_off = (isoff ? 1 : 0);
+			}
+			__simple_log_static__.off_slave = (isoff ? 1 : 0);
+		} while (0);
+	spl_mutex_unlock(__simple_log_static__.mtx);
 	
 	if (isoff) {
 		int errCode = 0;
+
 		spl_rel_sem(__simple_log_static__.sem_rwfile);
+		/* - Is not master, is slave mode */
+		spl_mutex_lock(__simple_log_static__.mtx);
+			if (__simple_log_static__.process_mode) {
+				if (!(__simple_log_static__.creating_mode)) {
+					raise_off = 1;
+				}
+			}
+		spl_mutex_unlock(__simple_log_static__.mtx);
+		if (raise_off) {
+			spl_rel_sem(__simple_log_static__.sem_off);
+		}
 #ifndef UNIX_LINUX
-		//errCode = (int) WaitForSingleObject(__simple_log_static__.sem_off, 3 * 1000);
 		errCode = (int) WaitForSingleObject(__simple_log_static__.sem_off, INFINITE);
 #else
 		errCode = SPL_sem_wait(__simple_log_static__.sem_off);
@@ -369,17 +467,17 @@ int spl_set_off(int isoff) {
 	}
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_get_off() {
 	int ret = 0;
 	spl_mutex_lock(__simple_log_static__.mtx_off);
 	do {
-		ret = __simple_log_static__.off;
+		ret = __simple_log_static__.shared_supplement->is_master_off;
 	} while (0);
 	spl_mutex_unlock(__simple_log_static__.mtx_off);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 
 int spl_init_log_parse(char* buff, char *key, char *isEnd) {
 	int ret = SPL_NO_ERROR;
@@ -450,6 +548,39 @@ int spl_init_log_parse(char* buff, char *key, char *isEnd) {
 			__simple_log_static__.topics = p;
 			break;
 		}
+		if (strcmp(key, SPLOG_PROCESS_MODE) == 0) {
+			int n = 0;
+			int mode = 0;
+			//char* p = 0;
+			n = (int)strlen(buff);
+			if (n < 1) {
+				//ret = SPL_LOG_TOPIC_EMPTY;
+				break;
+			}
+			//ret = spl_stdz_topics(buff, &n, &mode, &p);
+			//if (ret) {
+			//	break;
+			//}
+			n = sscanf(buff, "%d", &mode);
+			if (n < 1) {
+				ret = SPL_LOG_SHM_MODE;
+				break;
+			}
+			__simple_log_static__.process_mode = mode;
+			break;
+		}
+		if (strcmp(key, SPLOG_SHARED_KEY) == 0) {
+			int n = 0;
+			//int mode = 0;
+			//char* p = 0;
+			n = (int)strlen(buff);
+			if (n < 1) {
+				//ret = SPL_LOG_TOPIC_EMPTY;
+				break;
+			}
+			snprintf(__simple_log_static__.shared_key, 128, "%s", buff);
+			break;
+		}
 		if (strcmp(key, SPLOG_END_CFG) == 0) {
 			spl_console_log("End configuration.\n");
 			if (isEnd) {
@@ -460,9 +591,9 @@ int spl_init_log_parse(char* buff, char *key, char *isEnd) {
 	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int 
-spl_init_log( char *pathcfg) 
+spl_init_log( char *pathcfg, int creating) 
 {
 	int ret = 0;
 	FILE* fp = 0;
@@ -471,6 +602,7 @@ spl_init_log( char *pathcfg)
 	char buf[1024];
 	void* obj = 0;
 	char isEnd = 0;
+	char* folder = 0;
 	do {
 		memset(buf, 0, sizeof(buf));
 		//fp = fopen(pathcfg, "r");
@@ -480,7 +612,8 @@ spl_init_log( char *pathcfg)
 			spl_console_log("Cannot open file error.");
 			break;
 		}
-		while (1) {
+		while (1) 
+		{
 			c = fgetc(fp);
 			if (c == '\r' || c == '\n' || c == EOF) {
 				int  j = 0;
@@ -534,90 +667,121 @@ spl_init_log( char *pathcfg)
 		if (ret) {
 			break;
 		}
-		obj = spl_mutex_create();
-		if (!obj) {
-			ret = SPL_ERROR_CREATE_MUTEX;
+		//ret = spl_create_sync(&__simple_log_static__);
+#ifndef UNIX_LINUX
+		ret = spl_create_sync(&__simple_log_static__);
+#else
+		if(!__simple_log_static__.process_mode) {
+			ret = spl_create_sync(&__simple_log_static__);
+		}
+#endif			
+		if(ret) {
 			break;
 		}
-		__simple_log_static__.mtx = obj;
-
-		obj = spl_mutex_create();
-		if (!obj) {
-			ret = SPL_ERROR_CREATE_MUTEX;
-			break;
-		}
-		__simple_log_static__.mtx_off = obj;
-		
-		obj = spl_sem_create(1);
-		if (!obj) {
-			ret = SPL_ERROR_CREATE_SEM;
-			break;
-		}
-		__simple_log_static__.sem_rwfile = obj;
-
-		obj = spl_sem_create(1);
-		if (!obj) {
-			ret = SPL_ERROR_CREATE_SEM;
-			break;
-		}
-		__simple_log_static__.sem_off = obj;
-
-		char* folder = __simple_log_static__.folder;
+		folder = __simple_log_static__.folder;
 		ret = spl_verify_folder(folder);
 		if (ret) {
 			break;
 		}
 	} while (0);
 	if (fp) {
-		SPL_FCLOSE(fp,ret);
+		FFCLOSE(fp,ret);
 	}
 	if (ret == 0) {
-		ret = spl_gen_topic_buff(&__simple_log_static__);
+		__simple_log_static__.creating_mode = creating;
+		
+		if (!__simple_log_static__.process_mode) {
+			ret = spl_gen_topic_buff(&__simple_log_static__);
+			//If we run with only threads mode, we just initiate memory for only one process, don't need to be in shared memory.
+		} 
+		else {
+			//If we run with only processes mode, we just initiate memory for many process, MUST be in shared memory.
+			do {
+				ret = spl_shm_region(&__simple_log_static__);
+				if(ret) {
+					break;
+				}
+#ifndef UNIX_LINUX
+				//In Windows environment, we cannot embbed the mutexes, semaphores into the shared memory.
+				//spl_sem_create
+				//spl_mutex_create
+#else
+				//In UNIX_LINUX environment, we embbed the mutexes, semaphores into the shared memory.
+				ret = spl_create_sync(&__simple_log_static__);
+				if (ret) {
+					break;
+				}
+#endif				
+			} while(0);
+		}
 	}
 	if (ret == 0) {
-		ret = spl_simple_log_thread(&__simple_log_static__);
+		if (__simple_log_static__.process_mode) {
+			if (__simple_log_static__.creating_mode) {
+				//With processes mode, we only need to start the listening thread of the master process.
+				ret = spl_simple_log_thread(&__simple_log_static__);
+			}
+		}
+		else {
+			//With threads mode, we have to start the listening thread of the master process.
+			ret = spl_simple_log_thread(&__simple_log_static__);
+		}
 	}
 
 	return ret;
 }
-/*===========================================================================================================================*/
-void* spl_mutex_create() {
+/*=================================================================================================================================================*/
+void* spl_mutex_create(char* name) {
 	void *ret = 0;
 	do {
 #ifndef UNIX_LINUX
-		ret = CreateMutexA(0, 0, 0);
+		ret = CreateMutexA(0, 0, name);
 #else
+		int err = 0;
 	/*https://linux.die.net/man/3/pthread_mutex_init*/
-		spl_malloc(sizeof(pthread_mutex_t), ret, void);
+	/*https://linux.die.net/man/3/pthread_mutexattr_init*/
 		//ret = malloc(sizeof(pthread_mutex_t));
+		spl_malloc(sizeof(pthread_mutex_t), ret, void);
 		if (!ret) {
 			break;
 		}
-		memset(ret, 0, sizeof(pthread_mutex_t));
-		pthread_mutex_init((pthread_mutex_t*)ret, 0);
+		//memset(ret, 0, sizeof(pthread_mutex_t));
+		err = pthread_mutex_init((pthread_mutex_t*)ret, 0);
+		if(err) {
+			spl_console_log("pthread_mutex_init FAILED: %d.", err);
+			spl_free(ret);
+			ret = 0;
+		}
 #endif 
 	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
-void* spl_sem_create(int ini) {
+/*=================================================================================================================================================*/
+void* spl_sem_create(int ini, char* name) {
 	void* ret = 0;
-	do {
+	
 #ifndef UNIX_LINUX
-		ret = CreateSemaphoreA(0, 0, ini, 0);
+	ret = CreateSemaphoreA(0, 0, ini, name);
+	if(!ret) {
+		spl_console_log("CreateSemaphoreA FAILED.");
+	}
 #else
-		//ret = malloc(sizeof(sem_t));
-		spl_malloc(sizeof(sem_t), ret, void);
-		if (!ret) {
-			break;
-		}
-		memset(ret, 0, sizeof(sem_t));
-		sem_init((sem_t*)ret, 0, 0);
+	int err = 0;
+	spl_malloc(sizeof(sem_t), ret, void);
+	if(!ret) {
+		return ret;
+	}
+	err = sem_init((sem_t*)ret, 0, 0);
+	/*POSIX.1-2001.*/
+	if(err) {
+		spl_console_log("sem_init FAILED: %d.", errno);
+		spl_free(ret);
+		ret = 0;
+	}
 #endif 
-	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_mutex_lock(void* obj) {
 	int ret = 0;
 #ifndef UNIX_LINUX
@@ -641,7 +805,7 @@ int spl_mutex_lock(void* obj) {
 	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_mutex_unlock(void* obj) {
 	int ret = 0;
 #ifndef UNIX_LINUX
@@ -665,7 +829,7 @@ int spl_mutex_unlock(void* obj) {
 	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_verify_folder(char* folder) {
 	int ret = 0;
 	do {
@@ -687,7 +851,7 @@ int spl_verify_folder(char* folder) {
 	return ret;
 }
 /*https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemtime*/
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_get_fname_now(char* name) {
 	int ret = 0;
 	spl_local_time_st lt;
@@ -698,19 +862,24 @@ int spl_get_fname_now(char* name) {
 	return ret;
 }
 #include <time.h>
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 #ifndef UNIX_LINUX
 DWORD WINAPI spl_written_thread_routine(LPVOID lpParam)
 #else
 void* spl_written_thread_routine(void* lpParam)
 #endif
 {	
-	int k = 0;
 	SIMPLE_LOG_ST* t = (SIMPLE_LOG_ST*)lpParam;
-	int ret = 0, off = 0, sz = 0, i = 0, err = 0;
+	int ret = 0;
+	int k = 0;
+	int off = 0;
+	int sz = 0;
+	int err = 0;
 	char* buffer = 0;
 	int total_buf_sz = 0;
 	generic_dta_st* tmpBuff = 0;
+	register spl_uchar is_now_off = 0;
+	register int i = 0;
 	total_buf_sz = t->buff_size * (1 + t->n_topic);
 	spl_malloc(total_buf_sz, buffer, char);
 	
@@ -729,7 +898,7 @@ void* spl_written_thread_routine(void* lpParam)
 		if (!t->mtx) {
 			exit(1);
 		}
-		//spl_console_log("Mutex: 0x%p.\n", t->mtx);
+		spl_console_log("Mutex: 0x%p.\n", t->mtx);
 		while (1) {
 			
 #ifndef UNIX_LINUX
@@ -737,10 +906,9 @@ void* spl_written_thread_routine(void* lpParam)
 #else
 			SPL_sem_wait(t->sem_rwfile);
 #endif
-			off = spl_get_off();
-			if (off) {
-				break;
-			}
+			//if (is_now_off) {
+			//	break;
+			//}
 			ret = spl_gen_file(t, &sz, t->file_limit_size, &(t->index));
 			if (ret) {
 				spl_console_log("--spl_gen_file, ret: %d --\n", ret);
@@ -753,13 +921,17 @@ void* spl_written_thread_routine(void* lpParam)
 			}
 			spl_mutex_lock(t->mtx);
 			do {
-				
+				is_now_off = (t->shared_supplement->is_master_off || t->off_slave);
+				if (is_now_off) {
+					break;
+				}
 				if (t->buf->pl > t->buf->pc) {
 					
 					memcpy(buffer, t->buf, sizeof(generic_dta_st) + t->buf->pl + 1);
 					t->buf->pl = t->buf->pc = 0;
 				}
-				for (i = 0; i < t->n_topic; ++i) {
+				for (i = 0; i < t->n_topic; ++i) 
+				{
 					if (t->arr_topic[i].buf->pl > t->arr_topic[i].buf->pc) {
 						memcpy(buffer + (t->buff_size * (i + 1)), t->arr_topic[i].buf, sizeof(generic_dta_st) + t->arr_topic[i].buf->pl + 1);
 						t->arr_topic[i].buf->pl = t->arr_topic[i].buf->pc = 0;
@@ -770,11 +942,7 @@ void* spl_written_thread_routine(void* lpParam)
 			tmpBuff = (generic_dta_st*) buffer;
 			k = (int)fwrite(tmpBuff->data, 1, tmpBuff->pl, t->fp);
 			sz += k;
-
-			//err = SPL_FFLUSH((FILE *)(t->fp));
-
-			SPL_FFLUSH((t->fp), err);
-
+			err = fflush((FILE *)(t->fp));
 			tmpBuff->pl = 0;
 			if (err) {
 				//TO-TEST
@@ -787,10 +955,7 @@ void* spl_written_thread_routine(void* lpParam)
 				tmpBuff = (generic_dta_st*)(buffer + (t->buff_size * (i + 1)));
 				k = (int)fwrite(tmpBuff->data, 1, tmpBuff->pl, (FILE*)(t->arr_topic[i].fp));
 				t->arr_topic[i].fizize += k;
-
-				//err = SPL_FFLUSH((FILE *)(t->arr_topic[i].fp));
-				SPL_FFLUSH((t->arr_topic[i].fp), err);
-
+				err = fflush((FILE *)(t->arr_topic[i].fp));
 				tmpBuff->pl = 0;
 				if (err) {
 					spl_console_log("--fflush, ret: %d --\n", err);
@@ -801,25 +966,18 @@ void* spl_written_thread_routine(void* lpParam)
 			if (ret) {
 				break;
 			}
+			if (is_now_off) {
+				break;
+			}
 		}
 		if (t->fp) {
 			int werr = 0;
-			SPL_FCLOSE(t->fp, werr);
+			FFCLOSE(t->fp, werr);
 			for (i = 0; i < t->n_topic; ++i) {
 				if (t->arr_topic[i].fp) {
-					SPL_FCLOSE(t->arr_topic[i].fp, werr);
+					FFCLOSE(t->arr_topic[i].fp, werr);
 				}
 			}
-			spl_mutex_lock(t->mtx);
-				if (t->buf) {
-					spl_free(t->buf);
-				}
-				for (i = 0; i < t->n_topic; ++i) {
-					if (t->arr_topic[i].buf) {
-						t->arr_topic[i].buf = 0;
-					}
-				}
-			spl_mutex_unlock(t->mtx);
 		}
 
 		spl_free(buffer);
@@ -829,7 +987,7 @@ void* spl_written_thread_routine(void* lpParam)
 	spl_rel_sem(__simple_log_static__.sem_off);
 	return 0;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_simple_log_thread(SIMPLE_LOG_ST* t) {
 	int ret = 0;
 	do {
@@ -854,19 +1012,22 @@ int spl_simple_log_thread(SIMPLE_LOG_ST* t) {
 	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_fmt_now(char* fmtt, int len) {
 	int ret = 0;
 	spl_local_time_st stt;
-	static LLU pre_tnow = 0;
+	//static LLU pre_tnow = 0;
 	LLU _tnow = 0;
 	LLU _delta = 0;
 	int n = 0; 
 	char buff[20], buff1[20];
 	memset(buff, 0, 20);
-	memset(buff1, 0, 20);	
+	memset(buff1, 0, 20);
+	SHARED_DATA_ST* tp = 0;
+
 
 	time_t t = time(0);
+	tp = __simple_log_static__.shared_supplement;
 	do {
 		memset(&stt, 0, sizeof(stt));
 		ret = spl_local_time_now(&stt);
@@ -884,16 +1045,16 @@ int spl_fmt_now(char* fmtt, int len) {
 		do {
 			spl_mutex_lock(__simple_log_static__.mtx_off);
 				do {
-
-					if (!pre_tnow) {
+					if (!tp->pre_tnow) {
 						break;
 					}
-					if (_tnow > pre_tnow) {
-						_delta = _tnow - pre_tnow;
-					}
+					if (_tnow > (tp->pre_tnow)) {
+						_delta = _tnow - (tp->pre_tnow);
+					}					
 				} while (0);
-				pre_tnow = _tnow;
+				(tp->pre_tnow) = _tnow;
 			spl_mutex_unlock(__simple_log_static__.mtx_off);
+			
 		} while (0);
 
 		n = snprintf(buff, 20, SPL_FMT_DATE_ADDING, stt.year + YEAR_PADDING, stt.month + MONTH_PADDING, stt.day);
@@ -908,7 +1069,7 @@ int spl_fmt_now(char* fmtt, int len) {
 	return ret;
 }
 
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_fmmt_now(char* fmtt, int len) {
 	int ret = 0;
 	spl_local_time_st stt;
@@ -940,7 +1101,7 @@ int spl_fmmt_now(char* fmtt, int len) {
 	return ret;
 }
 
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 
 int spl_gen_file(SIMPLE_LOG_ST* t, int *sz, int limit, int *index) {
 	int ret = 0;
@@ -958,7 +1119,14 @@ int spl_gen_file(SIMPLE_LOG_ST* t, int *sz, int limit, int *index) {
 			spl_console_log("spl_local_time_now: ret: %d.\n", ret);
 			break;
 		}
-
+		//if (!(t->lc_time)) {
+		//	spl_malloc(sizeof(spl_local_time_st), t->lc_time, spl_local_time_st);
+		//	if (!t->lc_time) {
+		//		ret = SPL_LOG_MEM_GEN_FILE_ERROR;
+		//		break;
+		//	}
+		//	memcpy(t->lc_time, &lt, sizeof(spl_local_time_st));
+		//}
 		memcpy(&(t->lc_time_now), &lt, sizeof(spl_local_time_st));
 		plt = &(t->lc_time_now);
 		if (!t->fp) {
@@ -990,7 +1158,7 @@ int spl_gen_file(SIMPLE_LOG_ST* t, int *sz, int limit, int *index) {
 					*sz = cszize;
 					break;
 				}
-				SPL_FCLOSE(t->fp, err);
+				FFCLOSE(t->fp, err);
 				if(err) {
 					ret = SPL_LOG_CLOSE_FILE_ERROR;
 				}
@@ -1041,7 +1209,7 @@ int spl_gen_file(SIMPLE_LOG_ST* t, int *sz, int limit, int *index) {
 		snprintf(path, 1024, SPL_FILE_NAME_FMT, t->folder, yearmonth, fmt_file_name, *index);
 		snprintf(t->path_template, 1024, SPL_FILE_NAME_FMT_TOPIC, t->folder, yearmonth, fmt_file_name);
 
-		SPL_FCLOSE(t->fp, ferr);
+		FFCLOSE(t->fp, ferr);
 		if (ferr) {
 			ret = SPL_LOG_CLOSE_FILE_ERROR;
 			break;
@@ -1060,15 +1228,15 @@ int spl_gen_file(SIMPLE_LOG_ST* t, int *sz, int limit, int *index) {
 	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 void* spl_get_mtx() {
 	return __simple_log_static__.mtx;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 void* spl_get_sem_rwfile() {
 	return __simple_log_static__.sem_rwfile;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 LLU	spl_get_threadid() {
 #ifndef UNIX_LINUX
 	return (LLU)GetCurrentThreadId();
@@ -1076,7 +1244,7 @@ LLU	spl_get_threadid() {
 	return (LLU)pthread_self();
 #endif
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_rel_sem(void *sem) {
 	int ret = 0;
 #ifndef UNIX_LINUX
@@ -1101,7 +1269,7 @@ int spl_rel_sem(void *sem) {
 	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 
 const char* spl_get_text(int lev) {
 	const char* val = SPL_TEXT_UNKNOWN;
@@ -1129,36 +1297,76 @@ const char* spl_get_text(int lev) {
 	} while(0);
 	return val;
 }
-/*===========================================================================================================================*/
-int spl_finish_log() {
-	int ret = 0; 
-	spl_set_off(1);
+/*=================================================================================================================================================*/
+int spl_finish_log(int is_master) {
+	int ret = 0, err = 0, i = 0; 
+	SIMPLE_LOG_ST* t = &__simple_log_static__;
+	spl_set_off(1, is_master);
+
+	spl_mutex_lock(t->mtx);
+		do {
+			if (!(t->process_mode)) {
+				if (t->buf) {
+					spl_free(t->buf);
+				}
+				for (i = 0; i < t->n_topic; ++i) {
+					if (t->arr_topic[i].buf) {
+						t->arr_topic[i].buf = 0;
+					}
+				}
+				break;
+			}
+		} while (0);
+	spl_mutex_unlock(t->mtx);
+
 #ifndef UNIX_LINUX
+
+	//spl_mutex_lock(t->mtx);
+	//	do {
+	//		spl_shm_clear_shared_region(t);
+	//	} while (0);
+	//spl_mutex_unlock(t->mtx);
+	
+	ret = spl_shm_clear_shared_region(t);
+	if(ret) {
+		spl_console_log("spl_shm_clear_shared_region, ret: %d.", ret);
+	}
+
+	//SPL_CloseHandle(__simple_log_static__.whRWBufferMapFile);
+
 	SPL_CloseHandle(__simple_log_static__.mtx);
 	SPL_CloseHandle(__simple_log_static__.mtx_off);
 	SPL_CloseHandle(__simple_log_static__.sem_rwfile);
 	SPL_CloseHandle(__simple_log_static__.sem_off);
 #else
-	int err = 0;
-/*https://linux.die.net/man/3/SPL_sem_destroy
-//https://linux.die.net/man/3/pthread_mutex_init*/
-	SPL_pthread_mutex_destroy(__simple_log_static__.mtx, err);
-	spl_free(__simple_log_static__.mtx);
-	SPL_pthread_mutex_destroy(__simple_log_static__.mtx_off, err);
-	spl_free(__simple_log_static__.mtx_off);
-	SPL_sem_destroy(__simple_log_static__.sem_rwfile, err);
-	spl_free(__simple_log_static__.sem_rwfile);
-	SPL_sem_destroy(__simple_log_static__.sem_off, err);
-	spl_free(__simple_log_static__.sem_off);
+	/*--
+	https://linux.die.net/man/3/SPL_sem_destroy
+	https://linux.die.net/man/3/pthread_mutex_init
+	---*/
+	if(!(t->process_mode)) {
+		SPL_pthread_mutex_destroy(__simple_log_static__.mtx, err);
+		spl_free(__simple_log_static__.mtx);
+		SPL_pthread_mutex_destroy(__simple_log_static__.mtx_off, err);
+		spl_free(__simple_log_static__.mtx_off);
+		SPL_sem_destroy(__simple_log_static__.sem_rwfile, err);
+		spl_free(__simple_log_static__.sem_rwfile);
+		SPL_sem_destroy(__simple_log_static__.sem_off, err);
+		spl_free(__simple_log_static__.sem_off);
+	}
+	else {
+		ret = spl_shm_clear_shared_region(t);
+		if(ret) {
+			spl_console_log("spl_shm_clear_shared_region, ret: %d.", ret);
+		}
+	}
 #endif
 
 	spl_free(__simple_log_static__.topics);
 	spl_free(__simple_log_static__.arr_topic);
-
 	memset(&__simple_log_static__, 0, sizeof(__simple_log_static__));
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 char* spl_get_buf(int* n, int** ppl) {
 	SIMPLE_LOG_ST* t = &__simple_log_static__;
 	char* ret = 0;
@@ -1171,7 +1379,7 @@ char* spl_get_buf(int* n, int** ppl) {
 	}
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 /*https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createdirectorya*/
 int spl_folder_sup(char* folder, spl_local_time_st* lctime, char* year_month) {
 	int ret = 0;
@@ -1268,7 +1476,7 @@ int spl_folder_sup(char* folder, spl_local_time_st* lctime, char* year_month) {
 	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 void spl_sleep(unsigned int sec) {
 #ifndef UNIX_LINUX
 	Sleep( ((DWORD)(sec)) * 1000);
@@ -1276,7 +1484,7 @@ void spl_sleep(unsigned int sec) {
 	sleep(sec);
 #endif 
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_standardize_path(char* fname) {
 	int ret = 0;
 	int i = 0;
@@ -1288,7 +1496,7 @@ int spl_standardize_path(char* fname) {
 	}
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int	
 spl_stdz_topics
 (char *buff, int *inoutlen, int *ntopics, char** pchar)
@@ -1354,7 +1562,7 @@ spl_stdz_topics
 	//}
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int
 spl_gen_topics(SIMPLE_LOG_ST* t) {
 	int ret = 0;
@@ -1388,7 +1596,7 @@ spl_gen_topics(SIMPLE_LOG_ST* t) {
 					break;
 				}
 				t->arr_topic[i].fizize = (int)cszize;
-				SPL_FCLOSE(t->arr_topic[i].fp, err);
+				FFCLOSE(t->arr_topic[i].fp, err);
 				if (err) {
 					ret = SPL_LOG_CLOSE_FILE_ERROR;
 					break;
@@ -1409,7 +1617,7 @@ spl_gen_topics(SIMPLE_LOG_ST* t) {
 			for (i = 0; i < t->n_topic; ++i) {
 				do {
 					int err = 0;
-					SPL_FCLOSE(t->arr_topic[i].fp, err);
+					FFCLOSE(t->arr_topic[i].fp, err);
 					if (err) {
 						ret = SPL_LOG_CLOSE_FILE_ERROR;
 						break;
@@ -1438,13 +1646,11 @@ spl_gen_topics(SIMPLE_LOG_ST* t) {
 			}
 			do {
 				int err = 0;
-
-				SPL_FCLOSE(t->arr_topic[i].fp, err);
+				FFCLOSE(t->arr_topic[i].fp, err);
 				if (err) {
 					ret = SPL_LOG_CLOSE_FILE_ERROR;
 					break;
 				}
-
 				t->arr_topic[i].fizize = 0;
 				
 				snprintf(path, 1024, "%s-%s-%.7d.log", t->path_template, t->arr_topic[i].topic, t->arr_topic[i].index);
@@ -1459,7 +1665,7 @@ spl_gen_topics(SIMPLE_LOG_ST* t) {
 				if (cszize < t->file_limit_size) {
 					break;
 				}
-				SPL_FCLOSE(t->arr_topic[i].fp, err);
+				FFCLOSE(t->arr_topic[i].fp, err);
 				if (err) {
 					ret = SPL_LOG_CLOSE_FILE_ERROR;
 					break;
@@ -1474,13 +1680,17 @@ spl_gen_topics(SIMPLE_LOG_ST* t) {
 	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 char*
 spl_get_buf_topic(int* n, int** ppl, int index) {
 	SIMPLE_LOG_ST* tg = &__simple_log_static__;
 	char* ret = 0;
 	do {
-		
+		if (tg->shared_supplement->is_master_off || tg->off_slave) {
+			//spl_console_log("is_master_off: %d, off_slave: %d", 
+			//	tg->shared_supplement->is_master_off, tg->off_slave);
+			break;
+		}
 		if (index < 0 || ((index + 1) > tg->n_topic)) {
 			ret = spl_get_buf(n, ppl);
 			break;
@@ -1496,7 +1706,7 @@ spl_get_buf_topic(int* n, int** ppl, int index) {
 	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 LLU
 spl_milli_now() {
 	LLU ret = 0;
@@ -1518,20 +1728,20 @@ spl_milli_now() {
 	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int spl_gen_topic_buff(SIMPLE_LOG_ST* t) {
 	int ret = 0;
 	char path[1024];
 	int i = 0;
 	//LLU cszize = 0;
-	//spl_local_time_st lt, * plt = 0;;
-	//char fmt_file_name[64];
+	spl_local_time_st lt, * plt = 0;;
+	char fmt_file_name[64];
 	//int ferr = 0;
-	//char yearmonth[16];
+	char yearmonth[16];
 	char* buffer = 0;
 	int total_buf_sz = 0;
 	generic_dta_st* tmpBuff = 0;
-	total_buf_sz = t->buff_size * (1 + t->n_topic);
+	total_buf_sz = t->buff_size * (1 + t->n_topic) + sizeof(SHARED_DATA_ST);
 	spl_malloc(total_buf_sz, buffer, char);
 	do {
 		if (!buffer) {
@@ -1568,58 +1778,482 @@ int spl_gen_topic_buff(SIMPLE_LOG_ST* t) {
 				tmpBuff = (generic_dta_st*)(buffer + (( i + 1) * t->buff_size));
 				tmpBuff->total = t->buff_size - SPL_MEMO_PADDING;
 				t->arr_topic[i].buf = tmpBuff;
+
 			}
 			if (ret) {
 				break;
 			}
 		}
+		
 		if (ret) {
 			break;
 		}
+
+		t->shared_supplement = (SHARED_DATA_ST*)(buffer + (t->buff_size * (1 + t->n_topic)));
+		spl_console_log("----------t->shared_supplement: %p", t->shared_supplement);
 	} while (0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
+int spl_shm_region(SIMPLE_LOG_ST* t)
+{
+	int ret = 0, i = 0, err = 0;
+	char* tmp = 0;
+	char* key_name = 0;
+	generic_dta_st* tmpBuff = 0;
+	char path[1024];
+	int siize = t->buff_size * (1 + t->n_topic) + sizeof(SHARED_DATA_ST);;
+#ifndef UNIX_LINUX
+	HANDLE hMapFile = 0;
+#else
+	int hMapFile = 0;;
+#endif	
+	do 
+	{
+		if (! t->shared_key[0]) {
+			ret = SPL_LOG_SHM_OUT_NULL;
+			break;
+		}
+		if (!__simple_log_static__.shared_key[0]) {
+			ret = SPL_LOG_SHM_KEY_NULL;
+			spl_console_log("SPL_LOG_SHM_KEY_NULL");
+			break;
+		}
+		key_name = __simple_log_static__.shared_key;
+#ifndef UNIX_LINUX
+		/*
+			- https ://learn.microsoft.com/en-us/windows/win32/memory/creating-named-shared-memory
+		*/
+		if (t->creating_mode) {
+			hMapFile = CreateFileMapping(
+				INVALID_HANDLE_VALUE,    // use paging file
+				NULL,                    // default security
+				PAGE_READWRITE,          // read/write access
+				0,                       // maximum object size (high-order DWORD)
+				siize,                // maximum object size (low-order DWORD)
+				key_name);                 // name of mapping object
+			
+			if (!hMapFile) {
+				ret = SPL_LOG_SHM_MAPPING_NULL;
+				spl_console_log("CreateFileMapping: err: %d.", (int)GetLastError());
+				break;
+			}
+		}
+		else
+		{
+			hMapFile = OpenFileMappingA(
+				FILE_MAP_ALL_ACCESS, 0, key_name);
+			if (!hMapFile) {
+				ret = SPL_LOG_SHM_MAPPING_NULL;
+				spl_console_log("OpenFileMapping: err: %d.", (int)GetLastError());
+				break;
+			}
+		}
+		tmp = (char *)MapViewOfFile(hMapFile,  FILE_MAP_ALL_ACCESS, 0, 0, siize);
+		if (!tmp) {
+			ret = SPL_LOG_SHM_MAP_VIEW_NULL;
+			spl_console_log("MapViewOfFile: err: %d.", (int)GetLastError());
+			break;
+		}
+#else
+		if (t->creating_mode)
+		{
+			int err = 0;
+			do {
+				hMapFile = shm_open(key_name, SPL_LOG_UNIX_CREATE_MODE, SPL_LOG_UNIX__SHARED_MODE); 
+				if(hMapFile > 0) {
+					break;
+				}
+				hMapFile = shm_open(key_name, SPL_LOG_UNIX_OPEN_MODE, SPL_LOG_UNIX__SHARED_MODE);
+				if(hMapFile < 1) {
+					spl_console_log("SPL_LOG_SHM_UNIX_OPEN option creating");
+					ret = SPL_LOG_SHM_UNIX_OPEN;
+					break;
+				}
+			} while(0);
+		}
+		else 
+		{
+			hMapFile = shm_open(key_name, SPL_LOG_UNIX_OPEN_MODE, SPL_LOG_UNIX__SHARED_MODE);
+			if(hMapFile < 1) {
+				spl_console_log("SPL_LOG_SHM_UNIX_OPEN option creating");
+				ret = SPL_LOG_SHM_UNIX_OPEN;
+				break;
+			}
+		}
+		if(ret) {
+			break;
+		}
+		err = ftruncate(hMapFile, siize);
+		if(err) {
+			spl_console_log("SPL_LOG_SHM_UNIX_TRUNC");
+			ret = SPL_LOG_SHM_UNIX_TRUNC;
+			break;
+		}
+		tmp = (char*)mmap(0, siize, SPL_LOG_UNIX_PROT_FLAGS, MAP_SHARED, hMapFile, 0);
+		if(tmp == MAP_FAILED || tmp == 0) {
+			ret = SPL_LOG_SHM_UNIX_MAP_FAILED;
+			spl_console_log("SPL_LOG_SHM_UNIX_MAP_FAILED");
+			tmp = 0;
+			break;
+		}		
+#endif	
+		if (!tmp) {
+			ret = SPL_LOG_SHM_MEM_ERROR;
+			break;
+		}
+		//Just creating process should clean memory
+		if (t->creating_mode) {
+			memset(tmp, 0, siize);
+		}
+
+		t->buf = (generic_dta_st*)tmp;
+		tmpBuff = (generic_dta_st*)tmp;
+		tmpBuff->total = t->buff_size - SPL_MEMO_PADDING;
+		t->buf = tmpBuff;
+		if (!t->arr_topic) {
+			char* p0 = t->topics;
+			int sz = sizeof(SIMPLE_LOG_TOPIC_ST) * t->n_topic;
+			spl_malloc(sz, t->arr_topic, SIMPLE_LOG_TOPIC_ST);
+			memset(path, 0, sizeof(path));
+			if (!t->arr_topic) {
+				ret = SPL_LOG_TOPIC_MEMORY;
+				break;
+			}
+			for (i = 0; i < t->n_topic; ++i) {
+				char* p1 = 0;
+
+				p1 = strstr(p0, ",");
+				if (!p1) {
+					snprintf(t->arr_topic[i].topic, SPL_TOPIC_SIZE, "%s", p0);
+				}
+				else {
+					int n = p1 - p0;
+					snprintf(t->arr_topic[i].topic, n + 1, "%s", p0);
+					p1++;
+					p0 = p1;
+				}
+				//tmp += t->buff_size;
+				//tmpBuff = (generic_dta_st*)(tmp);
+				tmpBuff = (generic_dta_st*)(tmp + ((i + 1) * t->buff_size));
+				tmpBuff->total = t->buff_size - SPL_MEMO_PADDING;
+				t->arr_topic[i].buf = tmpBuff;
+			}
+		}
+		t->whRWBufferMapFile = hMapFile;
+
+		t->shared_supplement = (SHARED_DATA_ST*) (tmp + (t->buff_size * (1 + t->n_topic)));
+		spl_console_log("----------t->shared_supplement: %p", t->shared_supplement);
+	} 
+	while(0);
+	if (ret) {
+		int done = 0;
+#ifndef UNIX_LINUX
+		if (tmp) {
+			done = UnmapViewOfFile(tmp);
+			if (!done) {
+				spl_console_log("UnmapViewOfFile: err: %d.", (int)GetLastError());
+			}
+		}
+		if (hMapFile) {
+			done = CloseHandle(hMapFile);
+			if (!done) {
+				spl_console_log("CloseHandle: err: %d.", (int)GetLastError());
+			}
+		}
+#else
+		if(hMapFile > 0) {
+			int err = 0;
+			if(tmp) {
+				err = munmap(tmp, siize);
+				if(err) {
+					spl_console_log("munmap: err: %d.", (int)errno);
+				}
+			}
+			//err = shm_unlink(key_name);
+			spl_shm_unlink(key_name, err);
+			//if(err) {
+			//	spl_console_log("shm_unlink: err: %d.", (int)errno);
+			//}
+		}
+#endif	
+	}
+	return ret;
+}
+/*=================================================================================================================================================*/
+#define SPL_SEM_NAME_RW				"_SEM_RW"
+#define SPL_SEM_NAME_OFF			"_SEM_OFF"
+
+#define SPL_MTX_NAME_RW				"_MTX_RW"
+#define SPL_MTX_NAME_OFF			"_MTX_OFF"
+
 int
-spl_fclose_err(int terr, void* ffp)
+spl_create_sync(SIMPLE_LOG_ST* t) {
+	int ret = 0;
+	void* obj = 0;
+	char semName[128];
+	do {
+		if (!__simple_log_static__.process_mode) {
+			obj = spl_mutex_create(0);
+		}
+		else {
+			memset(semName, 0, sizeof(semName));
+			snprintf(semName, 128, "%s%s", SPL_MTX_NAME_RW, __simple_log_static__.shared_key);
+			//obj = spl_mutex_create(semName);
+#ifndef UNIX_LINUX
+			obj = spl_mutex_create(semName);
+#else
+			obj = (void*) (&(t->shared_supplement->mtx_rw));
+			if (t->creating_mode) {
+				ret = spl_init_mtx_shm(obj);
+				if (ret) {
+					break;
+				}
+			}
+#endif	
+		}
+		if (!obj) {
+			ret = SPL_ERROR_CREATE_MUTEX;
+			break;
+		}
+		__simple_log_static__.mtx = obj;
+		
+		/*-------------------------------------------------*/
+		
+		if (!__simple_log_static__.process_mode) {
+			obj = spl_mutex_create(0);
+		}
+		else {
+			memset(semName, 0, sizeof(semName));
+			snprintf(semName, 128, "%s%s", SPL_MTX_NAME_OFF, __simple_log_static__.shared_key);
+			//obj = spl_mutex_create(semName);
+#ifndef UNIX_LINUX
+			obj = spl_mutex_create(semName);
+#else
+			obj = (void*) &(t->shared_supplement->mtx_off);
+			if (t->creating_mode) {
+				ret = spl_init_mtx_shm(obj);
+				if (ret) {
+					break;
+				}
+			}
+#endif				
+		}
+		if (!obj) {
+			ret = SPL_ERROR_CREATE_MUTEX;
+			break;
+		}
+		__simple_log_static__.mtx_off = obj;
+		
+		/*-------------------------------------------------*/
+		
+		if (!__simple_log_static__.process_mode) {
+			obj = spl_sem_create(1, 0);
+		}
+		else {
+			memset(semName, 0, sizeof(semName));
+			snprintf(semName, 128, "%s%s", SPL_SEM_NAME_OFF, __simple_log_static__.shared_key);
+			//obj = spl_sem_create(1, semName);
+#ifndef UNIX_LINUX
+			obj = spl_sem_create(1, semName);
+#else
+			obj = (void*) &(t->shared_supplement->sem_rwfile);
+			if (t->creating_mode) {
+				ret = spl_init_sem_shm(obj);
+				if (ret) {
+					break;
+				}
+			}
+#endif				
+		}
+		if (!obj) {
+			ret = SPL_ERROR_CREATE_SEM;
+			break;
+		}
+		__simple_log_static__.sem_rwfile = obj;
+		
+		/*-------------------------------------------------*/
+		
+		if (!__simple_log_static__.process_mode) {
+			obj = spl_sem_create(1, 0);
+		}
+		else {
+			memset(semName, 0, sizeof(semName));
+			snprintf(semName, 128, "%s%s", SPL_SEM_NAME_RW, __simple_log_static__.shared_key);
+			//obj = spl_sem_create(1, semName);
+#ifndef UNIX_LINUX
+			obj = spl_sem_create(1, semName);
+#else
+			obj = (void*) &(t->shared_supplement->sem_off);
+			if (t->creating_mode) {
+				ret = spl_init_sem_shm(obj);
+				if (ret) {
+					break;
+				}
+			}
+#endif				
+		}
+		if (!obj) {
+			ret = SPL_ERROR_CREATE_SEM;
+			break;
+		}
+		__simple_log_static__.sem_off = obj;
+	} while (0);
+
+	return ret;
+}
+/*=================================================================================================================================================*/
+LLU spl_process_id() {
+	LLU ret = 0;
+#ifndef UNIX_LINUX
+	ret = (LLU)GetCurrentProcessId();
+#else
+	ret = (LLU)getpid();
+#endif	
+	return ret;
+}
+/*=================================================================================================================================================*/
+int
+spl_shm_clear_shared_region(SIMPLE_LOG_ST* t) {
+	int ret = 0, i = 0;
+	int done = 0;
+#ifndef UNIX_LINUX
+
+#else
+	int shared_hd = 0;
+	char* objmem = 0;	
+#endif	
+	if (!t->process_mode) {
+		return ret;
+	}	
+	spl_mutex_lock(t->mtx);	
+		do {
+		#ifndef UNIX_LINUX
+			do {
+				if (t->buf) {
+					done = UnmapViewOfFile(t->buf);
+					if (!done) {
+						spl_console_log("UnmapViewOfFile: err: %d.", (int)GetLastError());
+					}
+					t->buf = 0;
+				}
+				for (i = 0; i < t->n_topic; ++i) {
+					if (t->arr_topic[i].buf) {
+						t->arr_topic[i].buf = 0;
+					}
+				}
+				if (t->whRWBufferMapFile) {
+					SPL_CloseHandle(t->whRWBufferMapFile);
+				}
+			} while(0);
+			t->buf = 0;
+		#else
+			shared_hd = t->whRWBufferMapFile;
+			objmem = (char *)t->buf;			
+			t->buf = 0;
+			for (i = 0; i < t->n_topic; ++i) {
+				if (t->arr_topic[i].buf) {
+					t->arr_topic[i].buf = 0;
+				}
+			}			
+		#endif	
+		} while (0);
+	spl_mutex_unlock(t->mtx);	
+#ifndef UNIX_LINUX
+
+#else
+	do {
+		int err = 0;
+		int siize = 0;
+		if (__simple_log_static__.creating_mode) {
+			SPL_pthread_mutex_destroy(__simple_log_static__.mtx, err);
+			/*spl_free(__simple_log_static__.mtx);*/
+			SPL_pthread_mutex_destroy(__simple_log_static__.mtx_off, err);
+			/*spl_free(__simple_log_static__.mtx_off);*/
+			SPL_sem_destroy(__simple_log_static__.sem_rwfile, err);
+			/*spl_free(__simple_log_static__.sem_rwfile);*/
+			SPL_sem_destroy(__simple_log_static__.sem_off, err);
+			/*spl_free(__simple_log_static__.sem_off);	*/
+		}
+		
+		siize = t->buff_size * (1 + t->n_topic) + sizeof(SHARED_DATA_ST);;
+		err = munmap(objmem, siize);
+		if(err) {
+			spl_console_log("munmap: err: %d.", (int)errno);
+		}
+		//err = shm_unlink(t->shared_key);
+		if (__simple_log_static__.creating_mode) {
+			spl_shm_unlink(t->shared_key, err);
+		}
+		//if(err) {
+		//	spl_console_log("shm_unlink: err: %d.", (int)errno);
+		//}
+	} while(0);
+#endif		
+	return ret;
+}
+/*=================================================================================================================================================*/
+#ifndef UNIX_LINUX
+
+
+#else
+int
+spl_init_mtx_shm(void *shm_mtx)
 {
 	int ret = 0;
+	pthread_mutexattr_t psharedm;
 	do {
-#ifndef UNIX_LINUX
-		spl_console_log("ffp: %p, terr: %d, GetLastError: 0x%x,", ffp, terr, (int)GetLastError());
-#else
-		char buf[64];
-		/* https://linux.die.net/man/3/strerror_r , */
-		/* - The strerror_r() function is similar to strerror(), but is thread safe */
-		strerror_r(errno, buf, 64);
-		spl_console_log("ffp: %p,terr: %d, errno: %d, strerror_r: %s", ffp, (int)errno, buf);
-#endif
+		int err = 0;
+		if (!shm_mtx) {
+			ret = SPL_LOG_SHM_UNIX_MUTEX_SHM_NULL;
+			break;
+		}
+		err = pthread_mutexattr_init(&psharedm);
+		if(err) {
+			ret = SPL_LOG_SHM_UNIX_ATT_INIT_MUTEX;
+			spl_console_log("pthread_mutexattr_init: %d.", errno);
+			break;
+		}
+		err = pthread_mutexattr_setpshared(&psharedm, PTHREAD_PROCESS_SHARED);
+		if(err) {
+			ret = SPL_LOG_SHM_UNIX_ATT_INIT_MUTEX_SET;
+			spl_console_log("pthread_mutexattr_setpshared: %d.", errno);
+			break;
+		}
+		err = pthread_mutex_init((pthread_mutex_t*)shm_mtx, &psharedm);
+		if(err) {
+			ret = SPL_LOG_SHM_UNIX_INIT_MUTEX;
+			spl_console_log("pthread_mutex_init: %d.", errno);
+			break;
+		}
 	} while(0);
 	return ret;
 }
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
 int
-spl_fflush_err(int terr, void* ffp) {
+spl_init_sem_shm(void* obj)
+{
 	int ret = 0;
 	do {
-#ifndef UNIX_LINUX
-		spl_console_log("ffp: %p, terr: %d, GetLastError: 0x%x,", ffp, terr, (int)GetLastError());
-#else
-		char buf[64];
-		/* https://linux.die.net/man/3/strerror_r , */
-		/* - The strerror_r() function is similar to strerror(), but is thread safe */
-		strerror_r(errno, buf, 64);
-		spl_console_log("ffp: %p,terr: %d, errno: %d, strerror_r: %s", ffp, (int)errno, buf);
-#endif
+		int err = 0;
+		if (!obj) {
+			ret = SPL_LOG_SHM_UNIX_SEM_SHM_NULL;
+			spl_console_log("SPL_LOG_SHM_UNIX_SEM_SHM_NULL.");
+			break;
+		}
+		err = sem_init((sem_t*)obj, 1, 0);
+		if(err) {
+			ret = SPL_LOG_SHM_UNIX_SEM_SHM_INIT;
+			spl_console_log("sem_init: %d.", errno);
+			break;			
+		}
 	} while (0);
 	return ret;
-}
-/*===========================================================================================================================*/
-/*===========================================================================================================================*/
-#ifndef UNIX_LINUX
-#else
+}	
 #endif
-/*===========================================================================================================================*/
-/*===========================================================================================================================*/
-/*===========================================================================================================================*/
-/*===========================================================================================================================*/
+/*=================================================================================================================================================*/
+/*
+	- delta
+	- Mutex, and Semaphore
+*/
+/*=================================================================================================================================================*/
