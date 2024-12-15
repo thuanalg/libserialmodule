@@ -76,7 +76,7 @@ static void*
 #endif
 
 static
-    int serial_module_isoff(SP_SERIAL_INFO_ST* obj);
+    int spserial_module_isoff(SP_SERIAL_INFO_ST* obj);
 
 static void* 
     spserial_mutex_create();
@@ -248,7 +248,7 @@ void* spserial_mutex_create() {
     return ret;
 }
 /*===========================================================================================================================*/
-int serial_module_isoff(SP_SERIAL_INFO_ST* obj) {
+int spserial_module_isoff(SP_SERIAL_INFO_ST* obj) {
     int ret = 0;
     ret = obj->isoff;
     return ret;
@@ -266,15 +266,15 @@ void*
     int isoff = 0;
     int ret = 0;
     while (1) {
-        isoff = serial_module_isoff(p);
+        isoff = spserial_module_isoff(p);
         if (isoff) {
             break;
         }
-        ret = serial_module_openport(p);
+        ret = spserial_module_openport(p);
         if (ret) {
         }
         while (1) {
-            isoff = serial_module_isoff(p);
+            isoff = spserial_module_isoff(p);
             if (isoff) {
                 break;
             }
