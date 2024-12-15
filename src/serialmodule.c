@@ -142,7 +142,7 @@ int spserial_module_setoff(int iid)
 int
     spserial_module_openport(void* obj) {
 	int ret = 0;
-	int baudrate = 11520;
+	//int baudrate = 11520;
     SP_SERIAL_INFO_ST* p = (SP_SERIAL_INFO_ST*)obj;
     //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	do {
