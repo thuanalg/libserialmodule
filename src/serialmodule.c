@@ -18,6 +18,7 @@
 #define SPSERIAL_BUFFER_SIZE        2048
 
 
+
 //#define spserial_malloc(__nn__, __obj__, __type__) { (__obj__) = (__type__*) malloc(__nn__); if(__obj__) \
 //	{spllog(0, "Malloc: 0x%p\n", (__obj__)); memset((__obj__), 0, (__nn__));} \
 //	else {spllog(SPL_LOG_ERROR, "Malloc: error.\n");}} 
@@ -77,6 +78,16 @@ typedef struct __SP_SERIAL_INFO_ST__ {
         cb;
 } SP_SERIAL_INFO_ST;
 
+typedef struct __SPSERIAL_ARR_LIST_LINED__ {
+    SP_SERIAL_INFO_ST *item;
+    struct __SPSERIAL_ARR_LIST_LINED__* next;
+} SPSERIAL_ARR_LIST_LINED;
+
+typedef struct __SPSERIAL_ROOT_TYPE__ {
+    void* mutex;
+    void* sem;
+    SPSERIAL_ARR_LIST_LINED* node;
+}SPSERIAL_ROOT_TYPE;
 
 #ifndef UNIX_LINUX
 static DWORD WINAPI
