@@ -86,8 +86,42 @@ static int
 
 int spserial_module_create(void *obj) 
 {
+    int ret = 0;
+    SP_SERIAL_INPUT_ST* p = (SP_SERIAL_INPUT_ST*)obj;
 	fprintf(stdout, "hi!\n");
-	return 0;
+    do {
+        if (!p) {
+            ret = SPSERIAL_PORT_INPUT_NULL;
+            break;
+        }
+        if (p->baudrate < 1) {
+            ret = SPSERIAL_PORT_BAUDRATE_ERROR;
+            break;
+        }
+        if (!p->port_name[0]) {
+            ret = SPSERIAL_PORT_NAME_ERROR;
+            break;
+        }
+        // Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation
+        HANDLE hSerial = CreateFile(p->port_name,                 // Port name
+            GENERIC_READ | GENERIC_WRITE,
+            0,                          // No sharing
+            0,                          // Default security
+            OPEN_EXISTING,              // Open an existing port
+            FILE_FLAG_OVERLAPPED,       // Asynchronous I/O
+            0);                         // No template file
+
+        if (hSerial == INVALID_HANDLE_VALUE) {
+            DWORD dwError = GetLastError();
+            spllog(SPL_LOG_ERROR, "Open port errcode: %lu", dwError);
+            ret = SPSERIAL_PORT_OPEN;
+            break;
+        }
+        else {
+            CloseHandle(hSerial);
+        }
+    } while (0);
+	return ret;
 }
 int spserial_module_setoff(int iid) 
 {
@@ -123,61 +157,61 @@ int
                             FILE_FLAG_OVERLAPPED,       // Asynchronous I/O
                             0);                         // No template file
 
-            if (hSerial == INVALID_HANDLE_VALUE) {
-                DWORD dwError = GetLastError();
-                spllog(SPL_LOG_ERROR, "Open port errcode: %lu", dwError);
-                ret = SPSERIAL_PORT_OPEN;
-                hSerial = 0;
-                break;
-            }
-            p->handle = hSerial;
-            if (p->is_retry) {
-                break;
-            }
-            // Set up the serial port parameters (baud rate, etc.)
-            dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
-            if (!GetCommState(hSerial, &dcbSerialParams)) {
-                DWORD dwError = GetLastError();
-                spllog(SPL_LOG_ERROR, "GetCommState: %lu", dwError);
-                ret = SPSERIAL_PORT_GETCOMMSTATE;
-                break;
-            }
-            dcbSerialParams.BaudRate = p->baudrate;  // Baud rate
-            dcbSerialParams.ByteSize = 8;         // 8 data bits
-            dcbSerialParams.StopBits = ONESTOPBIT;
-            dcbSerialParams.Parity = NOPARITY;
-            if (!SetCommState(hSerial, &dcbSerialParams)) {
-                DWORD dwError = GetLastError();
-                spllog(SPL_LOG_ERROR, "SetCommState: %lu", dwError);
-                ret = SPSERIAL_PORT_SETCOMMSTATE;
-            }
-            p->trigger = CreateEvent(0, TRUE, FALSE, 0);
-            if (!p->trigger) {
-                DWORD dwError = GetLastError();
-                spllog(SPL_LOG_ERROR, "CreateEvent: %lu", dwError);
-                ret = SPSERIAL_PORT_CREATEEVENT;
-                break;
-            }
-            // Set timeouts (e.g., read timeout of 500ms, write timeout of 500ms)
-            timeouts.ReadIntervalTimeout = 50;
-            timeouts.ReadTotalTimeoutConstant = 500;
-            timeouts.ReadTotalTimeoutMultiplier = 10;
-            timeouts.WriteTotalTimeoutConstant = 500;
-            timeouts.WriteTotalTimeoutMultiplier = 10;
+         if (hSerial == INVALID_HANDLE_VALUE) {
+             DWORD dwError = GetLastError();
+             spllog(SPL_LOG_ERROR, "Open port errcode: %lu", dwError);
+             ret = SPSERIAL_PORT_OPEN;
+             hSerial = 0;
+             break;
+         }
+         p->handle = hSerial;
+         if (p->is_retry) {
+             break;
+         }
+         // Set up the serial port parameters (baud rate, etc.)
+         dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+         if (!GetCommState(hSerial, &dcbSerialParams)) {
+             DWORD dwError = GetLastError();
+             spllog(SPL_LOG_ERROR, "GetCommState: %lu", dwError);
+             ret = SPSERIAL_PORT_GETCOMMSTATE;
+             break;
+         }
+         dcbSerialParams.BaudRate = p->baudrate;  // Baud rate
+         dcbSerialParams.ByteSize = 8;         // 8 data bits
+         dcbSerialParams.StopBits = ONESTOPBIT;
+         dcbSerialParams.Parity = NOPARITY;
+         if (!SetCommState(hSerial, &dcbSerialParams)) {
+             DWORD dwError = GetLastError();
+             spllog(SPL_LOG_ERROR, "SetCommState: %lu", dwError);
+             ret = SPSERIAL_PORT_SETCOMMSTATE;
+         }
+         p->trigger = CreateEvent(0, TRUE, FALSE, 0);
+         if (!p->trigger) {
+             DWORD dwError = GetLastError();
+             spllog(SPL_LOG_ERROR, "CreateEvent: %lu", dwError);
+             ret = SPSERIAL_PORT_CREATEEVENT;
+             break;
+         }
+         // Set timeouts (e.g., read timeout of 500ms, write timeout of 500ms)
+         timeouts.ReadIntervalTimeout = 50;
+         timeouts.ReadTotalTimeoutConstant = 500;
+         timeouts.ReadTotalTimeoutMultiplier = 10;
+         timeouts.WriteTotalTimeoutConstant = 500;
+         timeouts.WriteTotalTimeoutMultiplier = 10;
 
-            if (!SetCommTimeouts(hSerial, &timeouts)) {
-                DWORD dwError = GetLastError();
-                spllog(SPL_LOG_ERROR, "SetCommTimeouts: %lu", dwError);
-                ret = SPSERIAL_PORT_SETCOMMTIMEOUTS;
-                break;
-            }
-            p->mtx_off = spserial_mutex_create();
-            if (!p->mtx_off) {
-                DWORD dwError = GetLastError();
-                spllog(SPL_LOG_ERROR, "spserial_mutex_create: %lu", dwError);
-                ret = SPSERIAL_PORT_SPSERIAL_MUTEX_CREATE;
-                break;
-            }
+         if (!SetCommTimeouts(hSerial, &timeouts)) {
+             DWORD dwError = GetLastError();
+             spllog(SPL_LOG_ERROR, "SetCommTimeouts: %lu", dwError);
+             ret = SPSERIAL_PORT_SETCOMMTIMEOUTS;
+             break;
+         }
+         p->mtx_off = spserial_mutex_create();
+         if (!p->mtx_off) {
+             DWORD dwError = GetLastError();
+             spllog(SPL_LOG_ERROR, "spserial_mutex_create: %lu", dwError);
+             ret = SPSERIAL_PORT_SPSERIAL_MUTEX_CREATE;
+             break;
+         }
 #else
 #endif
 	} while (0);
