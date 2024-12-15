@@ -32,10 +32,13 @@ extern "C" {
 		SPSERIAL_PORT_SETCOMMSTATE,
 		SPSERIAL_PORT_CREATEEVENT,
 		SPSERIAL_PORT_SETCOMMTIMEOUTS,
+		SPSERIAL_PORT_SPSERIAL_MUTEX_CREATE,
 
 		SPSERIAL_PORT_PEAK,
 	} SERIAL_PORT_ERR;
 	typedef struct __SP_SERIAL_INFO_ST__ {
+		char
+			isoff;
 		int 
 			baudrate;
 		char 
@@ -47,11 +50,13 @@ extern "C" {
 #else
 #endif
 		handle;
+		void* mtx_off;
 	} SP_SERIAL_INFO_ST;
 DLL_API_SERIAL_MODULE int
-	serial_module_init(void*);
+	serial_module_create(void*);
+
 DLL_API_SERIAL_MODULE int
-	serial_module_close(void*);
+	serial_module_setoff(int id);
 
 
 #ifdef __cplusplus
