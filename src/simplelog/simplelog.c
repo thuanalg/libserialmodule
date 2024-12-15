@@ -864,9 +864,9 @@ int spl_get_fname_now(char* name) {
 #include <time.h>
 /*=================================================================================================================================================*/
 #ifndef UNIX_LINUX
-DWORD WINAPI spl_written_thread_routine(LPVOID lpParam)
+	DWORD WINAPI spl_written_thread_routine(LPVOID lpParam)
 #else
-void* spl_written_thread_routine(void* lpParam)
+	void* spl_written_thread_routine(void* lpParam)
 #endif
 {	
 	SIMPLE_LOG_ST* t = (SIMPLE_LOG_ST*)lpParam;

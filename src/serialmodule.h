@@ -65,6 +65,13 @@ extern "C" {
 		SPSERIAL_module_cb
 			cb;
 	} SP_SERIAL_INPUT_ST;
+//Should be start before using, non-thread-safe
+DLL_API_SERIAL_MODULE int
+	spserial_module_init();
+
+//Should be closed to complete use, non-thread-safe
+DLL_API_SERIAL_MODULE int
+	spserial_module_close();
 
 DLL_API_SERIAL_MODULE int
 	spserial_module_create(void*);
@@ -72,6 +79,8 @@ DLL_API_SERIAL_MODULE int
 DLL_API_SERIAL_MODULE int
 	spserial_module_setoff(int id);
 
+DLL_API_SERIAL_MODULE int
+	spserial_module_write_data(int id, char*, int sz);
 
 #ifdef __cplusplus
 }
