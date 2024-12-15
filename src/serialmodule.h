@@ -36,22 +36,13 @@ extern "C" {
 
 		SPSERIAL_PORT_PEAK,
 	} SERIAL_PORT_ERR;
-	typedef struct __SP_SERIAL_INFO_ST__ {
-		char
-			isoff;
-		int 
+	typedef struct __SP_SERIAL_INPUT_ST__ {
+		int
 			baudrate;
-		char 
+		char
 			port_name[32];
-		void* 
-			trigger;
-#ifndef UNIX_LINUX
-		void* 
-#else
-#endif
-		handle;
-		void* mtx_off;
-	} SP_SERIAL_INFO_ST;
+	} SP_SERIAL_INPUT_ST;
+
 DLL_API_SERIAL_MODULE int
 	serial_module_create(void*);
 

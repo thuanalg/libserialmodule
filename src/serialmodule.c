@@ -45,6 +45,28 @@
 //#else
 //#endif
 
+typedef struct __SP_SERIAL_INFO_ST__ {
+    char
+        isoff;
+    char
+        is_retry;
+    int
+        baudrate;
+    char
+        port_name[32];
+    void*
+        trigger;
+#ifndef UNIX_LINUX
+    void*
+#else
+    int
+#endif
+        handle;
+    void*
+        mtx_off;
+} SP_SERIAL_INFO_ST;
+
+
 #ifndef UNIX_LINUX
 static DWORD WINAPI
     spserial_thread_operating_routine(LPVOID lpParam);
@@ -94,12 +116,12 @@ serial_module_openport(void* obj) {
 
         // Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation
         hSerial = CreateFile(p->port_name,                 // Port name
-            GENERIC_READ | GENERIC_WRITE,
-            0,                          // No sharing
-            0,                          // Default security
-            OPEN_EXISTING,              // Open an existing port
-            FILE_FLAG_OVERLAPPED,       // Asynchronous I/O
-            0);                         // No template file
+                            GENERIC_READ | GENERIC_WRITE,
+                            0,                          // No sharing
+                            0,                          // Default security
+                            OPEN_EXISTING,              // Open an existing port
+                            FILE_FLAG_OVERLAPPED,       // Asynchronous I/O
+                            0);                         // No template file
 
             if (hSerial == INVALID_HANDLE_VALUE) {
                 DWORD dwError = GetLastError();
@@ -109,6 +131,9 @@ serial_module_openport(void* obj) {
                 break;
             }
             p->handle = hSerial;
+            if (p->is_retry) {
+                break;
+            }
             // Set up the serial port parameters (baud rate, etc.)
             dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
             if (!GetCommState(hSerial, &dcbSerialParams)) {
@@ -215,6 +240,7 @@ void*
         if (ret) {
         }
         while (1) {
+            isoff = serial_module_isoff(p);
             if (isoff) {
                 break;
             }
