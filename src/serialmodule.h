@@ -44,10 +44,10 @@ extern "C" {
 	} SP_SERIAL_INPUT_ST;
 
 DLL_API_SERIAL_MODULE int
-	serial_module_create(void*);
+	spserial_module_create(void*);
 
 DLL_API_SERIAL_MODULE int
-	serial_module_setoff(int id);
+	spserial_module_setoff(int id);
 
 
 #ifdef __cplusplus

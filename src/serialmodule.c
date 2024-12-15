@@ -82,20 +82,20 @@ static void*
     spserial_mutex_create();
 
 static int
-    serial_module_openport(void*);
+    spserial_module_openport(void*);
 
-int
-serial_module_create(void *obj) {
+int spserial_module_create(void *obj) 
+{
 	fprintf(stdout, "hi!\n");
 	return 0;
 }
-int
-serial_module_setoff(int iid) {
+int spserial_module_setoff(int iid) 
+{
 	return 0;
 }
 
 int
-serial_module_openport(void* obj) {
+    spserial_module_openport(void* obj) {
 	int ret = 0;
 	int baudrate = 11520;
     SP_SERIAL_INFO_ST* p = (SP_SERIAL_INFO_ST*)obj;
