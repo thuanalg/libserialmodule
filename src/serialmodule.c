@@ -89,6 +89,9 @@ typedef struct __SPSERIAL_ROOT_TYPE__ {
     SPSERIAL_ARR_LIST_LINED* node;
 }SPSERIAL_ROOT_TYPE;
 
+static SPSERIAL_ROOT_TYPE*
+    spserial_root_node = 0;
+
 #ifndef UNIX_LINUX
 static DWORD WINAPI
     spserial_thread_operating_routine(LPVOID lpParam);
@@ -359,6 +362,14 @@ void*
 /*===========================================================================================================================*/
 int spserial_module_write_data(int id, char* data, int sz) {
     int ret = 0;
+    do {
+        spserial_malloc(sizeof(SPSERIAL_ROOT_TYPE), spserial_root_node, SPSERIAL_ROOT_TYPE);
+        if (!spserial_root_node) {
+            exit(1);
+            break;
+        }
+        //TO DO
+    } while (0);
     return ret;
 }
 /*===========================================================================================================================*/
