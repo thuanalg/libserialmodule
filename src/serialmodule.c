@@ -19,39 +19,9 @@
 
 
 
-//#define spserial_malloc(__nn__, __obj__, __type__) { (__obj__) = (__type__*) malloc(__nn__); if(__obj__) \
-//	{spllog(0, "Malloc: 0x%p\n", (__obj__)); memset((__obj__), 0, (__nn__));} \
-//	else {spllog(SPL_LOG_ERROR, "Malloc: error.\n");}} 
-//#define spserial_free(__obj__)   { if(obj) { spllog(0, "Free: %x", (__obj__)); free(__obj__); } }
-
-//#ifndef UNIX_LINUX
-//    #include <Windows.h>
-//    #define YEAR_PADDING								0
-//    #define MONTH_PADDING								0
-//#else
-//    #include <sys/types.h>
-//    #include <sys/stat.h>
-//    #include <pthread.h>
-//    #include <semaphore.h>
-//    #include <unistd.h>
-//    #include <sys/mman.h>
-//    #include <sys/stat.h> /* For mode constants */
-//    #include <fcntl.h> /* For O_* constants */
-//    #include <errno.h>
-//    
-//    #define YEAR_PADDING								1900
-//    #define MONTH_PADDING								1
-//    
-//    #define SPL_LOG_UNIX__SHARED_MODE					(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)	
-//    #define SPL_LOG_UNIX_CREATE_MODE					(O_CREAT | O_RDWR | O_EXCL)	
-//    #define SPL_LOG_UNIX_OPEN_MODE						(O_RDWR | O_EXCL)	
-//    #define SPL_LOG_UNIX_PROT_FLAGS						(PROT_READ | PROT_WRITE | PROT_EXEC)		
-//
-//#endif
-
-//#ifndef UNIX_LINUX
-//#else
-//#endif
+#ifndef UNIX_LINUX
+#else
+#endif
 
 typedef struct __SP_SERIAL_INFO_ST__ {
     int
