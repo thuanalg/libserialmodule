@@ -311,18 +311,23 @@ void*
             }
             memset(&csta, 0, sizeof(csta));
             ClearCommError(p->handle, &dwError, &csta);
-            if (csta.cbInQue > 0) {
+            if (csta.cbInQue > 0) 
+            {
                 cbInQue = csta.cbInQue;
                 bytesRead = 0;
                 memset(readBuffer, 0, sizeof(readBuffer));
                 rs = ReadFile(p->handle, readBuffer, SPSERIAL_BUFFER_SIZE, &bytesRead, &olRead);
                 memset(&csta, 0, sizeof(csta));
                 ClearCommError(p->handle, &dwError, &csta);
+                /*cbInQue start 0*/
                 if (csta.cbInQue > 0) {
                     spllog(SPL_LOG_ERROR, "Read Com not finished!!!");
                 }
-                else {
-                    if (p->cb) {
+                else /*else start*/
+                {
+                    /*p->cb start*/
+                    if (p->cb) 
+                    {
                         int n = 1 + sizeof(SPSERIAL_MODULE_EVENT) + cbInQue;
                         SP_SERIAL_GENERIC_ST* evt = 0;
                         spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
@@ -335,8 +340,11 @@ void*
                             p->cb(evt);
                         }
                     }
+                    /*p->cb end*/
                 }
+                /*else end*/
             }
+            /*cbInQue end 0*/
             
         }
         p->is_retry = 1;
