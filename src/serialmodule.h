@@ -77,7 +77,7 @@ DLL_API_SERIAL_MODULE int
 	spserial_module_create(void*);
 
 DLL_API_SERIAL_MODULE int
-	spserial_module_setoff(int id);
+	spserial_module_del(int id);
 
 DLL_API_SERIAL_MODULE int
 	spserial_module_write_data(int id, char*, int sz);

@@ -36,12 +36,14 @@ typedef struct __SP_SERIAL_INFO_ST__ {
         port_name[32];
     void*
         hEvent;
+
 #ifndef UNIX_LINUX
     void*
 #else
     int
 #endif
         handle;
+
     void*
         mtx_off;
     SPSERIAL_module_cb
@@ -54,13 +56,14 @@ typedef struct __SPSERIAL_ARR_LIST_LINED__ {
 } SPSERIAL_ARR_LIST_LINED;
 
 typedef struct __SPSERIAL_ROOT_TYPE__ {
+    int n;
     void* mutex;
     void* sem;
     SPSERIAL_ARR_LIST_LINED* node;
 }SPSERIAL_ROOT_TYPE;
 
-static SPSERIAL_ROOT_TYPE*
-    spserial_root_node = 0;
+static SPSERIAL_ROOT_TYPE
+    spserial_root_node;
 
 #ifndef UNIX_LINUX
 static DWORD WINAPI
@@ -82,6 +85,7 @@ static int
 int spserial_module_create(void *obj) 
 {
     int ret = 0;
+    int idd = -1;
     SP_SERIAL_INPUT_ST* p = (SP_SERIAL_INPUT_ST*)obj;
 	fprintf(stdout, "hi!\n");
     do {
@@ -97,14 +101,15 @@ int spserial_module_create(void *obj)
             ret = SPSERIAL_PORT_NAME_ERROR;
             break;
         }
-        // Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation
-        HANDLE hSerial = CreateFile(p->port_name,                 // Port name
+        /* Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation */
+        /* https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea */
+        HANDLE hSerial = CreateFile(p->port_name,                 
             GENERIC_READ | GENERIC_WRITE,
-            0,                          // No sharing
-            0,                          // Default security
-            OPEN_EXISTING,              // Open an existing port
-            FILE_FLAG_OVERLAPPED,       // Asynchronous I/O
-            0);                         // No template file
+            0,                          
+            0,                          
+            OPEN_EXISTING,              
+            FILE_FLAG_OVERLAPPED,       
+            0);                         
 
         if (hSerial == INVALID_HANDLE_VALUE) {
             DWORD dwError = GetLastError();
@@ -112,13 +117,22 @@ int spserial_module_create(void *obj)
             ret = SPSERIAL_PORT_OPEN;
             break;
         }
+       
+        /*
         else {
             CloseHandle(hSerial);
         }
+        */
+        SPSERIAL_ARR_LIST_LINED* obj = 0; 
+        spserial_malloc(sizeof(SPSERIAL_ARR_LIST_LINED), obj, SPSERIAL_ARR_LIST_LINED);
+        if (!spserial_root_node.n && !spserial_root_node.sem) {
+
+        }
     } while (0);
-	return ret;
+
+	return idd;
 }
-int spserial_module_setoff(int iid) 
+int spserial_module_del(int iid) 
 {
 	return 0;
 }
@@ -333,11 +347,7 @@ void*
 int spserial_module_write_data(int id, char* data, int sz) {
     int ret = 0;
     do {
-        spserial_malloc(sizeof(SPSERIAL_ROOT_TYPE), spserial_root_node, SPSERIAL_ROOT_TYPE);
-        if (!spserial_root_node) {
-            exit(1);
-            break;
-        }
+
         //TO DO
     } while (0);
     return ret;
