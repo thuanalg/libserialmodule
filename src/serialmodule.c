@@ -82,9 +82,16 @@ static void*
     spserial_mutex_create();
 static void*
     spserial_sem_create();
-
 static int
     spserial_module_openport(void*);
+static
+    int spserial_mutex_lock(void* obj);
+static int 
+    spserial_mutex_unlock(void* obj);
+static int 
+    spserial_rel_sem(void* sem);
+static int
+    spl_wait_sem(void* sem);
 
 int spserial_module_create(void *obj) 
 {
@@ -412,7 +419,109 @@ int spserial_module_close() {
 /*===========================================================================================================================*/
 int spserial_get_newid() {
     int ret = 0;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     do {
+    } while (0);
+    return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spserial_mutex_lock(void* obj) {
+    int ret = 0;
+#ifndef UNIX_LINUX
+    DWORD err = 0;
+#else
+#endif	
+    do {
+        if (!obj) {
+            ret = SPSERIAL_MUTEX_NULL_ERROR;
+            break;
+        }
+#ifndef UNIX_LINUX
+        err = WaitForSingleObject(obj, INFINITE);
+        if (err != WAIT_OBJECT_0) {
+            ret = 1;
+            break;
+        }
+#else
+        SPL_pthread_mutex_lock((pthread_mutex_t*)obj, ret);
+#endif
+    } while (0);
+    return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spserial_mutex_unlock(void* obj) {
+    int ret = 0;
+#ifndef UNIX_LINUX
+    DWORD done = 0;
+#else
+#endif	
+    do {
+        if (!obj) {
+            ret = SPSERIAL_MUTEX_NULL_ERROR;
+            break;
+        }
+#ifndef UNIX_LINUX
+        done = ReleaseMutex(obj);
+        if (!done) {
+            ret = 1;
+            break;
+        }
+#else
+        SPL_pthread_mutex_unlock((pthread_mutex_t*)obj, ret);
+#endif
+    } while (0);
+    return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spserial_rel_sem(void* sem) {
+    int ret = 0;
+#ifndef UNIX_LINUX
+#else
+    int err = 0, val = 0;
+#endif
+    do {
+        if (!sem) {
+            ret = SPSERIAL_SEM_NULL_ERROR;
+            break;
+        }
+#ifndef UNIX_LINUX
+        ReleaseSemaphore(sem, 1, 0);
+#else
+        err = sem_getvalue((sem_t*)sem, &val);
+        if (!err) {
+            if (val < 1) {
+                SPL_sem_post(sem);
+            }
+        }
+#endif 
+    } while (0);
+    return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spl_wait_sem(void* sem) {
+    int ret = 0;
+#ifndef UNIX_LINUX
+#else
+    int err = 0, val = 0;
+#endif
+    do {
+        if (!sem) {
+            ret = SPSERIAL_SEM_NULL_ERROR;
+            break;
+        }
+#ifndef UNIX_LINUX
+        int iswell = WaitForSingleObject((HANDLE)sem, INFINITE);
+        if (iswell != WAIT_OBJECT_0) {
+            ret = SPSERIAL_SEM_POST_ERROR;
+        }
+#else
+        err = sem_getvalue((sem_t*)sem, &val);
+        if (!err) {
+            if (val < 1) {
+                ret = sem_post((sem_t*)sem);
+            }
+        }
+#endif 
     } while (0);
     return ret;
 }
