@@ -9,6 +9,7 @@ int main(int argc, char *argv[]) {
 	FILE* fp = 0;
 	int myid = 0;
 	int ret = 0;
+	memset(&obj, 0, sizeof(obj));
 	snprintf(obj.port_name, SPSERIAL_PORT_LEN, "COM2");
 	obj.baudrate = 115200;
 	ret = spserial_module_init();
