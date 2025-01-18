@@ -40,7 +40,7 @@ typedef struct __SP_SERIAL_INFO_ST__ {
     int
         baudrate;
     char
-        port_name[32];
+        port_name[SPSERIAL_PORT_LEN];
     void*
         hEvent;
 
@@ -154,7 +154,12 @@ int spserial_module_create(void *obj)
             ret = SPSERIAL_GEN_IDD;
             break;
         }
+        
     } while (0);
+
+    if (input_looper) {
+        spserial_free(input_looper);
+    }
 
 	return ret;
 }
@@ -315,7 +320,8 @@ void*
     spserial_thread_operating_routine(void* arg)
 #endif
 {
-    SP_SERIAL_INFO_ST* p = (SP_SERIAL_INFO_ST*)arg;
+    SPSERIAL_ARR_LIST_LINED* pp = (SPSERIAL_ARR_LIST_LINED*)arg;
+    SP_SERIAL_INFO_ST* p = pp->item;
     int isoff = 0;
     int ret = 0;
     while (1) {
@@ -354,43 +360,41 @@ void*
             }
             memset(&csta, 0, sizeof(csta));
             ClearCommError(p->handle, &dwError, &csta);
-            /*cbInQue start 0*/
-            if (csta.cbInQue > 0) 
-            {
-                cbInQue = csta.cbInQue;
-                bytesRead = 0;
-                memset(readBuffer, 0, sizeof(readBuffer));
-                rs = ReadFile(p->handle, readBuffer, SPSERIAL_BUFFER_SIZE, &bytesRead, &olRead);
-                memset(&csta, 0, sizeof(csta));
-                ClearCommError(p->handle, &dwError, &csta);
-               
-                if (csta.cbInQue > 0) {
-                    spllog(SPL_LOG_ERROR, "Read Com not finished!!!");
-                }
-                else /*else start*/
-                {
-                    /*p->cb start*/
-                    if (p->cb) 
-                    {
-                        int n = 1 + sizeof(SPSERIAL_MODULE_EVENT) + cbInQue;
-                        SP_SERIAL_GENERIC_ST* evt = 0;
-                        spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
-                        if (evt) 
-                        {
-                            evt->total = n;
-                            evt->type = SPSERIAL_EVENT_READ_BUF;
-                            evt->pl = cbInQue;
-                            evt->pc = 0;
-                            memcpy(evt->data, readBuffer, cbInQue);
-                            p->cb(evt);
-                        }
-                    }
-                    /*p->cb end*/
-                }
-                /*else end*/
+            if (!csta.cbInQue) {
+                spl_console_log("ClearCommError");
+                //ResetEvent(p->hEvent);
+                continue;
             }
-            /*cbInQue end 0*/
+            cbInQue = csta.cbInQue;
+            bytesRead = 0;
+            memset(readBuffer, 0, sizeof(readBuffer));
+            rs = ReadFile(p->handle, readBuffer, SPSERIAL_BUFFER_SIZE, &bytesRead, &olRead);
+            memset(&csta, 0, sizeof(csta));
+            ClearCommError(p->handle, &dwError, &csta);
             
+            if (csta.cbInQue > 0) {
+                spllog(SPL_LOG_ERROR, "Read Com not finished!!!");
+            }
+            else /*else start*/
+            {
+                /*p->cb start*/
+                if (p->cb) 
+                {
+                    int n = 1 + sizeof(SPSERIAL_MODULE_EVENT) + cbInQue;
+                    SP_SERIAL_GENERIC_ST* evt = 0;
+                    spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
+                    if (evt) 
+                    {
+                        evt->total = n;
+                        evt->type = SPSERIAL_EVENT_READ_BUF;
+                        evt->pl = cbInQue;
+                        evt->pc = 0;
+                        memcpy(evt->data, readBuffer, cbInQue);
+                        p->cb(evt);
+                    }
+                }
+                /*p->cb end*/
+            }
         }
         p->is_retry = 1;
     }
@@ -430,13 +434,13 @@ int spserial_module_close() {
 int spserial_get_newid(SP_SERIAL_INPUT_ST *p, int *idd) {
     int ret = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-    SPSERIAL_ARR_LIST_LINED* obj;
+    SPSERIAL_ARR_LIST_LINED* obj = 0;
     do {
-        if (t->mutex) {
+        if (!t->mutex) {
             ret = SPSERIAL_MUTEX_NULL_ERROR;
             break;
         }
-        if (t->sem) {
+        if (!t->sem) {
             ret = SPSERIAL_SEM_NULL_ERROR;
             break;
         }
@@ -450,7 +454,11 @@ int spserial_get_newid(SP_SERIAL_INPUT_ST *p, int *idd) {
             ret = SPSERIAL_MEM_NULL;
             break;
         }
-        obj->item = p;
+        spserial_malloc(sizeof(SP_SERIAL_INFO_ST), obj->item, SP_SERIAL_INFO_ST)
+        if (!obj->item) {
+            ret = SPSERIAL_MEM_NULL;
+            break;
+        }
         spserial_mutex_lock(t->mutex);
         /*do {*/
             t->n++;
@@ -465,7 +473,16 @@ int spserial_get_newid(SP_SERIAL_INPUT_ST *p, int *idd) {
             }
         /* } while (0);*/
         spserial_mutex_unlock(t->mutex);
+        
+        snprintf(obj->item->port_name, SPSERIAL_PORT_LEN, "%s", p->port_name);
+        obj->item->baudrate = p->baudrate;
+        obj->item->cb = p->cb;
+        obj->item->iidd = *idd;
+        ret = spserial_create_thread(spserial_thread_operating_routine, obj);
     } while (0);
+    if (ret) {
+        spserial_free(obj);
+    }
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -507,6 +524,8 @@ int spserial_mutex_unlock(void* obj) {
 #ifndef UNIX_LINUX
         done = ReleaseMutex(obj);
         if (!done) {
+            DWORD dwError = GetLastError();
+            spllog(SPL_LOG_ERROR, "WaitForSingleObject errcode: %lu", dwError);
             ret = 1;
             break;
         }
@@ -535,6 +554,9 @@ int spserial_rel_sem(void* sem) {
         if (!err) {
             if (val < 1) {
                 ret = sem_post((sem_t*)sem);
+                if (ret) {
+                    spl_console_log("sem_post: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+                }
             }
         }
 #endif 
@@ -567,13 +589,12 @@ int spserial_wait_sem(void* sem) {
 
 int spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg) {
     int ret = 0;
-    //spl_console_log("===============================================f: %p, arg: %p", f, arg);
 #ifndef UNIX_LINUX
     DWORD dwThreadId = 0;
     HANDLE hThread = 0;
     hThread = CreateThread(NULL, 0, f, arg, 0, &dwThreadId);
     if (!hThread) {
-        ret = SPL_LOG_THREAD_W32_CREATE;
+        ret = SPSERIAL_THREAD_W32_CREATE;
         spl_console_log("CreateThread error: %d", (int)GetLastError());
     }
 #else
