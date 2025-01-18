@@ -78,6 +78,8 @@ static
 
 static void* 
     spserial_mutex_create();
+static void*
+    spserial_sem_create();
 
 static int
     spserial_module_openport(void*);
@@ -238,6 +240,25 @@ int
 	return ret;
 }
 /*===========================================================================================================================*/
+void* spserial_sem_create() {
+    //hd = CreateSemaphoreA(0, 0, 1, nameobj);
+    void* ret = 0;
+    do {
+#ifndef UNIX_LINUX
+        ret = CreateSemaphoreA(0, 0, 1, 0);
+#else
+        /*https://linux.die.net/man/3/sem_init*/
+        spserial_malloc(sizeof(sem_t), ret, void);
+        if (!ret) {
+            break;
+        }
+        memset(ret, 0, sizeof(sem_t));
+        sem_init((sem_t*)ret, 0, 1);
+#endif 
+    } while (0);
+    return ret;
+}
+/*===========================================================================================================================*/
 void* spserial_mutex_create() {
     void* ret = 0;
     do {
@@ -245,8 +266,7 @@ void* spserial_mutex_create() {
         ret = CreateMutexA(0, 0, 0);
 #else
         /*https://linux.die.net/man/3/pthread_mutex_init*/
-        spl_malloc(sizeof(pthread_mutex_t), ret, void);
-        //ret = malloc(sizeof(pthread_mutex_t));
+        spserial_malloc(sizeof(pthread_mutex_t), ret, void);
         if (!ret) {
             break;
         }
@@ -311,6 +331,7 @@ void*
             }
             memset(&csta, 0, sizeof(csta));
             ClearCommError(p->handle, &dwError, &csta);
+            /*cbInQue start 0*/
             if (csta.cbInQue > 0) 
             {
                 cbInQue = csta.cbInQue;
@@ -319,7 +340,7 @@ void*
                 rs = ReadFile(p->handle, readBuffer, SPSERIAL_BUFFER_SIZE, &bytesRead, &olRead);
                 memset(&csta, 0, sizeof(csta));
                 ClearCommError(p->handle, &dwError, &csta);
-                /*cbInQue start 0*/
+               
                 if (csta.cbInQue > 0) {
                     spllog(SPL_LOG_ERROR, "Read Com not finished!!!");
                 }
@@ -362,7 +383,15 @@ int spserial_module_write_data(int id, char* data, int sz) {
 }
 /*===========================================================================================================================*/
 int spserial_module_init() {
-    return 0;
+    int ret = 0;
+    do {
+        spserial_root_node.mutex = spserial_mutex_create();
+        if (!spserial_root_node.mutex) {
+            ret = SPSERIAL_MTX_CREATE;
+            break;
+        }
+    } while (0);
+    return ret;
 }
 /*===========================================================================================================================*/
 int spserial_module_close() {
