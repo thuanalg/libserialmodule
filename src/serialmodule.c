@@ -75,6 +75,8 @@ static void*
 
 static
     int spserial_module_isoff(SP_SERIAL_INFO_ST* obj);
+static
+    int spserial_get_newid();
 
 static void* 
     spserial_mutex_create();
@@ -87,8 +89,9 @@ static int
 int spserial_module_create(void *obj) 
 {
     int ret = 0;
-    int idd = -1;
+    int idd = 0;
     SP_SERIAL_INPUT_ST* p = (SP_SERIAL_INPUT_ST*)obj;
+    SP_SERIAL_INPUT_ST* input_looper = 0;
 	fprintf(stdout, "hi!\n");
     do {
         if (!p) {
@@ -122,10 +125,17 @@ int spserial_module_create(void *obj)
         else {
             CloseHandle(hSerial);
         }
-        SPSERIAL_ARR_LIST_LINED* obj = 0; 
-        spserial_malloc(sizeof(SPSERIAL_ARR_LIST_LINED), obj, SPSERIAL_ARR_LIST_LINED);
-        if (!spserial_root_node.n && !spserial_root_node.sem) {
-
+        /*Validate parameter is done.*/
+        spserial_malloc(sizeof(SP_SERIAL_INPUT_ST), input_looper, SP_SERIAL_INPUT_ST);
+        if (!input_looper) {
+            ret = SPSERIAL_MEM_NULL;
+            break;
+        }
+        memcpy(input_looper, p, sizeof(SP_SERIAL_INPUT_ST));
+        idd = spserial_get_newid();
+        if (idd < 1) {
+            ret = SPSERIAL_GEN_IDD;
+            break;
         }
     } while (0);
 
@@ -400,5 +410,9 @@ int spserial_module_close() {
     return 0;
 }
 /*===========================================================================================================================*/
+int spserial_get_newid() {
+    int ret = 0;
+    return ret;
+}
 /*===========================================================================================================================*/
 /*===========================================================================================================================*/
