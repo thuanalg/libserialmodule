@@ -549,6 +549,8 @@ int spl_wait_sem(void* sem) {
 #ifndef UNIX_LINUX
         int iswell = WaitForSingleObject((HANDLE)sem, INFINITE);
         if (iswell != WAIT_OBJECT_0) {
+            DWORD dwError = GetLastError();
+            spllog(SPL_LOG_ERROR, "WaitForSingleObject errcode: %lu", dwError);
             ret = SPSERIAL_SEM_POST_ERROR;
         }
 #else
