@@ -347,6 +347,7 @@ void*
             if (isoff) {
                 break;
             }
+            rs = SetCommMask(p->handle, flags);
             dwEvtMask = 0;
             rs = WaitCommEvent(p->handle, &dwEvtMask, &olRead);
             if (!rs) {
@@ -361,8 +362,7 @@ void*
             memset(&csta, 0, sizeof(csta));
             ClearCommError(p->handle, &dwError, &csta);
             if (!csta.cbInQue) {
-                spl_console_log("ClearCommError");
-                //ResetEvent(p->hEvent);
+                WaitForSingleObject(p->hEvent, INFINITE);
                 continue;
             }
             cbInQue = csta.cbInQue;
