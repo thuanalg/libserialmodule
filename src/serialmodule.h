@@ -24,7 +24,7 @@ extern "C" {
 #else
 	#define DLL_API_SERIAL_MODULE
 #endif /*! UNIX_LINUX */ 
-
+#define SPSERIAL_PORT_LEN						32
 #ifndef LLU
 	#define LLU				unsigned long long
 #endif
@@ -43,6 +43,7 @@ extern "C" {
 		SPSERIAL_PORT_BAUDRATE_ERROR,
 		SPSERIAL_PORT_NAME_ERROR,
 		SPSERIAL_MTX_CREATE,
+		SPSERIAL_SEM_CREATE,
 
 
 		SPSERIAL_PORT_PEAK,
@@ -63,7 +64,7 @@ extern "C" {
 		int
 			baudrate;
 		char
-			port_name[32];
+			port_name[SPSERIAL_PORT_LEN];
 		SPSERIAL_module_cb
 			cb;
 	} SP_SERIAL_INPUT_ST;

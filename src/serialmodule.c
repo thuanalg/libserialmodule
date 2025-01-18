@@ -119,12 +119,9 @@ int spserial_module_create(void *obj)
             ret = SPSERIAL_PORT_OPEN;
             break;
         }
-       
-        /*
         else {
             CloseHandle(hSerial);
         }
-        */
         SPSERIAL_ARR_LIST_LINED* obj = 0; 
         spserial_malloc(sizeof(SPSERIAL_ARR_LIST_LINED), obj, SPSERIAL_ARR_LIST_LINED);
         if (!spserial_root_node.n && !spserial_root_node.sem) {
@@ -139,8 +136,7 @@ int spserial_module_del(int iid)
 	return 0;
 }
 
-int
-    spserial_module_openport(void* obj) {
+int spserial_module_openport(void* obj) {
 	int ret = 0;
 	//int baudrate = 11520;
     SP_SERIAL_INFO_ST* p = (SP_SERIAL_INFO_ST*)obj;
@@ -352,7 +348,8 @@ void*
                         int n = 1 + sizeof(SPSERIAL_MODULE_EVENT) + cbInQue;
                         SP_SERIAL_GENERIC_ST* evt = 0;
                         spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
-                        if (evt) {
+                        if (evt) 
+                        {
                             evt->total = n;
                             evt->type = SPSERIAL_EVENT_READ_BUF;
                             evt->pl = cbInQue;
@@ -388,6 +385,11 @@ int spserial_module_init() {
         spserial_root_node.mutex = spserial_mutex_create();
         if (!spserial_root_node.mutex) {
             ret = SPSERIAL_MTX_CREATE;
+            break;
+        }
+        spserial_root_node.sem = spserial_sem_create();
+        if (!spserial_root_node.mutex) {
+            ret = SPSERIAL_SEM_CREATE;
             break;
         }
     } while (0);
