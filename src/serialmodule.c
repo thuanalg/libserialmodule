@@ -19,6 +19,11 @@
 
 #define SPSERIAL_BUFFER_SIZE        2048
 
+#ifndef UNIX_LINUX
+    #define SP_SERIAL_THREAD_ROUTINE LPTHREAD_START_ROUTINE
+#else
+    typedef void* (*SP_SERIAL_THREAD_ROUTINE)(void*);
+#endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef UNIX_LINUX
@@ -94,7 +99,9 @@ static int
 static int 
     spserial_rel_sem(void* sem);
 static int
-    spl_wait_sem(void* sem);
+    spserial_wait_sem(void* sem);
+static int
+    spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg);
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_create(void *obj) 
 {
@@ -527,7 +534,7 @@ int spserial_rel_sem(void* sem) {
         err = sem_getvalue((sem_t*)sem, &val);
         if (!err) {
             if (val < 1) {
-                SPL_sem_post(sem);
+                ret = sem_post((sem_t*)sem);
             }
         }
 #endif 
@@ -535,12 +542,8 @@ int spserial_rel_sem(void* sem) {
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spl_wait_sem(void* sem) {
+int spserial_wait_sem(void* sem) {
     int ret = 0;
-#ifndef UNIX_LINUX
-#else
-    int err = 0, val = 0;
-#endif
     do {
         if (!sem) {
             ret = SPSERIAL_SEM_NULL_ERROR;
@@ -554,15 +557,33 @@ int spl_wait_sem(void* sem) {
             ret = SPSERIAL_SEM_POST_ERROR;
         }
 #else
-        err = sem_getvalue((sem_t*)sem, &val);
-        if (!err) {
-            if (val < 1) {
-                ret = sem_post((sem_t*)sem);
-            }
-        }
+        ret = sem_wait((sem_t*)sem);
 #endif 
     } while (0);
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+
+int spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg) {
+    int ret = 0;
+    //spl_console_log("===============================================f: %p, arg: %p", f, arg);
+#ifndef UNIX_LINUX
+    DWORD dwThreadId = 0;
+    HANDLE hThread = 0;
+    hThread = CreateThread(NULL, 0, f, arg, 0, &dwThreadId);
+    if (!hThread) {
+        ret = SPL_LOG_THREAD_W32_CREATE;
+        spl_console_log("CreateThread error: %d", (int)GetLastError());
+    }
+#else
+    pthread_t tidd = 0;
+    ret = pthread_create(&tidd, 0, f, arg);
+    if (ret) {
+        ret = SPL_LOG_THREAD_PX_CREATE;
+        spl_console_log("pthread_create: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+    }
+#endif
+    return ret;
+}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
