@@ -61,7 +61,8 @@ typedef struct __SPSERIAL_ROOT_TYPE__ {
     int n;
     void* mutex;
     void* sem;
-    SPSERIAL_ARR_LIST_LINED* node;
+    SPSERIAL_ARR_LIST_LINED* init_node;
+    SPSERIAL_ARR_LIST_LINED* last_node;
 }SPSERIAL_ROOT_TYPE;
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 static SPSERIAL_ROOT_TYPE
@@ -78,7 +79,7 @@ static void*
 static
     int spserial_module_isoff(SP_SERIAL_INFO_ST* obj);
 static
-    int spserial_get_newid();
+    int spserial_get_newid(SP_SERIAL_INPUT_ST *, int *);
 
 static void* 
     spserial_mutex_create();
@@ -98,9 +99,9 @@ static int
 int spserial_module_create(void *obj) 
 {
     int ret = 0;
-    int idd = 0;
     SP_SERIAL_INPUT_ST* p = (SP_SERIAL_INPUT_ST*)obj;
     SP_SERIAL_INPUT_ST* input_looper = 0;
+    int idd = 0;
 	fprintf(stdout, "hi!\n");
     do {
         if (!p) {
@@ -141,14 +142,14 @@ int spserial_module_create(void *obj)
             break;
         }
         memcpy(input_looper, p, sizeof(SP_SERIAL_INPUT_ST));
-        idd = spserial_get_newid();
+        ret = spserial_get_newid(input_looper, &idd);
         if (idd < 1) {
             ret = SPSERIAL_GEN_IDD;
             break;
         }
     } while (0);
 
-	return idd;
+	return ret;
 }
 int spserial_module_del(int iid) 
 {
@@ -254,7 +255,7 @@ int spserial_module_openport(void* obj) {
     //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	return ret;
 }
-/*===========================================================================================================================*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void* spserial_sem_create() {
     //hd = CreateSemaphoreA(0, 0, 1, nameobj);
     void* ret = 0;
@@ -273,7 +274,7 @@ void* spserial_sem_create() {
     } while (0);
     return ret;
 }
-/*===========================================================================================================================*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void* spserial_mutex_create() {
     void* ret = 0;
     do {
@@ -291,14 +292,14 @@ void* spserial_mutex_create() {
     } while (0);
     return ret;
 }
-/*===========================================================================================================================*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_isoff(SP_SERIAL_INFO_ST* obj) {
     int ret = 0;
     ret = obj->isoff;
     return ret;
 }
 
-/*===========================================================================================================================*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 DWORD WINAPI
     spserial_thread_operating_routine(LPVOID arg)
@@ -388,7 +389,7 @@ void*
     }
     return 0;
 }
-/*===========================================================================================================================*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_write_data(int id, char* data, int sz) {
     int ret = 0;
     do {
@@ -397,7 +398,7 @@ int spserial_module_write_data(int id, char* data, int sz) {
     } while (0);
     return ret;
 }
-/*===========================================================================================================================*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_init() {
     int ret = 0;
     do {
@@ -414,15 +415,49 @@ int spserial_module_init() {
     } while (0);
     return ret;
 }
-/*===========================================================================================================================*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_close() {
     return 0;
 }
-/*===========================================================================================================================*/
-int spserial_get_newid() {
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spserial_get_newid(SP_SERIAL_INPUT_ST *p, int *idd) {
     int ret = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+    SPSERIAL_ARR_LIST_LINED* obj;
     do {
+        if (t->mutex) {
+            ret = SPSERIAL_MUTEX_NULL_ERROR;
+            break;
+        }
+        if (t->sem) {
+            ret = SPSERIAL_SEM_NULL_ERROR;
+            break;
+        }
+        //SPSERIAL_ARR_LIST_LINED
+        if (!p) {
+            ret = SPSERIAL_INPUT_NULL_ERROR;
+            break;
+        }
+        spserial_malloc(sizeof(SPSERIAL_ARR_LIST_LINED), obj, SPSERIAL_ARR_LIST_LINED);
+        if (!obj) {
+            ret = SPSERIAL_MEM_NULL;
+            break;
+        }
+        obj->item = p;
+        spserial_mutex_lock(t->mutex);
+        /*do {*/
+            t->n++;
+            (*idd) = t->n;
+            if (!t->init_node) {
+                t->init_node = obj;
+                t->last_node = obj;
+            }
+            else {
+                t->last_node->next = obj;
+                t->last_node = obj;
+            }
+        /* } while (0);*/
+        spserial_mutex_unlock(t->mutex);
     } while (0);
     return ret;
 }
@@ -527,5 +562,5 @@ int spl_wait_sem(void* sem) {
     } while (0);
     return ret;
 }
-/*===========================================================================================================================*/
-/*===========================================================================================================================*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
