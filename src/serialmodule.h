@@ -3,9 +3,10 @@
 #include <simplelog.h>
 
 #define spserial_malloc(__nn__, __obj__, __type__) { (__obj__) = (__type__*) malloc(__nn__); if(__obj__) \
-	{spllog(0, "Malloc: 0x%p\n", (__obj__)); memset((__obj__), 0, (__nn__));} \
-	else {spllog(0, "Malloc: error.\n");}} 
-#define spserial_free(__obj__)   { if(obj) { spllog(0, "Free: 0x%p", (__obj__)); free(__obj__); } }
+	{spllog(0, "Malloc: 0x%p.", (__obj__)); memset((__obj__), 0, (__nn__));} \
+	else {spllog(0, "Malloc: error.");}} 
+
+#define spserial_free(__obj__)   { if(__obj__) { spllog(0, "Free: 0x%p.", (__obj__)); free(__obj__); } }
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,6 +34,7 @@ extern "C" {
 		SPSERIAL_PORT_OK,
 		SPSERIAL_PORT_INFO_NULL,
 		SPSERIAL_PORT_INPUT_NULL,
+		SPSERIAL_IDD_NULL,
 		SPSERIAL_PORT_OPEN,
 		SPSERIAL_PORT_COMMSTATE,
 		SPSERIAL_PORT_GETCOMMSTATE,
@@ -84,7 +86,7 @@ DLL_API_SERIAL_MODULE int
 	spserial_module_close();
 
 DLL_API_SERIAL_MODULE int
-	spserial_module_create(void*);
+	spserial_module_create(void*, int *);
 
 DLL_API_SERIAL_MODULE int
 	spserial_module_del(int id);

@@ -65,8 +65,10 @@ typedef struct __SPSERIAL_ARR_LIST_LINED__ {
 
 typedef struct __SPSERIAL_ROOT_TYPE__ {
     int n;
+    int count;
     void* mutex;
     void* sem;
+    void* sem_off;
     SPSERIAL_ARR_LIST_LINED* init_node;
     SPSERIAL_ARR_LIST_LINED* last_node;
 }SPSERIAL_ROOT_TYPE;
@@ -85,7 +87,7 @@ static void*
 static
     int spserial_module_isoff(SP_SERIAL_INFO_ST* obj);
 static
-    int spserial_get_objbyid(int, void **obj);
+    int spserial_get_objbyid(int, void **obj, int);
 static
     int spserial_get_newid(SP_SERIAL_INPUT_ST *, int *);
 static void* 
@@ -105,14 +107,18 @@ static int
 static int
     spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg);
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_module_create(void *obj) 
+int spserial_module_create(void *obj, int  *idd) 
 {
     int ret = 0;
     SP_SERIAL_INPUT_ST* p = (SP_SERIAL_INPUT_ST*)obj;
     SP_SERIAL_INPUT_ST* input_looper = 0;
-    int idd = 0;
+    //int idd = 0;
 	fprintf(stdout, "hi!\n");
     do {
+        if (!idd) {
+            ret = SPSERIAL_IDD_NULL;
+            break;
+        }
         if (!p) {
             ret = SPSERIAL_PORT_INPUT_NULL;
             break;
@@ -151,8 +157,8 @@ int spserial_module_create(void *obj)
             break;
         }
         memcpy(input_looper, p, sizeof(SP_SERIAL_INPUT_ST));
-        ret = spserial_get_newid(input_looper, &idd);
-        if (idd < 1) {
+        ret = spserial_get_newid(input_looper, idd);
+        if ( *idd < 1) {
             ret = SPSERIAL_GEN_IDD;
             break;
         }
@@ -169,8 +175,14 @@ int spserial_module_del(int iid)
 {
     void *p = 0;
     int ret = 0;
+    SPSERIAL_ARR_LIST_LINED* node = 0;
     do {
-        ret = spserial_get_objbyid(iid, &p);
+        ret = spserial_get_objbyid(iid, &p, 1);
+        if (p) {
+            node = (SPSERIAL_ARR_LIST_LINED*)p;
+            spserial_free(node->item);
+            spserial_free(node);
+        }
     } while (0);
 	return 0;
 }
@@ -435,6 +447,9 @@ int spserial_module_init() {
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_close() {
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+    CloseHandle(t->mutex);
+    CloseHandle(t->sem);
     return 0;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -479,6 +494,7 @@ int spserial_get_newid(SP_SERIAL_INPUT_ST *p, int *idd) {
                 t->last_node->next = obj;
                 t->last_node = obj;
             }
+            t->count++;
         /* } while (0);*/
         spserial_mutex_unlock(t->mutex);
         
@@ -604,7 +620,6 @@ int spserial_get_objbyid(int idd, void** obj, int takeoff) {
         }
         spserial_mutex_lock(t->mutex);
         node = t->init_node;
-        prev = node;
         while (node) {
             if (node->item->iidd == idd) {
                 *obj = node;
@@ -612,7 +627,6 @@ int spserial_get_objbyid(int idd, void** obj, int takeoff) {
                     prev = node->prev;
                     next = node->next;
                     if (!prev) {
-
                         if (!next) {
                             t->init_node = 0;
                             t->last_node = 0;
@@ -623,8 +637,16 @@ int spserial_get_objbyid(int idd, void** obj, int takeoff) {
                         }
                     }
                     else {
-                        //if()
+                        if (!next) {
+                            prev->next = 0;
+                            t->last_node = prev;
+                        }
+                        else {
+                            prev->next = next;
+                            next->prev = prev;
+                        }
                     }
+                    t->count--;
                 }
                 break;
             }
