@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
 	myid = spserial_module_create(&obj);
 
 	while (1) {
-		fp = fopen("trigger_serial.txt", "r");
+		fp = fopen("C:/z/serialmodule/win32/Debug/trigger_serial.txt", "r");
 		if (fp) {
 			break;
 		}

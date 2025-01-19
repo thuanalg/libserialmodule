@@ -84,6 +84,8 @@ static void*
 static
     int spserial_module_isoff(SP_SERIAL_INFO_ST* obj);
 static
+    int spserial_get_objbyid(int, void **obj);
+static
     int spserial_get_newid(SP_SERIAL_INPUT_ST *, int *);
 
 static void* 
@@ -165,6 +167,11 @@ int spserial_module_create(void *obj)
 }
 int spserial_module_del(int iid) 
 {
+    void *p = 0;
+    int ret = 0;
+    do {
+        ret = spserial_get_objbyid(iid, &p);
+    } while (0);
 	return 0;
 }
 
@@ -581,6 +588,14 @@ int spserial_wait_sem(void* sem) {
 #else
         ret = sem_wait((sem_t*)sem);
 #endif 
+    } while (0);
+    return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spserial_get_objbyid(int idd, void** obj) {
+    int ret = 0;
+    do {
+
     } while (0);
     return ret;
 }
