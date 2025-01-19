@@ -15,6 +15,7 @@
     #include <fcntl.h> /* For O_* constants */
     #include <errno.h>
 #endif
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #define SPSERIAL_BUFFER_SIZE        2048
@@ -24,11 +25,13 @@
 #else
     typedef void* (*SP_SERIAL_THREAD_ROUTINE)(void*);
 #endif
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef UNIX_LINUX
 #else
 #endif
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 typedef struct __SP_SERIAL_INFO_ST__ {
     int
@@ -73,10 +76,14 @@ typedef struct __SPSERIAL_ROOT_TYPE__ {
     SPSERIAL_ARR_LIST_LINED* init_node;
     SPSERIAL_ARR_LIST_LINED* last_node;
 }SPSERIAL_ROOT_TYPE;
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
 static SPSERIAL_ROOT_TYPE
     spserial_root_node;
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
 #ifndef UNIX_LINUX
 static DWORD WINAPI
     spserial_thread_operating_routine(LPVOID lpParam);
@@ -91,23 +98,28 @@ static
     int spserial_get_objbyid(int, void **obj, int);
 static
     int spserial_get_newid(SP_SERIAL_INPUT_ST *, int *);
-static void* 
+static int
+    spserial_module_openport(void*);
+static int
+    spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg);
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/* Group of sync tool. */
+static void*
     spserial_mutex_create();
 static void*
     spserial_sem_create();
+static  int 
+    spserial_mutex_lock(void* obj);
 static int
-    spserial_module_openport(void*);
-static
-    int spserial_mutex_lock(void* obj);
-static int 
     spserial_mutex_unlock(void* obj);
-static int 
+static int
     spserial_rel_sem(void* sem);
 static int
     spserial_wait_sem(void* sem);
-static int
-    spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg);
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
 int spserial_module_create(void *obj, int  *idd) 
 {
     int ret = 0;
