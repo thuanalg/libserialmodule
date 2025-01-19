@@ -41,10 +41,9 @@ typedef struct __SP_SERIAL_INFO_ST__ {
         baudrate;
     char
         port_name[SPSERIAL_PORT_LEN];
+#ifndef UNIX_LINUX
     void*
         hEvent;
-
-#ifndef UNIX_LINUX
     void*
 #else
     int
@@ -53,6 +52,8 @@ typedef struct __SP_SERIAL_INFO_ST__ {
 
     void*
         mtx_off;
+    void* 
+        sem_off;    /*It need to wait for completing.*/
     SPSERIAL_module_cb
         cb;
 } SP_SERIAL_INFO_ST;
@@ -68,7 +69,7 @@ typedef struct __SPSERIAL_ROOT_TYPE__ {
     int count;
     void* mutex;
     void* sem;
-    void* sem_off;
+    
     SPSERIAL_ARR_LIST_LINED* init_node;
     SPSERIAL_ARR_LIST_LINED* last_node;
 }SPSERIAL_ROOT_TYPE;
@@ -180,6 +181,12 @@ int spserial_module_del(int iid)
         ret = spserial_get_objbyid(iid, &p, 1);
         if (p) {
             node = (SPSERIAL_ARR_LIST_LINED*)p;
+            spserial_mutex_lock(node->item->mtx_off);
+                node->item->isoff = 1;
+            spserial_mutex_unlock(node->item->mtx_off);
+            SetEvent(node->item->hEvent);
+
+            WaitForSingleObject(node->item->sem_off, INFINITE);
             spserial_free(node->item);
             spserial_free(node);
         }
@@ -270,6 +277,13 @@ int spserial_module_openport(void* obj) {
              ret = SPSERIAL_PORT_SPSERIAL_MUTEX_CREATE;
              break;
          }
+         p->sem_off = spserial_sem_create();
+         if (!p->sem_off) {
+             DWORD dwError = GetLastError();
+             spllog(SPL_LOG_ERROR, "spserial_sem_create: %lu", dwError);
+             ret = SPSERIAL_PORT_SPSERIAL_SEM_CREATE;
+             break;
+         }
 #else
 #endif
 	} while (0);
@@ -326,7 +340,9 @@ void* spserial_mutex_create() {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_isoff(SP_SERIAL_INFO_ST* obj) {
     int ret = 0;
-    ret = obj->isoff;
+    spserial_mutex_lock(obj->mtx_off);
+        ret = obj->isoff;
+    spserial_mutex_unlock(obj->mtx_off);
     return ret;
 }
 
@@ -417,6 +433,7 @@ void*
         }
         p->is_retry = 1;
     }
+    ReleaseSemaphore(p->sem_off, 1, 0);
     return 0;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
