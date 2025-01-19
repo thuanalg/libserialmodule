@@ -9,6 +9,14 @@ int main(int argc, char *argv[]) {
 	FILE* fp = 0;
 	int myid = 0;
 	int ret = 0;
+	char cfgpath[1024];
+
+#ifndef UNIX_LINUX
+	snprintf(cfgpath, 1024, "C:/z/serialmodule/win32/Debug/simplelog.cfg");
+#else
+	snprintf(cfgpath, 1024, "simplelog.cfg");
+#endif
+	ret = spl_init_log(cfgpath);
 	memset(&obj, 0, sizeof(obj));
 	snprintf(obj.port_name, SPSERIAL_PORT_LEN, "COM2");
 	obj.baudrate = 115200;
@@ -32,6 +40,7 @@ int main(int argc, char *argv[]) {
 		spserial_module_del(myid);
 	}
 	spserial_module_close();
+	spl_finish_log();
 	return 0;
 }
 

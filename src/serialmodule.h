@@ -3,9 +3,9 @@
 #include <simplelog.h>
 
 #define spserial_malloc(__nn__, __obj__, __type__) { (__obj__) = (__type__*) malloc(__nn__); if(__obj__) \
-	{spl_console_log("Malloc: 0x%p\n", (__obj__)); memset((__obj__), 0, (__nn__));} \
-	else {spl_console_log("Malloc: error.\n");}} 
-#define spserial_free(__obj__)   { if(obj) { spl_console_log("Free: %x", (__obj__)); free(__obj__); } }
+	{spllog(0, "Malloc: 0x%p\n", (__obj__)); memset((__obj__), 0, (__nn__));} \
+	else {spllog(0, "Malloc: error.\n");}} 
+#define spserial_free(__obj__)   { if(obj) { spllog(0, "Free: %x", (__obj__)); free(__obj__); } }
 
 #ifdef __cplusplus
 extern "C" {
