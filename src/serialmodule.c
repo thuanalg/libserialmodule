@@ -59,6 +59,7 @@ typedef struct __SP_SERIAL_INFO_ST__ {
 
 typedef struct __SPSERIAL_ARR_LIST_LINED__ {
     SP_SERIAL_INFO_ST *item;
+    struct __SPSERIAL_ARR_LIST_LINED__* prev;
     struct __SPSERIAL_ARR_LIST_LINED__* next;
 } SPSERIAL_ARR_LIST_LINED;
 
@@ -87,7 +88,6 @@ static
     int spserial_get_objbyid(int, void **obj);
 static
     int spserial_get_newid(SP_SERIAL_INPUT_ST *, int *);
-
 static void* 
     spserial_mutex_create();
 static void*
@@ -475,6 +475,7 @@ int spserial_get_newid(SP_SERIAL_INPUT_ST *p, int *idd) {
                 t->last_node = obj;
             }
             else {
+                obj->prev = t->last_node;
                 t->last_node->next = obj;
                 t->last_node = obj;
             }
@@ -592,10 +593,44 @@ int spserial_wait_sem(void* sem) {
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_get_objbyid(int idd, void** obj) {
+int spserial_get_objbyid(int idd, void** obj, int takeoff) {
     int ret = 0;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+    SPSERIAL_ARR_LIST_LINED* node = 0, * prev = 0, *next  = 0;;
     do {
+        if (!obj) {
 
+            break;
+        }
+        spserial_mutex_lock(t->mutex);
+        node = t->init_node;
+        prev = node;
+        while (node) {
+            if (node->item->iidd == idd) {
+                *obj = node;
+                if (takeoff) {
+                    prev = node->prev;
+                    next = node->next;
+                    if (!prev) {
+
+                        if (!next) {
+                            t->init_node = 0;
+                            t->last_node = 0;
+                        }
+                        else {
+                            t->init_node = next;
+                            t->init_node->prev = 0;
+                        }
+                    }
+                    else {
+                        //if()
+                    }
+                }
+                break;
+            }
+            node = node->next;
+        }
+        spserial_mutex_unlock(t->mutex);
     } while (0);
     return ret;
 }
