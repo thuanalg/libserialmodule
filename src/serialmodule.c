@@ -92,16 +92,18 @@ static void*
     spserial_thread_operating_routine(void*);
 #endif
 
-static
-    int spserial_module_isoff(SP_SERIAL_INFO_ST* obj);
-static
-    int spserial_get_objbyid(int, void **obj, int);
-static
-    int spserial_get_newid(SP_SERIAL_INPUT_ST *, int *);
+static int 
+    spserial_module_isoff(SP_SERIAL_INFO_ST* obj);
+static int 
+    spserial_get_objbyid(int, void **obj, int);
+static int 
+    spserial_get_newid(SP_SERIAL_INPUT_ST *, int *);
 static int
     spserial_module_openport(void*);
 static int
     spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg);
+static int 
+    spserial_clear_node(SPSERIAL_ARR_LIST_LINED *);
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* Group of sync tool. */
@@ -193,14 +195,7 @@ int spserial_module_del(int iid)
         ret = spserial_get_objbyid(iid, &p, 1);
         if (p) {
             node = (SPSERIAL_ARR_LIST_LINED*)p;
-            spserial_mutex_lock(node->item->mtx_off);
-                node->item->isoff = 1;
-            spserial_mutex_unlock(node->item->mtx_off);
-            SetEvent(node->item->hEvent);
-
-            WaitForSingleObject(node->item->sem_off, INFINITE);
-            spserial_free(node->item);
-            spserial_free(node);
+            spserial_clear_node(node);
         }
     } while (0);
 	return 0;
@@ -445,6 +440,10 @@ void*
         }
         p->is_retry = 1;
     }
+    CloseHandle(p->handle);
+    p->handle = 0;
+    CloseHandle(p->hEvent);
+    p->hEvent = 0;
     /*ReleaseSemaphore(p->sem_off, 1, 0);*/
     spserial_rel_sem(p->sem_off);
     return 0;
@@ -707,6 +706,21 @@ int spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg) {
         spl_console_log("pthread_create: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
     }
 #endif
+    return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
+    int ret = 0;
+    do {
+        spserial_mutex_lock(node->item->mtx_off);
+        node->item->isoff = 1;
+        spserial_mutex_unlock(node->item->mtx_off);
+        SetEvent(node->item->hEvent);
+
+        WaitForSingleObject(node->item->sem_off, INFINITE);
+        spserial_free(node->item);
+        spserial_free(node);
+    } while (0);
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
