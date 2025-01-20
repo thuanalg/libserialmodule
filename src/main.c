@@ -27,11 +27,12 @@ int main(int argc, char *argv[]) {
 	ret = spserial_module_create(&obj, &myid);
 
 	while (1) {
+		spl_sleep(2);
 		fp = fopen("C:/z/serialmodule/win32/Debug/trigger_serial.txt", "r");
 		if (fp) {
 			break;
 		}
-		spl_sleep(5);
+		spl_sleep(3);
 	}
 	if (fp) {
 		fclose(fp);

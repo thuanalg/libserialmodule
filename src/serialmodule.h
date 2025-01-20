@@ -25,6 +25,9 @@ extern "C" {
 #else
 	#define DLL_API_SERIAL_MODULE
 #endif /*! UNIX_LINUX */ 
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
 #define SPSERIAL_PORT_LEN						32
 #ifndef LLU
 	#define LLU				unsigned long long
@@ -42,6 +45,7 @@ extern "C" {
 		SPSERIAL_PORT_CREATEEVENT,
 		SPSERIAL_PORT_SETCOMMTIMEOUTS,
 		SPSERIAL_PORT_SPSERIAL_MUTEX_CREATE,
+		SPSERIAL_PORT_SPSERIAL_SEM_CREATE,
 		SPSERIAL_PORT_BAUDRATE_ERROR,
 		SPSERIAL_PORT_NAME_ERROR,
 		SPSERIAL_MTX_CREATE,
@@ -53,6 +57,10 @@ extern "C" {
 		SPSERIAL_SEM_POST_ERROR,
 		SPSERIAL_INPUT_NULL_ERROR,
 		SPSERIAL_THREAD_W32_CREATE,
+		SPSERIAL_NOT_FOUND_IDD,
+		SPSERIAL_REALLOC_ERROR,
+		SPSERIAL_MALLOC_ERROR,
+
 
 
 		SPSERIAL_PORT_PEAK,
@@ -64,6 +72,7 @@ extern "C" {
 
 	typedef struct __SP_SERIAL_GENERIC_ST__ {
 		int total;
+		int range;
 		int pl;
 		int pc;
 		int type;
@@ -77,11 +86,61 @@ extern "C" {
 		SPSERIAL_module_cb
 			cb;
 	} SP_SERIAL_INPUT_ST;
-//Should be start before using, non-thread-safe
+	
+	typedef struct __SP_SERIAL_INFO_ST__ {
+		int
+			iidd;
+		char
+			isoff;
+		char
+			is_retry;
+		int
+			baudrate;
+		char
+			port_name[SPSERIAL_PORT_LEN];
+
+#ifndef UNIX_LINUX
+		void*
+			hEvent;
+		void*
+#else
+		int
+#endif
+			handle;
+
+		void*
+			mtx_off;
+		void*
+			sem_off;    /*It need to wait for completing.*/
+		SPSERIAL_module_cb
+			cb;
+		SP_SERIAL_GENERIC_ST*
+			buff;
+	} SP_SERIAL_INFO_ST;
+
+	typedef struct __SPSERIAL_ARR_LIST_LINED__ {
+		SP_SERIAL_INFO_ST* item;
+		struct __SPSERIAL_ARR_LIST_LINED__* prev;
+		struct __SPSERIAL_ARR_LIST_LINED__* next;
+	} SPSERIAL_ARR_LIST_LINED;
+
+	typedef struct __SPSERIAL_ROOT_TYPE__ {
+		int n;
+		int count;
+		void* mutex;
+		void* sem;
+
+		SPSERIAL_ARR_LIST_LINED* init_node;
+		SPSERIAL_ARR_LIST_LINED* last_node;
+	}SPSERIAL_ROOT_TYPE;
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+/*Should be start before using, non - thread - safe*/
 DLL_API_SERIAL_MODULE int
 	spserial_module_init();
 
-//Should be closed to complete use, non-thread-safe
+/*Should be closed to complete use, non - thread - safe */
 DLL_API_SERIAL_MODULE int
 	spserial_module_close();
 
@@ -92,11 +151,16 @@ DLL_API_SERIAL_MODULE int
 	spserial_module_del(int id);
 
 DLL_API_SERIAL_MODULE int
-	spserial_module_write_data(int id, char*, int sz);
+	spserial_module_write_data(int iid, char*, int sz);
 
+DLL_API_SERIAL_MODULE int
+	spserial_get_objbyid(int, void** obj, int);
+
+DLL_API_SERIAL_MODULE int
+	spserial_module_write_to_port(SP_SERIAL_INFO_ST *, char*, int sz);
 #ifdef __cplusplus
 }
 #endif
 
-
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #endif
