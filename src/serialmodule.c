@@ -33,8 +33,9 @@
 #endif
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-
-#define SPSERIAL_BUFFER_SIZE        2048
+#define SPSERIAL_MAX_AB(__a__, __b__)               ((__a__) > (__b__)) ? (__a__) : (__b__)
+#define SPSERIAL_STEP_MEM                           1024
+#define SPSERIAL_BUFFER_SIZE                        2048
 
 #ifndef UNIX_LINUX
     #define SP_SERIAL_THREAD_ROUTINE LPTHREAD_START_ROUTINE
@@ -334,18 +335,17 @@ void*
     spserial_thread_operating_routine(void* arg)
 #endif
 {
+
     SPSERIAL_ARR_LIST_LINED* pp = (SPSERIAL_ARR_LIST_LINED*)arg;
     SP_SERIAL_INFO_ST* p = pp->item;
     int isoff = 0;
     int ret = 0;
+    SP_SERIAL_GENERIC_ST* buf = 0;
+    int step = sizeof(SP_SERIAL_GENERIC_ST) + SPSERIAL_STEP_MEM;
+    spserial_malloc(step, buf, SP_SERIAL_GENERIC_ST);
+    buf->total = step;
+    buf->range = buf->total - sizeof(SP_SERIAL_GENERIC_ST);
     while (1) {
-        isoff = spserial_module_isoff(p);
-        if (isoff) {
-            break;
-        }
-        ret = spserial_module_openport(p);
-        if (ret) {
-        }
         DWORD dwError = 0;
         DWORD dwEvtMask = 0, flags = 0, bytesRead = 0;;
         OVERLAPPED olRead = { 0 };
@@ -355,12 +355,21 @@ void*
         COMSTAT csta = { 0 };
         olRead.hEvent = p->hEvent;
         flags = EV_RXCHAR | EV_BREAK | EV_RXFLAG;
+
+        if (!buf) {
+            break;
+        }
+        isoff = spserial_module_isoff(p);
+        if (isoff) {
+            break;
+        }
+        ret = spserial_module_openport(p);
+        if (ret) {
+        }
         
         while (1) {
             isoff = spserial_module_isoff(p);
-            if (isoff) {
-                break;
-            }
+
             rs = SetCommMask(p->handle, flags);
             dwEvtMask = 0;
             rs = WaitCommEvent(p->handle, &dwEvtMask, &olRead);
@@ -411,7 +420,11 @@ void*
             }
         }
         p->is_retry = 1;
+        if (isoff) {
+            break;
+        }
     }
+    spserial_free(buf);
     SPSERIAL_CloseHandle(p->handle);
     SPSERIAL_CloseHandle(p->hEvent);
     /*ReleaseSemaphore(p->sem_off, 1, 0);*/
@@ -689,11 +702,16 @@ int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_write_to_port(SP_SERIAL_INFO_ST* obj, char*dta, int sz) {
-    return 0;
+    int ret = 0;
+    do {
+        if (!obj) {
+        
+        }
+    } while (0);
+    return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-#define SPSERIAL_MAX_AB(__a__, __b__)               ((__a__) > (__b__)) ? (__a__) : (__b__)
-#define SPSERIAL_STEP_MEM                           1024
+
 int spserial_module_write_data(int idd, char* data, int sz) {
     int ret = 0;
     void* p = 0;
