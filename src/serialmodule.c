@@ -17,6 +17,13 @@
 #endif
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+#ifndef UNIX_LINUX
+#define SPSERIAL_CloseHandle(__obj) \
+		{if(__obj) { int bl = CloseHandle((__obj)); spllog(0, "SPSERIAL_CloseHandle %s", bl ? "DONE": "ERROR"); (__obj) = 0;}}
+#else
+#endif
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #define SPSERIAL_BUFFER_SIZE        2048
 
@@ -116,7 +123,7 @@ int spserial_module_create(void *obj, int  *idd)
             break;
         }
         else {
-            CloseHandle(hSerial);
+            SPSERIAL_CloseHandle(hSerial);
         }
         /*Validate parameter is done.*/
         spserial_malloc(sizeof(SP_SERIAL_INPUT_ST), input_looper, SP_SERIAL_INPUT_ST);
@@ -251,7 +258,7 @@ int spserial_module_openport(void* obj) {
     if (ret && p) {
 #ifndef UNIX_LINUX
         if (p->handle) {
-            CloseHandle(p->handle);
+            SPSERIAL_CloseHandle(p->handle);
             p->handle = 0;
         }
 #else
@@ -394,9 +401,9 @@ void*
         }
         p->is_retry = 1;
     }
-    CloseHandle(p->handle);
+    SPSERIAL_CloseHandle(p->handle);
     p->handle = 0;
-    CloseHandle(p->hEvent);
+    SPSERIAL_CloseHandle(p->hEvent);
     p->hEvent = 0;
     /*ReleaseSemaphore(p->sem_off, 1, 0);*/
     spserial_rel_sem(p->sem_off);
@@ -423,8 +430,8 @@ int spserial_module_init() {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_close() {
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-    CloseHandle(t->mutex);
-    CloseHandle(t->sem);
+    SPSERIAL_CloseHandle(t->mutex);
+    SPSERIAL_CloseHandle(t->sem);
     return 0;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
