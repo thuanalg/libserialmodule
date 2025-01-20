@@ -57,6 +57,10 @@ extern "C" {
 		SPSERIAL_SEM_POST_ERROR,
 		SPSERIAL_INPUT_NULL_ERROR,
 		SPSERIAL_THREAD_W32_CREATE,
+		SPSERIAL_NOT_FOUND_IDD,
+		SPSERIAL_REALLOC_ERROR,
+		SPSERIAL_MALLOC_ERROR,
+
 
 
 		SPSERIAL_PORT_PEAK,
@@ -68,6 +72,7 @@ extern "C" {
 
 	typedef struct __SP_SERIAL_GENERIC_ST__ {
 		int total;
+		int range;
 		int pl;
 		int pc;
 		int type;
@@ -109,6 +114,8 @@ extern "C" {
 			sem_off;    /*It need to wait for completing.*/
 		SPSERIAL_module_cb
 			cb;
+		SP_SERIAL_GENERIC_ST*
+			buff;
 	} SP_SERIAL_INFO_ST;
 
 	typedef struct __SPSERIAL_ARR_LIST_LINED__ {

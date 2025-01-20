@@ -132,6 +132,7 @@ int spserial_module_create(void *obj, int  *idd)
             break;
         }
         else {
+            spllog(0, "Create hSerial: 0x%p.", hSerial);
             SPSERIAL_CloseHandle(hSerial);
         }
         /*Validate parameter is done.*/
@@ -206,7 +207,7 @@ int spserial_module_openport(void* obj) {
              break;
          }
          p->handle = hSerial;
-         spllog(0, "hSerial: 0x%p.", hSerial);
+         spllog(0, "Create hSerial: 0x%p.", hSerial);
          if (p->is_retry) {
              break;
          }
@@ -234,7 +235,7 @@ int spserial_module_openport(void* obj) {
              ret = SPSERIAL_PORT_CREATEEVENT;
              break;
          }
-         spllog(0, "hEvent: 0x%p.", p->hEvent);
+         spllog(0, "Create hEvent: 0x%p.", p->hEvent);
          /* Set timeouts(e.g., read timeout of 500ms, write timeout of 500ms) */
          timeouts.ReadIntervalTimeout = 50;
          timeouts.ReadTotalTimeoutConstant = 500;
@@ -691,10 +692,69 @@ int spserial_module_write_to_port(SP_SERIAL_INFO_ST* obj, char*dta, int sz) {
     return 0;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_module_write_data(int id, char* data, int sz) {
+#define SPSERIAL_MAX_AB(__a__, __b__)               ((__a__) > (__b__)) ? (__a__) : (__b__)
+#define SPSERIAL_STEP_MEM                           1024
+int spserial_module_write_data(int idd, char* data, int sz) {
     int ret = 0;
+    void* p = 0;
+    SPSERIAL_ARR_LIST_LINED* node = 0;
+    SP_SERIAL_INFO_ST* item = 0;
     do {
+        ret = spserial_get_objbyid(idd, &p, 0);
+        if (!p) {
+            ret = SPSERIAL_NOT_FOUND_IDD;
+            break;
+        }
+        node = (SPSERIAL_ARR_LIST_LINED*) p;
+        item = node->item;
+        spserial_mutex_lock(item->mtx_off);
+            do {
+                if (item->buff) {
+                    if (item->buff->range > item->buff->pl + sz) {
+                        memcpy(item->buff->data + item->buff->pl, data, sz);
+                        item->buff->pl += sz;
+                        break;
+                    }
+                    else {
+                        int range = 0;
+                        int total = 0;
+                        int addition = 0; 
+                        SP_SERIAL_GENERIC_ST* tmp = 0;
+                        addition = SPSERIAL_MAX_AB(sz, SPSERIAL_STEP_MEM);
+                        range = item->buff->range;
+                        total = item->buff->total;
+                        tmp = (SP_SERIAL_GENERIC_ST*)realloc(item->buff, total + addition);
+                        if (!tmp) {
+                            ret = SPSERIAL_REALLOC_ERROR;
+                            break;
+                        }
+                        item->buff = tmp;
+                        item->buff->range = addition + range;
+                        item->buff->total = addition + total;
 
+                        memcpy(item->buff->data + item->buff->pl, data, sz);
+                        item->buff->pl += sz;
+                        break;
+                    }
+                }
+                else {
+                    int step = 0;
+                    step = SPSERIAL_MAX_AB(sz, SPSERIAL_STEP_MEM);
+                    step += sizeof(SP_SERIAL_GENERIC_ST);
+                    spserial_malloc(step, item->buff, SP_SERIAL_GENERIC_ST);
+                    if (!item->buff) {
+                        ret = SPSERIAL_MALLOC_ERROR;
+                        break;
+                    }
+                    item->buff->total = step;
+                    item->buff->range = item->buff->total - sizeof(SP_SERIAL_GENERIC_ST);
+                    memcpy(item->buff->data + item->buff->pl, data, sz);
+                    item->buff->pl += sz;
+                    break;
+                }
+            } while (0);
+        spserial_mutex_unlock(item->mtx_off);
+        SetEvent(item->hEvent);
     } while (0);
     return ret;
 }
