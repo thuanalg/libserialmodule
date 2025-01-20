@@ -19,7 +19,15 @@
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #define SPSERIAL_CloseHandle(__obj) \
-		{if(__obj) { int bl = CloseHandle((__obj)); spllog(0, "SPSERIAL_CloseHandle %s", bl ? "DONE": "ERROR"); (__obj) = 0;}}
+		{\
+            if(__obj) { \
+                ;int bl = CloseHandle((__obj));\
+                ;if(!bl) { \
+                    ;spllog(SPL_LOG_ERROR, "CloseHandle error: %lu", GetLastError()); \
+                ;}\
+                ;spllog(0, "SPSERIAL_CloseHandle %s", bl ? "DONE": "ERROR"); (__obj) = 0;\
+            ;}\
+        }
 #else
 #endif
 
