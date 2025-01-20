@@ -32,52 +32,7 @@
 #else
 #endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-typedef struct __SP_SERIAL_INFO_ST__ {
-    int
-        iidd;
-    char
-        isoff;
-    char
-        is_retry;
-    int
-        baudrate;
-    char
-        port_name[SPSERIAL_PORT_LEN];
-#ifndef UNIX_LINUX
-    void*
-        hEvent;
-    void*
-#else
-    int
-#endif
-        handle;
 
-    void*
-        mtx_off;
-    void* 
-        sem_off;    /*It need to wait for completing.*/
-    SPSERIAL_module_cb
-        cb;
-} SP_SERIAL_INFO_ST;
-
-typedef struct __SPSERIAL_ARR_LIST_LINED__ {
-    SP_SERIAL_INFO_ST *item;
-    struct __SPSERIAL_ARR_LIST_LINED__* prev;
-    struct __SPSERIAL_ARR_LIST_LINED__* next;
-} SPSERIAL_ARR_LIST_LINED;
-
-typedef struct __SPSERIAL_ROOT_TYPE__ {
-    int n;
-    int count;
-    void* mutex;
-    void* sem;
-    
-    SPSERIAL_ARR_LIST_LINED* init_node;
-    SPSERIAL_ARR_LIST_LINED* last_node;
-}SPSERIAL_ROOT_TYPE;
-
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 static SPSERIAL_ROOT_TYPE
     spserial_root_node;
@@ -94,8 +49,7 @@ static void*
 
 static int 
     spserial_module_isoff(SP_SERIAL_INFO_ST* obj);
-static int 
-    spserial_get_objbyid(int, void **obj, int);
+
 static int 
     spserial_get_newid(SP_SERIAL_INPUT_ST *, int *);
 static int
@@ -127,7 +81,6 @@ int spserial_module_create(void *obj, int  *idd)
     int ret = 0;
     SP_SERIAL_INPUT_ST* p = (SP_SERIAL_INPUT_ST*)obj;
     SP_SERIAL_INPUT_ST* input_looper = 0;
-    //int idd = 0;
 	fprintf(stdout, "hi!\n");
     do {
         if (!idd) {
@@ -203,9 +156,9 @@ int spserial_module_del(int iid)
 
 int spserial_module_openport(void* obj) {
 	int ret = 0;
-	//int baudrate = 11520;
     SP_SERIAL_INFO_ST* p = (SP_SERIAL_INFO_ST*)obj;
-    //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+    /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 	do {
 #ifndef UNIX_LINUX
 		DCB dcb = {0};
@@ -213,21 +166,21 @@ int spserial_module_openport(void* obj) {
         COMSTAT comStat = {0};
         DWORD dwError = 0;
         BOOL fSuccess = FALSE;
-        DCB dcbSerialParams = { 0 };  // Serial port parameters
+        DCB dcbSerialParams = { 0 };  
         COMMTIMEOUTS timeouts = {0};
         if (!p) {
             ret= SPSERIAL_PORT_INFO_NULL;
             break;
         }
 
-        // Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation
-        hSerial = CreateFile(p->port_name,                 // Port name
+        /*Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation*/
+        hSerial = CreateFile(p->port_name,                 
                             GENERIC_READ | GENERIC_WRITE,
-                            0,                          // No sharing
-                            0,                          // Default security
-                            OPEN_EXISTING,              // Open an existing port
-                            FILE_FLAG_OVERLAPPED,       // Asynchronous I/O
-                            0);                         // No template file
+                            0,                          
+                            0,                          
+                            OPEN_EXISTING,              
+                            FILE_FLAG_OVERLAPPED,       
+                            0);                         
 
          if (hSerial == INVALID_HANDLE_VALUE) {
              DWORD dwError = GetLastError();
@@ -240,7 +193,7 @@ int spserial_module_openport(void* obj) {
          if (p->is_retry) {
              break;
          }
-         // Set up the serial port parameters (baud rate, etc.)
+         /* Set up the serial port parameters(baud rate, etc.) */
          dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
          if (!GetCommState(hSerial, &dcbSerialParams)) {
              DWORD dwError = GetLastError();
@@ -248,8 +201,8 @@ int spserial_module_openport(void* obj) {
              ret = SPSERIAL_PORT_GETCOMMSTATE;
              break;
          }
-         dcbSerialParams.BaudRate = p->baudrate;  // Baud rate
-         dcbSerialParams.ByteSize = 8;         // 8 data bits
+         dcbSerialParams.BaudRate = p->baudrate;  
+         dcbSerialParams.ByteSize = 8;         
          dcbSerialParams.StopBits = ONESTOPBIT;
          dcbSerialParams.Parity = NOPARITY;
          if (!SetCommState(hSerial, &dcbSerialParams)) {
@@ -264,7 +217,7 @@ int spserial_module_openport(void* obj) {
              ret = SPSERIAL_PORT_CREATEEVENT;
              break;
          }
-         // Set timeouts (e.g., read timeout of 500ms, write timeout of 500ms)
+         /* Set timeouts(e.g., read timeout of 500ms, write timeout of 500ms) */
          timeouts.ReadIntervalTimeout = 50;
          timeouts.ReadTotalTimeoutConstant = 500;
          timeouts.ReadTotalTimeoutMultiplier = 10;
@@ -294,7 +247,7 @@ int spserial_module_openport(void* obj) {
 #else
 #endif
 	} while (0);
-    //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
     if (ret && p) {
 #ifndef UNIX_LINUX
         if (p->handle) {
@@ -304,12 +257,11 @@ int spserial_module_openport(void* obj) {
 #else
 #endif
     }
-    //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 	return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void* spserial_sem_create() {
-    //hd = CreateSemaphoreA(0, 0, 1, nameobj);
     void* ret = 0;
     do {
 #ifndef UNIX_LINUX
@@ -324,6 +276,7 @@ void* spserial_sem_create() {
         sem_init((sem_t*)ret, 0, 1);
 #endif 
     } while (0);
+    spllog(0, "Create: 0x%p.", ret);
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -342,6 +295,7 @@ void* spserial_mutex_create() {
         pthread_mutex_init((pthread_mutex_t*)ret, 0);
 #endif 
     } while (0);
+    spllog(0, "Create: 0x%p.", ret);
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -448,15 +402,7 @@ void*
     spserial_rel_sem(p->sem_off);
     return 0;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_module_write_data(int id, char* data, int sz) {
-    int ret = 0;
-    do {
 
-        //TO DO
-    } while (0);
-    return ret;
-}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_init() {
     int ret = 0;
@@ -716,10 +662,21 @@ int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
         node->item->isoff = 1;
         spserial_mutex_unlock(node->item->mtx_off);
         SetEvent(node->item->hEvent);
-
-        WaitForSingleObject(node->item->sem_off, INFINITE);
+		spserial_wait_sem(node->item->sem_off);
         spserial_free(node->item);
         spserial_free(node);
+    } while (0);
+    return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spserial_module_write_to_port(SP_SERIAL_INFO_ST* obj, char*dta, int sz) {
+    return 0;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spserial_module_write_data(int id, char* data, int sz) {
+    int ret = 0;
+    do {
+
     } while (0);
     return ret;
 }
