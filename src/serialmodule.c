@@ -695,6 +695,7 @@ int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
 
         SPSERIAL_CloseHandle(node->item->mtx_off);
         SPSERIAL_CloseHandle(node->item->sem_off);
+        spserial_free(node->item->buff);
         spserial_free(node->item);
         spserial_free(node);
     } while (0);
