@@ -341,6 +341,7 @@ void*
     int isoff = 0;
     int ret = 0;
     SP_SERIAL_GENERIC_ST* buf = 0;
+    int kkkk = 0;
     int step = sizeof(SP_SERIAL_GENERIC_ST) + SPSERIAL_STEP_MEM;
     spserial_malloc(step, buf, SP_SERIAL_GENERIC_ST);
     buf->total = step;
@@ -349,6 +350,7 @@ void*
         DWORD dwError = 0;
         DWORD dwEvtMask = 0, flags = 0, bytesRead = 0;;
         OVERLAPPED olRead = { 0 };
+        OVERLAPPED olRrite = { 0 };
         BOOL rs = FALSE;
         int count = 0, cbInQue = 0;
         char readBuffer[SPSERIAL_BUFFER_SIZE + 1];
@@ -371,7 +373,9 @@ void*
             isoff = spserial_module_isoff(p);
 
             rs = SetCommMask(p->handle, flags);
-            dwEvtMask = 0;
+            dwEvtMask = flags;
+            memset(&olRead, 0, sizeof(olRead));
+            olRead.hEvent = p->hEvent;
             rs = WaitCommEvent(p->handle, &dwEvtMask, &olRead);
             if (!rs) {
                 DWORD dwRet = GetLastError();
@@ -382,9 +386,13 @@ void*
                     break;
                 }
             }
+            else {
+                spl_console_log("WaitCommEvent OK");
+            }
             memset(&csta, 0, sizeof(csta));
             ClearCommError(p->handle, &dwError, &csta);
             if (!csta.cbInQue) {
+                //WaitForSingleObject(p->hEvent, 10);
                 WaitForSingleObject(p->hEvent, INFINITE);
                 continue;
             }
@@ -400,7 +408,20 @@ void*
             }
             else /*else start*/
             {
+                //ResetEvent(p->hEvent);
+                readBuffer[cbInQue] = 0;
+                spllog(0, "%s", readBuffer);
+                spl_console_log("%s", readBuffer);
                 /*p->cb start*/
+                {
+                    int k = 0;
+                    char tbuff[128];
+                    snprintf(tbuff, 128, "%d", kkkk);
+                    memset(&olRrite, 0, sizeof(&olRrite));
+                    olRrite.hEvent = p->hEvent;
+                    WriteFile(p->handle, tbuff, strlen(tbuff), &k, &olRrite);
+                    kkkk++;
+                }
                 if (p->cb) 
                 {
                     int n = 1 + sizeof(SPSERIAL_MODULE_EVENT) + cbInQue;
@@ -419,6 +440,7 @@ void*
                 /*p->cb end*/
             }
         }
+
         p->is_retry = 1;
         if (isoff) {
             break;
