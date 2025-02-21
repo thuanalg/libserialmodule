@@ -14,6 +14,7 @@
     #include <sys/stat.h> /* For mode constants */
     #include <fcntl.h> /* For O_* constants */
     #include <errno.h>
+    #include <termios.h>
 #endif
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -50,6 +51,15 @@
 #endif
 
 
+#ifndef UNIX_LINUX
+#else
+#endif
+
+
+static int spserial_init_trigger(void*);
+static int spserial_pull_trigger(void*);
+
+void thuan() { }
 
 static SPSERIAL_ROOT_TYPE
     spserial_root_node;
@@ -93,7 +103,7 @@ static int
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spserial_module_create(void *obj, int  *idd) 
+int spserial_inst_create(void *obj, int  *idd) 
 {
     int ret = 0;
     SP_SERIAL_INPUT_ST* p = (SP_SERIAL_INPUT_ST*)obj;
@@ -157,7 +167,7 @@ int spserial_module_create(void *obj, int  *idd)
 
 	return ret;
 }
-int spserial_module_del(int iid) 
+int spserial_inst_del(int iid) 
 {
     void *p = 0;
     int ret = 0;
@@ -458,6 +468,7 @@ void*
 int spserial_module_init() {
     int ret = 0;
     do {
+#ifndef UNIX_LINUX
         spserial_root_node.mutex = spserial_mutex_create();
         if (!spserial_root_node.mutex) {
             ret = SPSERIAL_MTX_CREATE;
@@ -468,6 +479,8 @@ int spserial_module_init() {
             ret = SPSERIAL_SEM_CREATE;
             break;
         }
+#else
+#endif
     } while (0);
     return ret;
 }
@@ -724,7 +737,7 @@ int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_module_write_to_port(SP_SERIAL_INFO_ST* item, char* data, int sz) {
+int spserial_inst_write_to_port(SP_SERIAL_INFO_ST* item, char* data, int sz) {
     int ret = 0;
     do {
         if (!item) {
@@ -784,7 +797,7 @@ int spserial_module_write_to_port(SP_SERIAL_INFO_ST* item, char* data, int sz) {
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spserial_module_write_data(int idd, char* data, int sz) {
+int spserial_inst_write_data(int idd, char* data, int sz) {
     int ret = 0;
     void* p = 0;
     SPSERIAL_ARR_LIST_LINED* node = 0;

@@ -146,19 +146,19 @@ DLL_API_SERIAL_MODULE int
 	spserial_module_close();
 
 DLL_API_SERIAL_MODULE int
-	spserial_module_create(void*, int *);
+	spserial_inst_create(void*, int *);
 
 DLL_API_SERIAL_MODULE int
-	spserial_module_del(int id);
+	spserial_inst_del(int id);
 
 DLL_API_SERIAL_MODULE int
-	spserial_module_write_data(int iid, char*, int sz);
+	spserial_inst_write_data(int iid, char*, int sz);
 
 DLL_API_SERIAL_MODULE int
 	spserial_get_objbyid(int, void** obj, int);
 
 DLL_API_SERIAL_MODULE int
-	spserial_module_write_to_port(SP_SERIAL_INFO_ST *, char*, int sz);
+	spserial_inst_write_to_port(SP_SERIAL_INFO_ST *, char*, int sz);
 #ifdef __cplusplus
 }
 #endif
