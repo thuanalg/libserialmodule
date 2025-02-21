@@ -189,8 +189,8 @@ int spserial_module_openport(void* obj) {
     /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 	do {
 #ifndef UNIX_LINUX
-		DCB dcb = {0};
-		HANDLE hSerial = 0;
+	DCB dcb = {0};
+	HANDLE hSerial = 0;
         COMSTAT comStat = {0};
         DWORD dwError = 0;
         BOOL fSuccess = FALSE;
