@@ -53,11 +53,12 @@
 
 #ifndef UNIX_LINUX
 #else
+static int spserial_init_trigger(void*);
+static int spserial_pull_trigger(void*);
+static int spserial_start_listen(void*);
 #endif
 
 
-static int spserial_init_trigger(void*);
-static int spserial_pull_trigger(void*);
 
 void thuan() { }
 
@@ -480,6 +481,7 @@ int spserial_module_init() {
             break;
         }
 #else
+	ret = spserial_start_listen(0);
 #endif
     } while (0);
     return ret;
@@ -861,4 +863,13 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
     } while (0);
     return ret;
 }
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+#ifndef UNIX_LINUX
+#else
+int spserial_init_trigger(void* obj) { return 0;}
+int spserial_pull_trigger(void* obj) { return 0;}
+int spserial_start_listen(void* obj) { return 0;}
+#endif
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
