@@ -114,6 +114,10 @@ extern "C" {
 			mtx_off;
 		void*
 			sem_off;    /*It need to wait for completing.*/
+#ifdef UNIX_LINUX
+		void*
+			sem_trigger;    /*It need to wait for UNIX_LINUX.*/
+#endif 
 		SPSERIAL_module_cb
 			cb;
 		SP_SERIAL_GENERIC_ST*
