@@ -1,5 +1,6 @@
 #ifndef ___SIMPLE_SERIAL_MODULE__
 #define ___SIMPLE_SERIAL_MODULE__
+#include <stdlib.h>
 #include <simplelog.h>
 
 #define spserial_malloc(__nn__, __obj__, __type__) { (__obj__) = (__type__*) malloc(__nn__); if(__obj__) \

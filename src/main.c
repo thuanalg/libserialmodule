@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
 	if (ret) {
 		return EXIT_FAILURE;
 	}
-	ret = spserial_module_create(&obj, &myid);
+	ret = spserial_inst_create(&obj, &myid);
 
 	while (1) {
 		spl_sleep(2);
@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
 		fclose(fp);
 	}
 	if (myid > 0) {
-		spserial_module_del(myid);
+		spserial_inst_del(myid);
 	}
 	spserial_module_close();
 	spl_finish_log();
