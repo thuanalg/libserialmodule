@@ -18,8 +18,9 @@ int main(int argc, char *argv[]) {
 #endif
 	ret = spl_init_log(cfgpath);
 	memset(&obj, 0, sizeof(obj));
-	snprintf(obj.port_name, SPSERIAL_PORT_LEN, "COM2");
-	obj.baudrate = 115200;
+	snprintf(obj.port_name, SPSERIAL_PORT_LEN, "COM1");
+	/*obj.baudrate = 115200;*/
+	obj.baudrate = 9600;
 	ret = spserial_module_init();
 	if (ret) {
 		return EXIT_FAILURE;
