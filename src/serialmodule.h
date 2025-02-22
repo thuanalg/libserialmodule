@@ -1,5 +1,6 @@
 #ifndef ___SIMPLE_SERIAL_MODULE__
 #define ___SIMPLE_SERIAL_MODULE__
+#include <stdlib.h>
 #include <simplelog.h>
 
 #define spserial_malloc(__nn__, __obj__, __type__) { (__obj__) = (__type__*) malloc(__nn__); if(__obj__) \
@@ -158,7 +159,7 @@ DLL_API_SERIAL_MODULE int
 	spserial_get_objbyid(int, void** obj, int);
 
 DLL_API_SERIAL_MODULE int
-	spserial_inst_write_to_port(SP_SERIAL_INFO_ST *, char*, int sz);
+	spserial_inst_write_to_port(SP_SERIAL_INFO_ST*, char*, int sz);
 #ifdef __cplusplus
 }
 #endif

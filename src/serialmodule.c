@@ -339,12 +339,7 @@ int spserial_module_isoff(SP_SERIAL_INFO_ST* obj) {
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
-DWORD WINAPI
-    spserial_thread_operating_routine(LPVOID arg)
-#else
-void*
-    spserial_thread_operating_routine(void* arg)
-#endif
+DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
 {
 
     SPSERIAL_ARR_LIST_LINED* pp = (SPSERIAL_ARR_LIST_LINED*)arg;
@@ -359,6 +354,7 @@ void*
     buf->range = buf->total - sizeof(SP_SERIAL_GENERIC_ST);
     while (1) {
         DWORD dwError = 0;
+        int wrote = 0;
         DWORD dwEvtMask = 0, flags = 0, bytesRead = 0;;
         OVERLAPPED olRead = { 0 };
         OVERLAPPED olRrite = { 0 };
@@ -382,6 +378,28 @@ void*
         
         while (1) {
             isoff = spserial_module_isoff(p);
+            memset(&olRead, 0, sizeof(olRead));
+            olRead.hEvent = p->hEvent;
+            spserial_mutex_lock(p->mtx_off);
+                do {
+                    int kkk = 0;
+                    if (!p->buff) {
+                        break;
+                    }
+                    if (p->buff->pl < 1) {
+                        break;
+                    }
+                    rs = WriteFile(p->handle, p->buff->data, p->buff->pl, &kkk, &olRead);
+                    //spl_console_log("WriteFile OK");
+                    p->buff->pl = 0;
+                    wrote = 1;
+                } while (0);
+            spserial_mutex_unlock(p->mtx_off);
+
+            if (wrote) {
+                wrote = 0;
+                SetEvent(p->hEvent);
+            }
 
             rs = SetCommMask(p->handle, flags);
             dwEvtMask = flags;
@@ -404,6 +422,7 @@ void*
             ClearCommError(p->handle, &dwError, &csta);
             if (!csta.cbInQue) {
                 //WaitForSingleObject(p->hEvent, 10);
+                
                 WaitForSingleObject(p->hEvent, INFINITE);
                 continue;
             }
@@ -419,20 +438,9 @@ void*
             }
             else /*else start*/
             {
-                //ResetEvent(p->hEvent);
-                readBuffer[cbInQue] = 0;
-                spllog(0, "%s", readBuffer);
-                spl_console_log("%s", readBuffer);
-                /*p->cb start*/
-                {
-                    int k = 0;
-                    char tbuff[128];
-                    snprintf(tbuff, 128, "%d", kkkk);
-                    memset(&olRrite, 0, sizeof(&olRrite));
-                    olRrite.hEvent = p->hEvent;
-                    WriteFile(p->handle, tbuff, strlen(tbuff), &k, &olRrite);
-                    kkkk++;
-                }
+                spllog(SPL_LOG_INFO, "%s", readBuffer);
+                //spl_console_log("%s", readBuffer);
+                ResetEvent(p->hEvent);
                 if (p->cb) 
                 {
                     int n = 1 + sizeof(SPSERIAL_MODULE_EVENT) + cbInQue;
@@ -464,7 +472,11 @@ void*
     spserial_rel_sem(p->sem_off);
     return 0;
 }
-
+#else 
+    void* spserial_thread_operating_routine(void* obj) {
+        return 0;
+    }
+#endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_init() {
     int ret = 0;
@@ -481,16 +493,27 @@ int spserial_module_init() {
             break;
         }
 #else
-	ret = spserial_start_listen(0);
+        ret = spserial_init_trigger(0);
+        if (ret) {
+            break;
+        }
+	    ret = spserial_start_listen(0);
+        if (ret) {
+            break;
+        }
 #endif
+        spl_console_log("spserial_module_init: DONE");
     } while (0);
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_close() {
     SPSERIAL_ROOT_TYPE* srl = &spserial_root_node;
+#ifndef UNIX_LINUX
     SPSERIAL_CloseHandle(srl->mutex);
     SPSERIAL_CloseHandle(srl->sem);
+#else
+#endif
     return 0;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -543,7 +566,11 @@ int spserial_get_newid(SP_SERIAL_INPUT_ST *p, int *idd) {
         obj->item->baudrate = p->baudrate;
         obj->item->cb = p->cb;
         obj->item->iidd = *idd;
+#ifndef UNIX_LINUX
         ret = spserial_create_thread(spserial_thread_operating_routine, obj);
+#else
+        spl_console_log("Need to do here.");
+#endif
     } while (0);
     if (ret) {
         spserial_free(obj);
@@ -615,6 +642,7 @@ int spserial_rel_sem(void* sem) {
 #ifndef UNIX_LINUX
         ReleaseSemaphore(sem, 1, 0);
 #else
+        /*
         err = sem_getvalue((sem_t*)sem, &val);
         if (!err) {
             if (val < 1) {
@@ -623,6 +651,11 @@ int spserial_rel_sem(void* sem) {
                     spl_console_log("sem_post: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
                 }
             }
+        }
+        */
+        ret = sem_post((sem_t*)sem);
+        if (ret) {
+            spl_console_log("sem_post: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
         }
 #endif 
     } while (0);
@@ -866,9 +899,14 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #else
-int spserial_init_trigger(void* obj) { return 0;}
-int spserial_pull_trigger(void* obj) { return 0;}
-int spserial_start_listen(void* obj) { return 0;}
+    int spserial_init_trigger(void* obj) { 
+        return 0;
+    }
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+    int spserial_pull_trigger(void* obj) { return 0;}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+    int spserial_start_listen(void* obj) { return 0;}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
