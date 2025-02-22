@@ -359,6 +359,7 @@ void*
     buf->range = buf->total - sizeof(SP_SERIAL_GENERIC_ST);
     while (1) {
         DWORD dwError = 0;
+        int wrote = 0;
         DWORD dwEvtMask = 0, flags = 0, bytesRead = 0;;
         OVERLAPPED olRead = { 0 };
         OVERLAPPED olRrite = { 0 };
@@ -382,6 +383,28 @@ void*
         
         while (1) {
             isoff = spserial_module_isoff(p);
+            memset(&olRead, 0, sizeof(olRead));
+            olRead.hEvent = p->hEvent;
+            spserial_mutex_lock(p->mtx_off);
+                do {
+                    int kkk = 0;
+                    if (!p->buff) {
+                        break;
+                    }
+                    if (p->buff->pl < 1) {
+                        break;
+                    }
+                    rs = WriteFile(p->handle, p->buff->data, p->buff->pl, &kkk, &olRead);
+                    //spl_console_log("WriteFile OK");
+                    p->buff->pl = 0;
+                    wrote = 1;
+                } while (0);
+            spserial_mutex_unlock(p->mtx_off);
+
+            if (wrote) {
+                wrote = 0;
+                SetEvent(p->hEvent);
+            }
 
             rs = SetCommMask(p->handle, flags);
             dwEvtMask = flags;
@@ -404,6 +427,7 @@ void*
             ClearCommError(p->handle, &dwError, &csta);
             if (!csta.cbInQue) {
                 //WaitForSingleObject(p->hEvent, 10);
+                
                 WaitForSingleObject(p->hEvent, INFINITE);
                 continue;
             }
@@ -419,20 +443,9 @@ void*
             }
             else /*else start*/
             {
-                //ResetEvent(p->hEvent);
-                readBuffer[cbInQue] = 0;
-                spllog(0, "%s", readBuffer);
-                spl_console_log("%s", readBuffer);
-                /*p->cb start*/
-                {
-                    int k = 0;
-                    char tbuff[128];
-                    snprintf(tbuff, 128, "%d", kkkk);
-                    memset(&olRrite, 0, sizeof(&olRrite));
-                    olRrite.hEvent = p->hEvent;
-                    WriteFile(p->handle, tbuff, strlen(tbuff), &k, &olRrite);
-                    kkkk++;
-                }
+                spllog(SPL_LOG_INFO, "%s", readBuffer);
+                //spl_console_log("%s", readBuffer);
+                ResetEvent(p->hEvent);
                 if (p->cb) 
                 {
                     int n = 1 + sizeof(SPSERIAL_MODULE_EVENT) + cbInQue;

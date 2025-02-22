@@ -159,7 +159,7 @@ DLL_API_SERIAL_MODULE int
 	spserial_get_objbyid(int, void** obj, int);
 
 DLL_API_SERIAL_MODULE int
-	spserial_inst_write_to_port(SP_SERIAL_INFO_ST *, char*, int sz);
+	spserial_inst_write_to_port(SP_SERIAL_INFO_ST*, char*, int sz);
 #ifdef __cplusplus
 }
 #endif
