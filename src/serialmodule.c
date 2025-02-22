@@ -339,12 +339,7 @@ int spserial_module_isoff(SP_SERIAL_INFO_ST* obj) {
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
-DWORD WINAPI
-    spserial_thread_operating_routine(LPVOID arg)
-#else
-void*
-    spserial_thread_operating_routine(void* arg)
-#endif
+DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
 {
 
     SPSERIAL_ARR_LIST_LINED* pp = (SPSERIAL_ARR_LIST_LINED*)arg;
@@ -477,7 +472,11 @@ void*
     spserial_rel_sem(p->sem_off);
     return 0;
 }
-
+#else 
+    void* spserial_thread_operating_routine(void* obj) {
+        return 0;
+    }
+#endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_init() {
     int ret = 0;
