@@ -1,4 +1,6 @@
 # Add main.cpp file of the project root directory as a source file
+# Add direct macro into cmake : https://stackoverflow.com/questions/8564337/how-can-i-define-a-c-preprocessor-macro-through-the-command-line-with-cmake
+# cmake -DUNIX_LINUX=1 -D__MACH__=1
 project(serial_module_project)
 set(SOURCE_LIB_MODULE_FILES serialmodule.c serialmodule.h)
 set(SOURCE_TEST_MODULR_FILES main.c)
