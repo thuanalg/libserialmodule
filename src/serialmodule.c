@@ -481,16 +481,27 @@ int spserial_module_init() {
             break;
         }
 #else
-	ret = spserial_start_listen(0);
+        ret = spserial_init_trigger(0);
+        if (ret) {
+            break;
+        }
+	    ret = spserial_start_listen(0);
+        if (ret) {
+            break;
+        }
 #endif
+        spl_console_log("spserial_module_init: DONE");
     } while (0);
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_close() {
     SPSERIAL_ROOT_TYPE* srl = &spserial_root_node;
+#ifndef UNIX_LINUX
     SPSERIAL_CloseHandle(srl->mutex);
     SPSERIAL_CloseHandle(srl->sem);
+#else
+#endif
     return 0;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -543,7 +554,11 @@ int spserial_get_newid(SP_SERIAL_INPUT_ST *p, int *idd) {
         obj->item->baudrate = p->baudrate;
         obj->item->cb = p->cb;
         obj->item->iidd = *idd;
+#ifndef UNIX_LINUX
         ret = spserial_create_thread(spserial_thread_operating_routine, obj);
+#else
+        spl_console_log("Need to do here.");
+#endif
     } while (0);
     if (ret) {
         spserial_free(obj);
