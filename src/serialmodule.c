@@ -15,6 +15,13 @@
     #include <fcntl.h> /* For O_* constants */
     #include <errno.h>
     #include <termios.h>
+
+    #ifdef __TRUE_LINUX__
+        #include <sys/epoll.h>
+    #else
+        #include <poll.h>
+    #endif 
+    /* https://gist.github.com/reterVision/8300781 */
 #endif
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
