@@ -10,6 +10,7 @@ int main(int argc, char *argv[]) {
 	int i = 0;
 	SP_SERIAL_INPUT_ST obj;
 	FILE* fp = 0;
+	int k = 0;
 	int myid = 0;
 	int ret = 0;
 	char cfgpath[1024];
@@ -17,7 +18,8 @@ int main(int argc, char *argv[]) {
 
 	for (i = 0; i < argc; ++i) {
 		if (strstr(argv[i], __ISMASTER__)) {
-			sscanf(argv[i], __ISMASTER__"%d", &is_master);
+			 k = sscanf(argv[i], __ISMASTER__"%d", &is_master);
+			 spl_console_log("k = %d.", k);
 			continue;
 		}
 	}
