@@ -3,7 +3,9 @@
 #include <stdlib.h>
 
 int is_master = 0;
+char is_port[32];
 #define __ISMASTER__			"--is_master="
+#define __ISPORT__				"--is_port="
 
 #define TESTTEST "1234567"
 int main(int argc, char *argv[]) {
@@ -16,10 +18,17 @@ int main(int argc, char *argv[]) {
 	char cfgpath[1024];
 	SPSERIAL_ARR_LIST_LINED* objId = 0;
 
+	snprintf(is_port, "%s", "COM2");
+
 	for (i = 0; i < argc; ++i) {
 		if (strstr(argv[i], __ISMASTER__)) {
 			 k = sscanf(argv[i], __ISMASTER__"%d", &is_master);
 			 spl_console_log("k = %d.", k);
+			continue;
+		}
+		if (strstr(argv[i], __ISPORT__)) {
+			k = sscanf(argv[i], __ISPORT__"%s", is_port);
+			spl_console_log("k = %d.", k);
 			continue;
 		}
 	}
@@ -31,7 +40,7 @@ int main(int argc, char *argv[]) {
 #endif
 	ret = spl_init_log(cfgpath);
 	memset(&obj, 0, sizeof(obj));
-	snprintf(obj.port_name, SPSERIAL_PORT_LEN, "COM2");
+	snprintf(obj.port_name, SPSERIAL_PORT_LEN, is_port);
 	/*obj.baudrate = 115200;*/
 	obj.baudrate = 9600;
 	ret = spserial_module_init();
