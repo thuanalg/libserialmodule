@@ -408,7 +408,9 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
 
             if (wrote) {
                 wrote = 0;
+                /*
                 SetEvent(p->hEvent);
+                */
             }
 
             rs = SetCommMask(p->handle, flags);
@@ -450,7 +452,8 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
             {
                 spllog(SPL_LOG_INFO, "%s", readBuffer);
                 //spl_console_log("%s", readBuffer);
-                ResetEvent(p->hEvent);
+                /* ResetEvent(p->hEvent); */
+                //ResetEvent(p->hEvent);
                 if (p->cb) 
                 {
                     int n = 1 + sizeof(SPSERIAL_MODULE_EVENT) + cbInQue;
@@ -468,6 +471,7 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                 }
                 /*p->cb end*/
             }
+
         }
 
         p->is_retry = 1;

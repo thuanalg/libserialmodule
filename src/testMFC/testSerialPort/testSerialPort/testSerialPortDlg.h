@@ -36,4 +36,5 @@ protected:
 public:
 	afx_msg void OnBnClickedOk();
 	int m_myid;
+	afx_msg void OnBnClickedCancel();
 };

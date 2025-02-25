@@ -71,6 +71,7 @@ BEGIN_MESSAGE_MAP(CtestSerialPortDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDOK, &CtestSerialPortDlg::OnBnClickedOk)
+	ON_BN_CLICKED(IDCANCEL, &CtestSerialPortDlg::OnBnClickedCancel)
 END_MESSAGE_MAP()
 
 
@@ -195,4 +196,16 @@ void CtestSerialPortDlg::OnBnClickedOk()
 	// TODO: Add your control notification handler code here
 	CDialogEx::OnOK();
 
+}
+
+
+void CtestSerialPortDlg::OnBnClickedCancel()
+{
+	if (m_myid > 0) {
+		spserial_inst_del(m_myid);
+	}
+	spserial_module_close();
+	spl_finish_log();
+	// TODO: Add your control notification handler code here
+	CDialogEx::OnCancel();
 }
