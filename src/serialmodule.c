@@ -432,25 +432,61 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
             }
             memset(&csta, 0, sizeof(csta));
             ClearCommError(p->handle, &dwError, &csta);
-            if (!csta.cbInQue) {
+            cbInQue = csta.cbInQue;
+            if (!cbInQue) {
                 //WaitForSingleObject(p->hEvent, 10);
                 
                 WaitForSingleObject(p->hEvent, INFINITE);
+                OVERLAPPED overlapped = { 0 };
+                overlapped.hEvent = p->hEvent;
+                if (GetOverlappedResult(p->handle, &overlapped, &bytesRead, TRUE)) {
+                }
+                else {
+                    PurgeComm(p->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
+                }
                 continue;
             }
-            cbInQue = csta.cbInQue;
+            //Sleep(1000);
+            
             bytesRead = 0;
             memset(readBuffer, 0, sizeof(readBuffer));
             rs = ReadFile(p->handle, readBuffer, SPSERIAL_BUFFER_SIZE, &bytesRead, &olRead);
+            bytesRead = olRead.InternalHigh;
+            if (!bytesRead) {
+                
+                ResetEvent(p->hEvent);
+            }
+            spllog(SPL_LOG_ERROR, "olRead.InternalHigh: %d, olRead.Internal: %d!!!", (int)olRead.InternalHigh, (int)olRead.Internal);
+            if (!rs) {
+                if (GetLastError() == ERROR_IO_PENDING) {
+                    OVERLAPPED overlapped = { 0 };
+                    overlapped.hEvent = p->hEvent;
+                    if (GetOverlappedResult(p->handle, &overlapped, &bytesRead, TRUE)) {
+                        //if (!olRead.InternalHigh) {
+                        //    memset(readBuffer, 0, sizeof(readBuffer));
+                        //    rs = ReadFile(p->handle, readBuffer, SPSERIAL_BUFFER_SIZE, &bytesRead, &olRead);
+                        //    spllog(SPL_LOG_ERROR, "olRead.InternalHigh: %d!!!", (int)olRead.InternalHigh);
+                        //}
+                    }
+                    else {
+                        PurgeComm(p->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
+                    }
+                }
+                else {
+                }
+            }
             memset(&csta, 0, sizeof(csta));
             ClearCommError(p->handle, &dwError, &csta);
             
             if (csta.cbInQue > 0) {
                 spllog(SPL_LOG_ERROR, "Read Com not finished!!!");
             }
-            else /*else start*/
+            else if(cbInQue > 0)/*else start*/
             {
-                spllog(SPL_LOG_INFO, "%s", readBuffer);
+                if (cbInQue == 1) {
+                    int a = 0;
+                }
+                spllog(SPL_LOG_INFO, "            [[[ %s, cbInQue: %d ]]]", readBuffer, cbInQue);
                 //spl_console_log("%s", readBuffer);
                 /* ResetEvent(p->hEvent); */
                 //ResetEvent(p->hEvent);
