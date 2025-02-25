@@ -385,6 +385,9 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
         
         while (1) {
             isoff = spserial_module_isoff(p);
+            if (isoff) {
+                break;
+            }
             memset(&olRead, 0, sizeof(olRead));
             olRead.hEvent = p->hEvent;
             spserial_mutex_lock(p->mtx_off);

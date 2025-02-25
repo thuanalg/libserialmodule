@@ -1,7 +1,9 @@
 
 // testSerialPortDlg.h : header file
 //
-
+#include "serialmodule.h"
+#include <stdio.h>
+#include <stdlib.h>
 #pragma once
 
 
@@ -31,4 +33,7 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
+public:
+	afx_msg void OnBnClickedOk();
+	int m_myid;
 };
