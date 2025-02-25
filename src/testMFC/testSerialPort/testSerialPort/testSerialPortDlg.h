@@ -37,4 +37,6 @@ public:
 	afx_msg void OnBnClickedOk();
 	int m_myid;
 	afx_msg void OnBnClickedCancel();
+	afx_msg void OnEnChangeEditComport();
+	afx_msg void OnBnClickedButtonmsg();
 };

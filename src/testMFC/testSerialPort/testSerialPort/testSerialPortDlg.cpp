@@ -72,6 +72,8 @@ BEGIN_MESSAGE_MAP(CtestSerialPortDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDOK, &CtestSerialPortDlg::OnBnClickedOk)
 	ON_BN_CLICKED(IDCANCEL, &CtestSerialPortDlg::OnBnClickedCancel)
+	ON_EN_CHANGE(IDC_EDIT_COMPORT, &CtestSerialPortDlg::OnEnChangeEditComport)
+	ON_BN_CLICKED(IDC_BUTTON_msg, &CtestSerialPortDlg::OnBnClickedButtonmsg)
 END_MESSAGE_MAP()
 
 
@@ -208,4 +210,24 @@ void CtestSerialPortDlg::OnBnClickedCancel()
 	spl_finish_log();
 	// TODO: Add your control notification handler code here
 	CDialogEx::OnCancel();
+}
+
+
+void CtestSerialPortDlg::OnEnChangeEditComport()
+{
+	// TODO:  If this is a RICHEDIT control, the control will not
+	// send this notification unless you override the CDialogEx::OnInitDialog()
+	// function and call CRichEditCtrl().SetEventMask()
+	// with the ENM_CHANGE flag ORed into the mask.
+
+	// TODO:  Add your control notification handler code here
+}
+
+
+void CtestSerialPortDlg::OnBnClickedButtonmsg()
+{
+	// TODO: Add your control notification handler code here
+	SPSERIAL_ARR_LIST_LINED* objId = 0;
+	int ret = spserial_get_objbyid(m_myid, (void **) & objId, 0);
+	spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
 }
