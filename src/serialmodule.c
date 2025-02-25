@@ -462,11 +462,14 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                     OVERLAPPED overlapped = { 0 };
                     overlapped.hEvent = p->hEvent;
                     if (GetOverlappedResult(p->handle, &overlapped, &bytesRead, TRUE)) {
-                        //if (!olRead.InternalHigh) {
+                        //if (olRead.Internal > 258) {
+                        //    memset(&overlapped, 0, sizeof(overlapped));
                         //    memset(readBuffer, 0, sizeof(readBuffer));
-                        //    rs = ReadFile(p->handle, readBuffer, SPSERIAL_BUFFER_SIZE, &bytesRead, &olRead);
-                        //    spllog(SPL_LOG_ERROR, "olRead.InternalHigh: %d!!!", (int)olRead.InternalHigh);
+                        //    overlapped.hEvent = p->hEvent;
+                        //    rs = ReadFile(p->handle, readBuffer, SPSERIAL_BUFFER_SIZE, &bytesRead, &overlapped);
+                        //    spllog(SPL_LOG_ERROR, "overlapped.InternalHigh: %d!!!", (int)overlapped.InternalHigh);
                         //}
+                        //spllog(SPL_LOG_ERROR, "overlapped.InternalHigh: %d, overlapped.Internal: %d!!!", (int)olRead.InternalHigh, (int)olRead.Internal);
                     }
                     else {
                         PurgeComm(p->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
