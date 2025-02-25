@@ -242,6 +242,7 @@ int spserial_module_openport(void* obj) {
          dcbSerialParams.ByteSize = 8;         
          dcbSerialParams.StopBits = ONESTOPBIT;
          dcbSerialParams.Parity = NOPARITY;
+         //dcbSerialParams.StopBits
          if (!SetCommState(hSerial, &dcbSerialParams)) {
              DWORD dwError = GetLastError();
              spllog(SPL_LOG_ERROR, "SetCommState: %lu", dwError);
@@ -256,11 +257,11 @@ int spserial_module_openport(void* obj) {
          }
          spllog(0, "Create hEvent: 0x%p.", p->hEvent);
          /* Set timeouts(e.g., read timeout of 500ms, write timeout of 500ms) */
-         timeouts.ReadIntervalTimeout = 50;
+         timeouts.ReadIntervalTimeout = 500;
          timeouts.ReadTotalTimeoutConstant = 500;
-         timeouts.ReadTotalTimeoutMultiplier = 10;
+         timeouts.ReadTotalTimeoutMultiplier = 500;
          timeouts.WriteTotalTimeoutConstant = 500;
-         timeouts.WriteTotalTimeoutMultiplier = 10;
+         timeouts.WriteTotalTimeoutMultiplier = 500;
 
          if (!SetCommTimeouts(hSerial, &timeouts)) {
              DWORD dwError = GetLastError();
