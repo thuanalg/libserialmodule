@@ -1,0 +1,35 @@
+﻿  pch.cpp
+  testSerialPort.cpp
+C:\z\serialmodule\src\simplelog\simplelog.h(164,4): warning C4200: nonstandard extension used: zero-sized array in struct/union
+  (compiling source file '/testSerialPort.cpp')
+      C:\z\serialmodule\src\simplelog\simplelog.h(164,4):
+      This member will be ignored by a defaulted constructor or copy/move assignment operator
+  
+C:\z\serialmodule\src\simplelog\simplelog.h(178,4): warning C4200: nonstandard extension used: zero-sized array in struct/union
+  (compiling source file '/testSerialPort.cpp')
+      C:\z\serialmodule\src\simplelog\simplelog.h(178,4):
+      This member will be ignored by a defaulted constructor or copy/move assignment operator
+  
+C:\z\serialmodule\src\serialmodule.h(81,8): warning C4200: nonstandard extension used: zero-sized array in struct/union
+  (compiling source file '/testSerialPort.cpp')
+      C:\z\serialmodule\src\serialmodule.h(81,8):
+      This member will be ignored by a defaulted constructor or copy/move assignment operator
+  
+  testSerialPortDlg.cpp
+C:\z\serialmodule\src\simplelog\simplelog.h(164,4): warning C4200: nonstandard extension used: zero-sized array in struct/union
+  (compiling source file '/testSerialPortDlg.cpp')
+      C:\z\serialmodule\src\simplelog\simplelog.h(164,4):
+      This member will be ignored by a defaulted constructor or copy/move assignment operator
+  
+C:\z\serialmodule\src\simplelog\simplelog.h(178,4): warning C4200: nonstandard extension used: zero-sized array in struct/union
+  (compiling source file '/testSerialPortDlg.cpp')
+      C:\z\serialmodule\src\simplelog\simplelog.h(178,4):
+      This member will be ignored by a defaulted constructor or copy/move assignment operator
+  
+C:\z\serialmodule\src\serialmodule.h(81,8): warning C4200: nonstandard extension used: zero-sized array in struct/union
+  (compiling source file '/testSerialPortDlg.cpp')
+      C:\z\serialmodule\src\serialmodule.h(81,8):
+      This member will be ignored by a defaulted constructor or copy/move assignment operator
+  
+  Generating Code...
+  testSerialPort.vcxproj -> C:\z\serialmodule\win32\Debug\testSerialPort.exe
