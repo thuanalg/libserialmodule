@@ -48,7 +48,12 @@ END_MESSAGE_MAP()
 
 // CtestSerialPortDlg dialog
 
+int is_master = 0;
+char is_port[32];
+#define __ISMASTER__			"--is_master="
+#define __ISPORT__				"--is_port="
 
+#define TESTTEST "1234567"
 
 CtestSerialPortDlg::CtestSerialPortDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_TESTSERIALPORT_DIALOG, pParent)
@@ -65,6 +70,7 @@ BEGIN_MESSAGE_MAP(CtestSerialPortDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_BN_CLICKED(IDOK, &CtestSerialPortDlg::OnBnClickedOk)
 END_MESSAGE_MAP()
 
 
@@ -100,7 +106,31 @@ BOOL CtestSerialPortDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// TODO: Add extra initialization here
-
+	int i = 0;
+	SP_SERIAL_INPUT_ST obj;
+	FILE* fp = 0;
+	int k = 0;
+	
+	int ret = 0;
+	char cfgpath[1024];
+	SPSERIAL_ARR_LIST_LINED* objId = 0;
+#ifndef UNIX_LINUX
+	snprintf(cfgpath, 1024, "C:/z/serialmodule/win32/Debug/simplelog.cfg");
+#else
+	snprintf(cfgpath, 1024, "simplelog.cfg");
+#endif
+	snprintf(is_port, 32, "%s", "COM3");
+	ret = spl_init_log(cfgpath);
+	memset(&obj, 0, sizeof(obj));
+	snprintf(obj.port_name, SPSERIAL_PORT_LEN, is_port);
+	/*obj.baudrate = 115200;*/
+	obj.baudrate = 9600;
+	ret = spserial_module_init();
+	if (ret) {
+		return EXIT_FAILURE;
+	}
+	ret = spserial_inst_create(&obj, &m_myid);
+	ret = spserial_get_objbyid(m_myid, (void **) & objId, 0);
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -153,3 +183,16 @@ HCURSOR CtestSerialPortDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+
+
+void CtestSerialPortDlg::OnBnClickedOk()
+{
+	if (m_myid > 0) {
+		spserial_inst_del(m_myid);
+	}
+	spserial_module_close();
+	spl_finish_log();
+	// TODO: Add your control notification handler code here
+	CDialogEx::OnOK();
+
+}
