@@ -53,7 +53,7 @@ char is_port[32];
 #define __ISMASTER__			"--is_master="
 #define __ISPORT__				"--is_port="
 
-#define TESTTEST "1234567"
+#define TESTTEST "1234567--------------------------------"
 
 CtestSerialPortDlg::CtestSerialPortDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_TESTSERIALPORT_DIALOG, pParent)
@@ -230,5 +230,7 @@ void CtestSerialPortDlg::OnBnClickedButtonmsg()
 	// TODO: Add your control notification handler code here
 	SPSERIAL_ARR_LIST_LINED* objId = 0;
 	int ret = spserial_get_objbyid(m_myid, (void **) & objId, 0);
+	spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
+	spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
 	spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
 }
