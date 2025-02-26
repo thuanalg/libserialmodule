@@ -361,6 +361,7 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
     buf->total = step;
     buf->range = buf->total - sizeof(SP_SERIAL_GENERIC_ST);
     int bytesRead = 0;
+    DWORD bRead = 0;
     while (1) {
         DWORD dwError = 0;
         int wrote = 0;
@@ -488,7 +489,7 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                     BOOL rs1 = FALSE;
                     DWORD readErr = GetLastError();
                     if (readErr == ERROR_IO_PENDING) {
-                        DWORD bRead = 0;
+                        bRead = 0;
                         WaitForSingleObject(p->hEvent, INFINITE);
                         rs1 = GetOverlappedResult(p->handle, &olReadWrite, &bRead, 1);
                         if (rs1) {
@@ -518,24 +519,31 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                 if (cbInQue == 1) {
                     int a = 0;
                 }
-                spllog(SPL_LOG_DEBUG, " ---------------->>>>>>>>>>>>>>>>  [[[ %s, cbInQue: %d ]]]", readBuffer, cbInQue);
-                if (p->cb) 
+                spllog(SPL_LOG_DEBUG, " ---------------->>>>>>>>>>>>>>>>  [[[ %s, cbInQue: %d, bRead: %d ]]]", readBuffer, cbInQue, bRead);
+                if (p->cb_evt_fn) 
                 {
-                    int n = 1 + sizeof(SPSERIAL_MODULE_EVENT) + cbInQue;
+                    int nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + bRead + sizeof(void*);
                     SP_SERIAL_GENERIC_ST* evt = 0;
-                    spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
+                    spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);
+                    
                     if (evt) 
                     {
-                        evt->total = n;
+                        void* ppp = 0;
+                        evt->total = nnnn;
                         evt->type = SPSERIAL_EVENT_READ_BUF;
-                        evt->pl = cbInQue;
-                        evt->pc = 0;
-                        memcpy(evt->data, readBuffer, cbInQue);
-                        p->cb(evt);
+                        
+                        evt->pc = sizeof(void*);
+                        ppp = (void*)evt->data;
+                        ppp = p->cb_obj;
+                        memcpy(evt->data + evt->pc, readBuffer, bRead);
+                        evt->pl = evt->pc + bRead;
+                        p->cb_evt_fn(evt);
+                        spserial_free(evt);
                     }
                 }
                 /*p->cb end*/
             }
+            bRead = 0;
 
         }
 
@@ -642,7 +650,8 @@ int spserial_get_newid(SP_SERIAL_INPUT_ST *p, int *idd) {
         
         snprintf(obj->item->port_name, SPSERIAL_PORT_LEN, "%s", p->port_name);
         obj->item->baudrate = p->baudrate;
-        obj->item->cb = p->cb;
+        obj->item->cb_evt_fn = p->cb_evt_fn;
+        obj->item->cb_obj = p->cb_obj;
         obj->item->iidd = *idd;
 #ifndef UNIX_LINUX
         ret = spserial_create_thread(spserial_thread_operating_routine, obj);

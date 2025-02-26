@@ -86,7 +86,8 @@ extern "C" {
 		char
 			port_name[SPSERIAL_PORT_LEN];
 		SPSERIAL_module_cb
-			cb;
+			cb_evt_fn;
+		void* cb_obj;
 	} SP_SERIAL_INPUT_ST;
 	
 	typedef struct __SP_SERIAL_INFO_ST__ {
@@ -119,7 +120,8 @@ extern "C" {
 			sem_trigger;    /*It need to wait for UNIX_LINUX.*/
 #endif 
 		SPSERIAL_module_cb
-			cb;
+			cb_evt_fn;
+		void* cb_obj;
 		SP_SERIAL_GENERIC_ST*
 			buff;
 	} SP_SERIAL_INFO_ST;
