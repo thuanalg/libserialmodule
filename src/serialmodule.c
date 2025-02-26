@@ -365,14 +365,14 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
         DWORD dwError = 0;
         int wrote = 0;
         DWORD dwEvtMask = 0, flags = 0, bytesRead = 0;;
-        OVERLAPPED olRead = { 0 };
-        OVERLAPPED olRrite = { 0 };
+        OVERLAPPED olReadWrite = { 0 };
+        //OVERLAPPED olRrite = { 0 };
         BOOL rs = FALSE;
         BOOL wrs = FALSE;
         int count = 0, cbInQue = 0;
         char readBuffer[SPSERIAL_BUFFER_SIZE + 1];
         COMSTAT csta = { 0 };
-        olRead.hEvent = p->hEvent;
+        olReadWrite.hEvent = p->hEvent;
         flags = EV_RXCHAR | EV_BREAK | EV_RXFLAG;
 
         if (!buf) {
@@ -391,12 +391,11 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
             if (isoff) {
                 break;
             }
-            memset(&olRead, 0, sizeof(olRead));
-            olRead.hEvent = p->hEvent;
+            memset(&olReadWrite, 0, sizeof(olReadWrite));
+            olReadWrite.hEvent = p->hEvent;
             wrs = TRUE;
             spserial_mutex_lock(p->mtx_off);
                 do {
-                    
                     if (!p->buff) {
                         break;
                     }
@@ -409,11 +408,12 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                     
                 } while (0);
             spserial_mutex_unlock(p->mtx_off);
-            if (buf->pl > 0) {
+            while (buf->pl > 0) 
+            {
                 bytesRead = 0;
-                memset(&olRead, 0, sizeof(olRead));
-                olRead.hEvent = p->hEvent;
-                wrs = WriteFile(p->handle, buf->data, buf->pl, &bytesRead, &olRead);
+                memset(&olReadWrite, 0, sizeof(olReadWrite));
+                olReadWrite.hEvent = p->hEvent;
+                wrs = WriteFile(p->handle, buf->data, buf->pl, &bytesRead, &olReadWrite);
                 
                 if (!wrs) {
                     DWORD wErr = GetLastError();
@@ -421,9 +421,9 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                     if (wErr == ERROR_IO_PENDING) {
                         DWORD dwWaitResult = WaitForSingleObject(p->hEvent, INFINITE);
                         if (dwWaitResult == WAIT_OBJECT_0) {
-                            DWORD bytesWritten = 0;
-                            if (GetOverlappedResult(p->handle, &olRead, &bytesWritten, TRUE)) {
-                                if (buf->pl == (int)bytesWritten) {
+                            bytesRead = 0;
+                            if (GetOverlappedResult(p->handle, &olReadWrite, &bytesRead, TRUE)) {
+                                if (buf->pl == (int)bytesRead) {
                                     spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
                                 }
                                 else {
@@ -444,24 +444,14 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                         }
                     }
                 }
-                else {
-                    wrote = 1;
-                }
                 buf->pl = 0; 
-            }
-
-            if (wrote) {
-                wrote = 0;
-                /*
-                SetEvent(p->hEvent);
-                */
             }
 
             rs = SetCommMask(p->handle, flags);
             dwEvtMask = flags;
-            memset(&olRead, 0, sizeof(olRead));
-            olRead.hEvent = p->hEvent;
-            rs = WaitCommEvent(p->handle, &dwEvtMask, &olRead);
+            memset(&olReadWrite, 0, sizeof(olReadWrite));
+            olReadWrite.hEvent = p->hEvent;
+            rs = WaitCommEvent(p->handle, &dwEvtMask, &olReadWrite);
             if (!rs) {
                 DWORD dwRet = GetLastError();
                 if (ERROR_IO_PENDING != dwRet) {
@@ -479,7 +469,7 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
             cbInQue = csta.cbInQue;
             if (!cbInQue) {
                 WaitForSingleObject(p->hEvent, INFINITE);
-                if (GetOverlappedResult(p->handle, &olRead, &bytesRead, TRUE)) {
+                if (GetOverlappedResult(p->handle, &olReadWrite, &bytesRead, TRUE)) {
                 }
                 else {
                     PurgeComm(p->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
@@ -491,16 +481,16 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
             bytesRead = 0;
             memset(readBuffer, 0, sizeof(readBuffer));
             do {
-                rs = ReadFile(p->handle, readBuffer, SPSERIAL_BUFFER_SIZE, &bytesRead, &olRead);
+                rs = ReadFile(p->handle, readBuffer, SPSERIAL_BUFFER_SIZE, &bytesRead, &olReadWrite);
                 spllog(SPL_LOG_DEBUG, "olRead.InternalHigh: %d, olRead.Internal: %d, rs : %s!!!", 
-                    (int)olRead.InternalHigh, (int)olRead.Internal, rs ? "true" : "false");
+                    (int)olReadWrite.InternalHigh, (int)olReadWrite.Internal, rs ? "true" : "false");
                 if (!rs) {
                     BOOL rs1 = FALSE;
                     DWORD readErr = GetLastError();
                     if (readErr == ERROR_IO_PENDING) {
                         DWORD bRead = 0;
                         WaitForSingleObject(p->hEvent, INFINITE);
-                        rs1 = GetOverlappedResult(p->handle, &olRead, &bRead, 1);
+                        rs1 = GetOverlappedResult(p->handle, &olReadWrite, &bRead, 1);
                         if (rs1) {
                             spllog(SPL_LOG_DEBUG, "bRead: %d", (int)bRead);
                         }
