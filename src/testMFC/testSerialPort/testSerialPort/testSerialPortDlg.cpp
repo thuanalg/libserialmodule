@@ -15,6 +15,20 @@
 
 // CAboutDlg dialog used for App About
 
+static int callback_to_GUI(void* obj) {
+	/*You should clone memory to use*/
+	SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*) obj;
+	int n = evt->total;
+	spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
+	memcpy((char*)evt, (char*)obj, n);
+
+	spllog(SPL_LOG_INFO, "data length: %d.", evt->pl - evt->pc);
+	
+	
+	spserial_free(evt);
+	return 0;
+}
+
 class CAboutDlg : public CDialogEx
 {
 public:
@@ -127,6 +141,8 @@ BOOL CtestSerialPortDlg::OnInitDialog()
 	ret = spl_init_log(cfgpath);
 	memset(&obj, 0, sizeof(obj));
 	snprintf(obj.port_name, SPSERIAL_PORT_LEN, is_port);
+	obj.cb_evt_fn = callback_to_GUI;
+	obj.cb_obj = this->m_hWnd;
 	/*obj.baudrate = 115200;*/
 	//obj.baudrate = 115200;
 	obj.baudrate = 115200;
