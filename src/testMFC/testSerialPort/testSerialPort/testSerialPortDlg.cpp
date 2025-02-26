@@ -119,6 +119,7 @@ BOOL CtestSerialPortDlg::OnInitDialog()
 	SPSERIAL_ARR_LIST_LINED* objId = 0;
 #ifndef UNIX_LINUX
 	snprintf(cfgpath, 1024, "C:/z/serialmodule/win32/Debug/simplelog.cfg");
+	//snprintf(cfgpath, 1024, "D:/reserach/serialmodule/xwin64/Debug/simplelog.cfg");
 #else
 	snprintf(cfgpath, 1024, "simplelog.cfg");
 #endif
