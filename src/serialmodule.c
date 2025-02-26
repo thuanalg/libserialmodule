@@ -492,7 +492,7 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
             memset(readBuffer, 0, sizeof(readBuffer));
             do {
                 rs = ReadFile(p->handle, readBuffer, SPSERIAL_BUFFER_SIZE, &bytesRead, &olRead);
-                spllog(SPL_LOG_ERROR, "olRead.InternalHigh: %d, olRead.Internal: %d, rs : %s!!!", 
+                spllog(SPL_LOG_DEBUG, "olRead.InternalHigh: %d, olRead.Internal: %d, rs : %s!!!", 
                     (int)olRead.InternalHigh, (int)olRead.Internal, rs ? "true" : "false");
                 if (!rs) {
                     BOOL rs1 = FALSE;
