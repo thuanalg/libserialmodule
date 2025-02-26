@@ -502,7 +502,7 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                         WaitForSingleObject(p->hEvent, INFINITE);
                         rs1 = GetOverlappedResult(p->handle, &olRead, &bRead, 1);
                         if (rs1) {
-                            spllog(SPL_LOG_ERROR, "bRead: %d", (int)bRead);
+                            spllog(SPL_LOG_DEBUG, "bRead: %d", (int)bRead);
                         }
                         else {
                             spllog(SPL_LOG_ERROR, "PurgeComm: %d", (int)GetLastError());
