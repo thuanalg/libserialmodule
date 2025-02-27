@@ -17,9 +17,15 @@
 
 static int callback_to_GUI(void* obj) {
 	/*You should clone memory to use*/
+	if (!obj) {
+		return 0;
+	}
 	SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*) obj;
 	int n = evt->total;
 	spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
+	if (!evt) {
+		return 0;
+	}
 	memcpy((char*)evt, (char*)obj, n);
 
 	spllog(SPL_LOG_INFO, "data length: %d.", evt->pl - evt->pc);
