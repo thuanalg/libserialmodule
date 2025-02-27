@@ -133,6 +133,11 @@ BOOL CtestSerialPortDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// TODO: Add extra initialization here
+	/*-----------------------------------------------------------------------------------------------------------------------*/
+	p_CfgEdit = (CEdit*)GetDlgItem(IDC_EDIT_PATH_CFG);
+	p_ComPort = (CEdit*)GetDlgItem(IDC_EDIT_COMPORT);
+	p_CfgEdit = (CEdit*)GetDlgItem(IDC_EDIT_TEXT);
+	/*-----------------------------------------------------------------------------------------------------------------------*/
 	int i = 0;
 	SP_SERIAL_INPUT_ST obj;
 	FILE* fp = 0;

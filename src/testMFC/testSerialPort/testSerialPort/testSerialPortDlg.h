@@ -43,4 +43,10 @@ public:
 	afx_msg void OnBnClickedButtonStopModule();
 	afx_msg void OnBnClickedButtonAdd();
 	afx_msg void OnBnClickedButtonRemove();
+
+	/*-----------------------------------------------------------------------------------------------------------------------*/
+	CEdit* p_CfgEdit;
+	CEdit* p_ComPort;
+	CEdit* p_Cdata;
+	/*-----------------------------------------------------------------------------------------------------------------------*/
 };
