@@ -94,6 +94,10 @@ BEGIN_MESSAGE_MAP(CtestSerialPortDlg, CDialogEx)
 	ON_BN_CLICKED(IDCANCEL, &CtestSerialPortDlg::OnBnClickedCancel)
 	ON_EN_CHANGE(IDC_EDIT_COMPORT, &CtestSerialPortDlg::OnEnChangeEditComport)
 	ON_BN_CLICKED(IDC_BUTTON_msg, &CtestSerialPortDlg::OnBnClickedButtonmsg)
+	ON_BN_CLICKED(IDC_BUTTON_INIT_MODULE, &CtestSerialPortDlg::OnBnClickedButtonInitModule)
+	ON_BN_CLICKED(IDC_BUTTON_STOP_MODULE, &CtestSerialPortDlg::OnBnClickedButtonStopModule)
+	ON_BN_CLICKED(IDC_BUTTON_ADD, &CtestSerialPortDlg::OnBnClickedButtonAdd)
+	ON_BN_CLICKED(IDC_BUTTON_REMOVE, &CtestSerialPortDlg::OnBnClickedButtonRemove)
 END_MESSAGE_MAP()
 
 
@@ -256,4 +260,28 @@ void CtestSerialPortDlg::OnBnClickedButtonmsg()
 	spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
 	spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
 	spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
+}
+
+
+void CtestSerialPortDlg::OnBnClickedButtonInitModule()
+{
+	// TODO: Add your control notification handler code here
+}
+
+
+void CtestSerialPortDlg::OnBnClickedButtonStopModule()
+{
+	// TODO: Add your control notification handler code here
+}
+
+
+void CtestSerialPortDlg::OnBnClickedButtonAdd()
+{
+	// TODO: Add your control notification handler code here
+}
+
+
+void CtestSerialPortDlg::OnBnClickedButtonRemove()
+{
+	// TODO: Add your control notification handler code here
 }

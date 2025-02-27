@@ -39,4 +39,8 @@ public:
 	afx_msg void OnBnClickedCancel();
 	afx_msg void OnEnChangeEditComport();
 	afx_msg void OnBnClickedButtonmsg();
+	afx_msg void OnBnClickedButtonInitModule();
+	afx_msg void OnBnClickedButtonStopModule();
+	afx_msg void OnBnClickedButtonAdd();
+	afx_msg void OnBnClickedButtonRemove();
 };

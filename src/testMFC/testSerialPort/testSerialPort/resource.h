@@ -13,9 +13,11 @@
 #define IDC_BUTTON_msg                  1001
 #define IDC_BUTTON_INIT_MODULE          1002
 #define IDC_BUTTON_STOP_MODULE          1003
-#define IDC_BUTTON3                     1004
 #define IDC_BUTTON_ADD                  1004
 #define IDC_EDIT2                       1005
+#define IDC_EDIT_PATH_CFG               1006
+#define IDC_BUTTON_ADD2                 1007
+#define IDC_BUTTON_REMOVE               1007
 
 // Next default values for new objects
 // 
