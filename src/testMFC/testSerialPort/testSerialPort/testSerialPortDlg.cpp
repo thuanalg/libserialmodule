@@ -107,7 +107,7 @@ END_MESSAGE_MAP()
 BOOL CtestSerialPortDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
-
+	m_listPort.clear();
 	// Add "About..." menu item to system menu.
 
 	// IDM_ABOUTBOX must be in the system command range.
@@ -139,36 +139,7 @@ BOOL CtestSerialPortDlg::OnInitDialog()
 	p_ComPort = (CEdit*)GetDlgItem(IDC_EDIT_COMPORT);
 	p_Cdata = (CEdit*)GetDlgItem(IDC_EDIT_TEXT);
 	/*-----------------------------------------------------------------------------------------------------------------------*/
-//	int i = 0;
-//	SP_SERIAL_INPUT_ST obj;
-//	FILE* fp = 0;
-//	int k = 0;
-//	
-//	int ret = 0;
-//	char cfgpath[1024];
-//	SPSERIAL_ARR_LIST_LINED* objId = 0;
-//#ifndef UNIX_LINUX
-//	snprintf(cfgpath, 1024, "C:/z/serialmodule/win32/Debug/simplelog.cfg");
-//	//snprintf(cfgpath, 1024, "D:/reserach/serialmodule/xwin64/Debug/simplelog.cfg");
-//#else
-//	snprintf(cfgpath, 1024, "simplelog.cfg");
-//#endif
-//	snprintf(is_port, 32, "%s", "COM3");
-//	ret = spl_init_log(cfgpath);
-//	memset(&obj, 0, sizeof(obj));
-//	snprintf(obj.port_name, SPSERIAL_PORT_LEN, is_port);
-//	obj.cb_evt_fn = callback_to_GUI;
-//	obj.cb_obj = this->m_hWnd;
-//	/*obj.baudrate = 115200;*/
-//	//obj.baudrate = 115200;
-//	obj.baudrate = 115200;
-//	ret = spserial_module_init();
-//	if (ret) {
-//		return EXIT_FAILURE;
-//	}
-//	ret = spserial_inst_create(&obj, &m_myid);
-//	ret = spserial_get_objbyid(m_myid, (void **) & objId, 0);
-	return TRUE;  // return TRUE  unless you set the focus to a control
+	return TRUE;
 }
 
 void CtestSerialPortDlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -224,11 +195,16 @@ HCURSOR CtestSerialPortDlg::OnQueryDragIcon()
 
 void CtestSerialPortDlg::OnBnClickedOk()
 {
-	//if (m_myid > 0) {
-	//	spserial_inst_del(m_myid);
-	//}
-	//spserial_module_close();
-	spl_finish_log();
+	int ret = 0;
+	SPSERIAL_ARR_LIST_LINED* objId = 0;
+
+	while (m_listPort.size() > 0) {
+		objId = (SPSERIAL_ARR_LIST_LINED*)m_listPort.front();
+		spserial_inst_del(objId->item->iidd);
+		m_listPort.pop_front();
+	}
+	ret = spserial_module_close();
+	ret = spl_finish_log();
 	// TODO: Add your control notification handler code here
 	CDialogEx::OnOK();
 
@@ -237,11 +213,16 @@ void CtestSerialPortDlg::OnBnClickedOk()
 
 void CtestSerialPortDlg::OnBnClickedCancel()
 {
-	//if (m_myid > 0) {
-	//	spserial_inst_del(m_myid);
-	//}
-	//spserial_module_close();
-	spl_finish_log();
+	int ret = 0;
+	SPSERIAL_ARR_LIST_LINED* objId = 0;
+
+	while (m_listPort.size() > 0) {
+		objId = (SPSERIAL_ARR_LIST_LINED*)m_listPort.front();
+		spserial_inst_del(objId->item->iidd);
+		m_listPort.pop_front();
+	}
+	ret = spserial_module_close();
+	ret = spl_finish_log();
 	// TODO: Add your control notification handler code here
 	CDialogEx::OnCancel();
 }
@@ -286,6 +267,10 @@ void CtestSerialPortDlg::OnBnClickedButtonInitModule()
 		exit(1);
 	}
 	spllog(SPL_LOG_INFO, "test");
+	ret = spserial_module_init();
+	if (ret) {
+		exit(1);
+	}
 }
 
 
@@ -298,6 +283,40 @@ void CtestSerialPortDlg::OnBnClickedButtonStopModule()
 void CtestSerialPortDlg::OnBnClickedButtonAdd()
 {
 	// TODO: Add your control notification handler code here
+	int ret = 0, i = 0;
+	char port[1024] = { 0 };
+	int n = 0;
+	CString txt = _T("");
+	p_ComPort->GetWindowText(txt);
+	n = txt.GetLength();
+	for (i = 0; i < n; ++i) {
+		port[i] = (char)txt[i];
+	}
+	SP_SERIAL_INPUT_ST obj;
+	FILE* fp = 0;
+	int k = 0;
+	
+	SPSERIAL_ARR_LIST_LINED* objId = 0;
+
+	memset(&obj, 0, sizeof(obj));
+	snprintf(obj.port_name, SPSERIAL_PORT_LEN, port);
+	obj.cb_evt_fn = callback_to_GUI;
+	obj.cb_obj = this->m_hWnd;
+	/*obj.baudrate = 115200;*/
+	//obj.baudrate = 115200;
+	obj.baudrate = 115200;
+	if (ret) {
+		exit(EXIT_FAILURE);
+	}
+	ret = spserial_inst_create(&obj, &m_myid);
+	if (ret) {
+		exit(1);
+	}
+	ret = spserial_get_objbyid(m_myid, (void **) & objId, 0);
+	if (ret) {
+		exit(1);
+	}
+	m_listPort.push_back((void*)objId);
 }
 
 

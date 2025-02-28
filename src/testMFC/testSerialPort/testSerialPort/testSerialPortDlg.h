@@ -4,8 +4,9 @@
 #include "serialmodule.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <list>
 #pragma once
-
+using namespace std;
 
 // CtestSerialPortDlg dialog
 class CtestSerialPortDlg : public CDialogEx
@@ -49,5 +50,6 @@ public:
 	CEdit* p_CfgEdit;
 	CEdit* p_ComPort;
 	CEdit* p_Cdata;
+	std::list<void *> m_listPort;
 	/*-----------------------------------------------------------------------------------------------------------------------*/
 };
