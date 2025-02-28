@@ -374,7 +374,8 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
         char readBuffer[SPSERIAL_BUFFER_SIZE + 1];
         COMSTAT csta = { 0 };
         olReadWrite.hEvent = p->hEvent;
-        flags = EV_RXCHAR | EV_BREAK | EV_RXFLAG;
+        flags = EV_RXCHAR | EV_BREAK | EV_RXFLAG | EV_DSR;
+        //flags = EV_BREAK | EV_RXFLAG;
 
         if (!buf) {
             break;
