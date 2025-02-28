@@ -528,13 +528,18 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                     
                     if (evt) 
                     {
-                        void* ppp = 0;
                         evt->total = nnnn;
                         evt->type = SPSERIAL_EVENT_READ_BUF;
                         
                         evt->pc = sizeof(void*);
-                        ppp = (void*)evt->data;
-                        ppp = p->cb_obj;
+                        if (sizeof(void*) == 4) {
+                            unsigned int tmp = (unsigned int)p->cb_obj;
+                            memcpy((char*)evt->data, (char*)&tmp, evt->pc);
+                        }
+                        else  if (sizeof(void*) == 8) {
+                            unsigned long long int tmp = (unsigned long long int)p->cb_obj;
+                            memcpy((char*)evt->data, (char *)&tmp, evt->pc);
+                        }
                         memcpy(evt->data + evt->pc, readBuffer, bRead);
                         evt->pl = evt->pc + bRead;
                         p->cb_evt_fn(evt);

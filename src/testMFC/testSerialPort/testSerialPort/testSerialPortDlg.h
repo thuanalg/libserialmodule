@@ -54,6 +54,7 @@ public:
 	CEdit* p_CfgEdit;
 	CEdit* p_ComPort;
 	CEdit* p_Cdata;
+	CEdit* p_CSent;
 	std::list<void *> m_listPort;
 	/*-----------------------------------------------------------------------------------------------------------------------*/
 };

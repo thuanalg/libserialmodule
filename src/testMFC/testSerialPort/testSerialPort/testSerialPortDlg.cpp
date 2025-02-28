@@ -30,7 +30,16 @@ static int callback_to_GUI(void* obj) {
 	memcpy((char*)evt, (char*)obj, n);
 
 	spllog(SPL_LOG_INFO, "data length: %d.", evt->pl - evt->pc);
-	hwm = (void*)evt->data;
+	if (sizeof(void*) == 4) {
+		unsigned int *tmp = (unsigned int*)evt->data;
+		hwm = (void*)(*tmp);
+	}
+	else if (sizeof(void*) == 8)  {
+		unsigned long long int* tmp = (unsigned long long int*)evt->data;
+		hwm = (void*)(*tmp);
+	}
+	//hwm = (void*)evt->data;
+	spllog(SPL_LOG_INFO, "hwm: 0x%p", hwm);
 	::SendMessageA((HWND)hwm, WM_SPSERIAL_CUSTOM_MESSAGE, 0, (LPARAM)evt);
 	//spserial_free(evt);
 	return 0;
@@ -141,6 +150,7 @@ BOOL CtestSerialPortDlg::OnInitDialog()
 	p_CfgEdit = (CEdit*)GetDlgItem(IDC_EDIT_PATH_CFG);
 	p_ComPort = (CEdit*)GetDlgItem(IDC_EDIT_COMPORT);
 	p_Cdata = (CEdit*)GetDlgItem(IDC_EDIT_TEXT);
+	p_CSent = (CEdit*)GetDlgItem(IDC_EDIT_SEND);
 	/*-----------------------------------------------------------------------------------------------------------------------*/
 	return TRUE;
 }
@@ -247,9 +257,20 @@ void CtestSerialPortDlg::OnBnClickedButtonmsg()
 	// TODO: Add your control notification handler code here
 	SPSERIAL_ARR_LIST_LINED* objId = 0;
 	int ret = spserial_get_objbyid(m_myid, (void **) & objId, 0);
-	spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
-	spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
-	spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
+	CString data;
+	p_CSent->GetWindowText(data);
+	int n = data.GetLength();
+	if (n) {
+		char senddd[1024] = {0};
+		int i = 0;
+		for (i = 0; i < n; ++i) {
+			senddd[i] = (char)data[i];
+		}
+		spserial_inst_write_to_port(objId->item, senddd, n);
+	}
+	//spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
+	//spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
+	//spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
 }
 
 
@@ -305,6 +326,7 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 	snprintf(obj.port_name, SPSERIAL_PORT_LEN, port);
 	obj.cb_evt_fn = callback_to_GUI;
 	obj.cb_obj = this->m_hWnd;
+	spllog(SPL_LOG_INFO, "this->m_hWnd: 0x%p.", this->m_hWnd);
 	/*obj.baudrate = 115200;*/
 	//obj.baudrate = 115200;
 	obj.baudrate = 115200;
@@ -330,6 +352,14 @@ void CtestSerialPortDlg::OnBnClickedButtonRemove()
 
 
 LRESULT CtestSerialPortDlg::OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam) {
+	SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*)lParam;
+	char* p = evt->data + evt->pc;
+	CString txt;
+	p_Cdata->GetWindowText(txt);
+	CString nstr(p);
+	txt.Insert(0, nstr);
+	txt.Insert(0, _T("\r\n"));
+	p_Cdata->SetWindowText(txt);
 	return 0;
 }
 
