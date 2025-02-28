@@ -867,9 +867,7 @@ int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
 		
         spserial_wait_sem(node->item->sem_off);
 
-        SPSERIAL_CloseHandle(node->item->mtx_off);
-        SPSERIAL_CloseHandle(node->item->sem_off);
-        spserial_free(node->item->buff);
+
         iddd = node->item->iidd;
         /*
             spserial_free(node->item);
@@ -882,14 +880,30 @@ int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
                
                 while (tnode) {
                     if (tnode->item->iidd == iddd) {
-                        if (tnode == t->init_node) {
-                            t->init_node = tnode->next;
+                        prv = tnode->prev;
+                        next = tnode->next;
+                        if (prv && next) {
+                            prv->next = next;
+                            next->prev = prv;
                         }
-                        else if (tnode == t->last_node) {
+                        else if (!prv && !next) {
+                            t->last_node = 0;
+                            t->last_node = 0;
+                        }
+                        else if (!prv) {
+                            /*prv->next = next;*/
+                            next->prev = prv;
+                            t->init_node = next;
 
+                        }
+                        else if (!next) {
+                            prv->next = next;
+                            /*next->prev = prv;*/
+                            t->last_node = prv;
                         }
                         else {
-
+                            t->last_node = 0;
+                            t->last_node = 0;
                         }
                         break;
                     }
@@ -898,6 +912,11 @@ int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
             }
         /* } while (0);*/
         spserial_mutex_unlock(t->mutex);
+
+        SPSERIAL_CloseHandle(node->item->mtx_off);
+        SPSERIAL_CloseHandle(node->item->sem_off);
+        spserial_free(node->item->buff);
+
     } while (0);
     return ret;
 }
