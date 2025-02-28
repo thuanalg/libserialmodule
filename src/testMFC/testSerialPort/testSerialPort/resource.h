@@ -19,6 +19,8 @@
 #define IDC_BUTTON_REMOVE               1007
 #define IDC_EDIT2                       1008
 #define IDC_EDIT_SEND                   1008
+#define IDC_EDIT_SEND2                  1009
+#define IDC_EDIT_WCOM                   1009
 
 // Next default values for new objects
 // 
