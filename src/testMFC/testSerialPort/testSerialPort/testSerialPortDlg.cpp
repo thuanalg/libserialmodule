@@ -290,7 +290,7 @@ void CtestSerialPortDlg::OnBnClickedButtonmsg()
 		pcomid = *it;
 		objId = (SPSERIAL_ARR_LIST_LINED*)pcomid;
 		if (strcmp(portport, objId->item->port_name) == 0) {
-			spserial_inst_write_to_port(objId->item, data, 100);
+			spserial_inst_write_to_port(objId->item, data, strlen(data));
 		}
 	}
 }
@@ -370,6 +370,28 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 void CtestSerialPortDlg::OnBnClickedButtonRemove()
 {
 	// TODO: Add your control notification handler code here
+	char port[1024] = { 0 };
+	int n = 0, i = 0;
+	CString txt = _T("");
+	p_ComPort->GetWindowText(txt);
+	n = txt.GetLength();
+	for (i = 0; i < n; ++i) {
+		port[i] = txt[i];
+	}
+	/*----------------------------------------------------------------------------------------*/
+	std::list<void*>::iterator it = m_listPort.begin();
+	n = m_listPort.size();
+	SPSERIAL_ARR_LIST_LINED* objId = 0;
+	void* pcomid = 0;
+	for (i = 0; i < n; ++i) {
+		std::advance(it, i);
+		pcomid = *it;
+		objId = (SPSERIAL_ARR_LIST_LINED*)pcomid;
+		if (strcmp(port, objId->item->port_name) == 0) {
+			//spserial_inst_write_to_port(objId->item, data, 100);
+			spserial_inst_del(objId->item->iidd);
+		}
+	}
 }
 
 

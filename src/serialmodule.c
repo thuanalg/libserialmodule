@@ -611,14 +611,14 @@ int spserial_module_close() {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_get_newid(SP_SERIAL_INPUT_ST *p, int *idd) {
     int ret = 0;
-    SPSERIAL_ROOT_TYPE* srl = &spserial_root_node;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     SPSERIAL_ARR_LIST_LINED* obj = 0;
     do {
-        if (!srl->mutex) {
+        if (!t->mutex) {
             ret = SPSERIAL_MUTEX_NULL_ERROR;
             break;
         }
-        if (!srl->sem) {
+        if (!t->sem) {
             ret = SPSERIAL_SEM_NULL_ERROR;
             break;
         }
@@ -637,22 +637,22 @@ int spserial_get_newid(SP_SERIAL_INPUT_ST *p, int *idd) {
             ret = SPSERIAL_MEM_NULL;
             break;
         }
-        spserial_mutex_lock(srl->mutex);
+        spserial_mutex_lock(t->mutex);
         /*do {*/
-            srl->n++;
-            (*idd) = srl->n;
-            if (!srl->init_node) {
-                srl->init_node = obj;
-                srl->last_node = obj;
+            t->n++;
+            (*idd) = t->n;
+            if (!t->init_node) {
+                t->init_node = obj;
+                t->last_node = obj;
             }
             else {
-                obj->prev = srl->last_node;
-                srl->last_node->next = obj;
-                srl->last_node = obj;
+                obj->prev = t->last_node;
+                t->last_node->next = obj;
+                t->last_node = obj;
             }
-            srl->count++;
+            t->count++;
         /* } while (0);*/
-        spserial_mutex_unlock(srl->mutex);
+        spserial_mutex_unlock(t->mutex);
         
         snprintf(obj->item->port_name, SPSERIAL_PORT_LEN, "%s", p->port_name);
         obj->item->baudrate = p->baudrate;
@@ -849,18 +849,55 @@ int spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg) {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
     int ret = 0;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+    SPSERIAL_ARR_LIST_LINED* tnode = 0, *prv = 0, *next = 0;
+    int iddd = 0;
     do {
+        if (!node) {
+            ret = SPSERIAL_PARAM_NULL;
+            break;
+        }
         spserial_mutex_lock(node->item->mtx_off);
-        node->item->isoff = 1;
+            /*do {*/
+                node->item->isoff = 1;
+            /*} while (0); */
         spserial_mutex_unlock(node->item->mtx_off);
+        
         SetEvent(node->item->hEvent);
-		spserial_wait_sem(node->item->sem_off);
+		
+        spserial_wait_sem(node->item->sem_off);
 
         SPSERIAL_CloseHandle(node->item->mtx_off);
         SPSERIAL_CloseHandle(node->item->sem_off);
         spserial_free(node->item->buff);
-        spserial_free(node->item);
-        spserial_free(node);
+        iddd = node->item->iidd;
+        /*
+            spserial_free(node->item);
+            spserial_free(node);
+        */
+        spserial_mutex_lock(t->mutex);
+        /*do {*/
+            if (t->init_node) {
+                tnode = t->init_node;
+               
+                while (tnode) {
+                    if (tnode->item->iidd == iddd) {
+                        if (tnode == t->init_node) {
+                            t->init_node = tnode->next;
+                        }
+                        else if (tnode == t->last_node) {
+
+                        }
+                        else {
+
+                        }
+                        break;
+                    }
+                    tnode = tnode->next;
+                }
+            }
+        /* } while (0);*/
+        spserial_mutex_unlock(t->mutex);
     } while (0);
     return ret;
 }
