@@ -17,9 +17,15 @@
 
 static int callback_to_GUI(void* obj) {
 	/*You should clone memory to use*/
+	if (!obj) {
+		return 0;
+	}
 	SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*) obj;
 	int n = evt->total;
 	spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
+	if (!evt) {
+		return 0;
+	}
 	memcpy((char*)evt, (char*)obj, n);
 
 	spllog(SPL_LOG_INFO, "data length: %d.", evt->pl - evt->pc);
@@ -83,11 +89,16 @@ void CtestSerialPortDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CtestSerialPortDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
+	ON_WM_CLOSE()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDOK, &CtestSerialPortDlg::OnBnClickedOk)
 	ON_BN_CLICKED(IDCANCEL, &CtestSerialPortDlg::OnBnClickedCancel)
 	ON_EN_CHANGE(IDC_EDIT_COMPORT, &CtestSerialPortDlg::OnEnChangeEditComport)
 	ON_BN_CLICKED(IDC_BUTTON_msg, &CtestSerialPortDlg::OnBnClickedButtonmsg)
+	ON_BN_CLICKED(IDC_BUTTON_INIT_MODULE, &CtestSerialPortDlg::OnBnClickedButtonInitModule)
+	ON_BN_CLICKED(IDC_BUTTON_STOP_MODULE, &CtestSerialPortDlg::OnBnClickedButtonStopModule)
+	ON_BN_CLICKED(IDC_BUTTON_ADD, &CtestSerialPortDlg::OnBnClickedButtonAdd)
+	ON_BN_CLICKED(IDC_BUTTON_REMOVE, &CtestSerialPortDlg::OnBnClickedButtonRemove)
 END_MESSAGE_MAP()
 
 
@@ -123,35 +134,40 @@ BOOL CtestSerialPortDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// TODO: Add extra initialization here
-	int i = 0;
-	SP_SERIAL_INPUT_ST obj;
-	FILE* fp = 0;
-	int k = 0;
-	
-	int ret = 0;
-	char cfgpath[1024];
-	SPSERIAL_ARR_LIST_LINED* objId = 0;
-#ifndef UNIX_LINUX
-	snprintf(cfgpath, 1024, "C:/z/serialmodule/win32/Debug/simplelog.cfg");
-	//snprintf(cfgpath, 1024, "D:/reserach/serialmodule/xwin64/Debug/simplelog.cfg");
-#else
-	snprintf(cfgpath, 1024, "simplelog.cfg");
-#endif
-	snprintf(is_port, 32, "%s", "COM3");
-	ret = spl_init_log(cfgpath);
-	memset(&obj, 0, sizeof(obj));
-	snprintf(obj.port_name, SPSERIAL_PORT_LEN, is_port);
-	obj.cb_evt_fn = callback_to_GUI;
-	obj.cb_obj = this->m_hWnd;
-	/*obj.baudrate = 115200;*/
-	//obj.baudrate = 115200;
-	obj.baudrate = 115200;
-	ret = spserial_module_init();
-	if (ret) {
-		return EXIT_FAILURE;
-	}
-	ret = spserial_inst_create(&obj, &m_myid);
-	ret = spserial_get_objbyid(m_myid, (void **) & objId, 0);
+	/*-----------------------------------------------------------------------------------------------------------------------*/
+	p_CfgEdit = (CEdit*)GetDlgItem(IDC_EDIT_PATH_CFG);
+	p_ComPort = (CEdit*)GetDlgItem(IDC_EDIT_COMPORT);
+	p_Cdata = (CEdit*)GetDlgItem(IDC_EDIT_TEXT);
+	/*-----------------------------------------------------------------------------------------------------------------------*/
+//	int i = 0;
+//	SP_SERIAL_INPUT_ST obj;
+//	FILE* fp = 0;
+//	int k = 0;
+//	
+//	int ret = 0;
+//	char cfgpath[1024];
+//	SPSERIAL_ARR_LIST_LINED* objId = 0;
+//#ifndef UNIX_LINUX
+//	snprintf(cfgpath, 1024, "C:/z/serialmodule/win32/Debug/simplelog.cfg");
+//	//snprintf(cfgpath, 1024, "D:/reserach/serialmodule/xwin64/Debug/simplelog.cfg");
+//#else
+//	snprintf(cfgpath, 1024, "simplelog.cfg");
+//#endif
+//	snprintf(is_port, 32, "%s", "COM3");
+//	ret = spl_init_log(cfgpath);
+//	memset(&obj, 0, sizeof(obj));
+//	snprintf(obj.port_name, SPSERIAL_PORT_LEN, is_port);
+//	obj.cb_evt_fn = callback_to_GUI;
+//	obj.cb_obj = this->m_hWnd;
+//	/*obj.baudrate = 115200;*/
+//	//obj.baudrate = 115200;
+//	obj.baudrate = 115200;
+//	ret = spserial_module_init();
+//	if (ret) {
+//		return EXIT_FAILURE;
+//	}
+//	ret = spserial_inst_create(&obj, &m_myid);
+//	ret = spserial_get_objbyid(m_myid, (void **) & objId, 0);
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -208,10 +224,10 @@ HCURSOR CtestSerialPortDlg::OnQueryDragIcon()
 
 void CtestSerialPortDlg::OnBnClickedOk()
 {
-	if (m_myid > 0) {
-		spserial_inst_del(m_myid);
-	}
-	spserial_module_close();
+	//if (m_myid > 0) {
+	//	spserial_inst_del(m_myid);
+	//}
+	//spserial_module_close();
 	spl_finish_log();
 	// TODO: Add your control notification handler code here
 	CDialogEx::OnOK();
@@ -221,10 +237,10 @@ void CtestSerialPortDlg::OnBnClickedOk()
 
 void CtestSerialPortDlg::OnBnClickedCancel()
 {
-	if (m_myid > 0) {
-		spserial_inst_del(m_myid);
-	}
-	spserial_module_close();
+	//if (m_myid > 0) {
+	//	spserial_inst_del(m_myid);
+	//}
+	//spserial_module_close();
 	spl_finish_log();
 	// TODO: Add your control notification handler code here
 	CDialogEx::OnCancel();
@@ -250,4 +266,50 @@ void CtestSerialPortDlg::OnBnClickedButtonmsg()
 	spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
 	spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
 	spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
+}
+
+
+void CtestSerialPortDlg::OnBnClickedButtonInitModule()
+{
+	// TODO: Add your control notification handler code here
+	int ret = 0, i =0;
+	char cfgpath[1024] = {0};
+	int n = 0;
+	CString txt;
+	p_CfgEdit->GetWindowText(txt);
+	n = txt.GetLength();
+	for (i = 0; i < n; ++i) {
+		cfgpath[i] = txt[i];
+	}
+	ret = spl_init_log(cfgpath);
+	if (ret) {
+		exit(1);
+	}
+	spllog(SPL_LOG_INFO, "test");
+}
+
+
+void CtestSerialPortDlg::OnBnClickedButtonStopModule()
+{
+	// TODO: Add your control notification handler code here
+}
+
+
+void CtestSerialPortDlg::OnBnClickedButtonAdd()
+{
+	// TODO: Add your control notification handler code here
+}
+
+
+void CtestSerialPortDlg::OnBnClickedButtonRemove()
+{
+	// TODO: Add your control notification handler code here
+}
+
+
+void CtestSerialPortDlg::OnClose()
+{
+	// TODO: Add your control notification handler code here
+	CDialog::OnClose();
+	//spl_finish_log();
 }

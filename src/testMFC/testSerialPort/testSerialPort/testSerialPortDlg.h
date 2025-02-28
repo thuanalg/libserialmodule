@@ -39,4 +39,15 @@ public:
 	afx_msg void OnBnClickedCancel();
 	afx_msg void OnEnChangeEditComport();
 	afx_msg void OnBnClickedButtonmsg();
+	afx_msg void OnBnClickedButtonInitModule();
+	afx_msg void OnBnClickedButtonStopModule();
+	afx_msg void OnBnClickedButtonAdd();
+	afx_msg void OnBnClickedButtonRemove();
+	afx_msg void OnClose();
+
+	/*-----------------------------------------------------------------------------------------------------------------------*/
+	CEdit* p_CfgEdit;
+	CEdit* p_ComPort;
+	CEdit* p_Cdata;
+	/*-----------------------------------------------------------------------------------------------------------------------*/
 };
