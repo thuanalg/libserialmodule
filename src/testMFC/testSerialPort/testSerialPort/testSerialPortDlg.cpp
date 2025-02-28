@@ -360,6 +360,7 @@ LRESULT CtestSerialPortDlg::OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam
 	txt.Insert(0, nstr);
 	txt.Insert(0, _T("\r\n"));
 	p_Cdata->SetWindowText(txt);
+	spserial_free(evt);
 	return 0;
 }
 
