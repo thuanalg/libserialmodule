@@ -8,6 +8,9 @@
 #pragma once
 using namespace std;
 
+#define WM_SPSERIAL_CUSTOM_MESSAGE		(WM_USER + 107)
+
+
 // CtestSerialPortDlg dialog
 class CtestSerialPortDlg : public CDialogEx
 {
@@ -33,6 +36,7 @@ protected:
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
+	afx_msg LRESULT OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam);  // Handler for your custom message
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnBnClickedOk();

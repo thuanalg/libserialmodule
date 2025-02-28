@@ -20,6 +20,7 @@ static int callback_to_GUI(void* obj) {
 	if (!obj) {
 		return 0;
 	}
+	void* hwm = 0;
 	SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*) obj;
 	int n = evt->total;
 	spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
@@ -29,9 +30,9 @@ static int callback_to_GUI(void* obj) {
 	memcpy((char*)evt, (char*)obj, n);
 
 	spllog(SPL_LOG_INFO, "data length: %d.", evt->pl - evt->pc);
-	
-	
-	spserial_free(evt);
+	hwm = (void*)evt->data;
+	::SendMessageA((HWND)hwm, WM_SPSERIAL_CUSTOM_MESSAGE, 0, (LPARAM)evt);
+	//spserial_free(evt);
 	return 0;
 }
 
@@ -99,6 +100,8 @@ BEGIN_MESSAGE_MAP(CtestSerialPortDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_STOP_MODULE, &CtestSerialPortDlg::OnBnClickedButtonStopModule)
 	ON_BN_CLICKED(IDC_BUTTON_ADD, &CtestSerialPortDlg::OnBnClickedButtonAdd)
 	ON_BN_CLICKED(IDC_BUTTON_REMOVE, &CtestSerialPortDlg::OnBnClickedButtonRemove)
+	ON_BN_CLICKED(IDC_BUTTON_REMOVE, &CtestSerialPortDlg::OnBnClickedButtonRemove)
+	ON_MESSAGE(WM_SPSERIAL_CUSTOM_MESSAGE, &CtestSerialPortDlg::OnSpSerialCustomMessage)
 END_MESSAGE_MAP()
 
 
@@ -323,6 +326,11 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 void CtestSerialPortDlg::OnBnClickedButtonRemove()
 {
 	// TODO: Add your control notification handler code here
+}
+
+
+LRESULT CtestSerialPortDlg::OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam) {
+	return 0;
 }
 
 
