@@ -863,66 +863,19 @@ int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
             ret = SPSERIAL_PARAM_NULL;
             break;
         }
+        spserial_mutex_lock(node->item->mtx_off);
+        /*do {*/
+            node->item->isoff = 1;
+        /*} while (0); */
+        spserial_mutex_unlock(node->item->mtx_off);
 
+        SetEvent(node->item->hEvent);
 
+        spserial_wait_sem(node->item->sem_off);
 
-//        iddd = node->item->iidd;
-        /*
-            spserial_free(node->item);
-            spserial_free(node);
-        */
-//       spserial_mutex_lock(t->mutex);
-//       /*do {*/
-//           if (t->init_node) {
-//               tnode = t->init_node;
-//               while ( (i < t->count) && tnode) 
-//               {
-//                   if (tnode->item->iidd == iddd) {
-//                       if (tnode->item->iidd == t->init_node->item->iidd) {
-//                           t->init_node = t->init_node->next;
-//                       }
-//                       else {
-//                           if (prev) {
-//                               prev->next = tnode->next;
-//                               if (!prev->next) {
-//                                   t->last_node = prev;
-//                               }
-//                           }
-//                       }
-//                       found = 1;
-//                       t->count--;
-//                       if (!t->count) {
-//                           t->init_node = t->last_node = 0;
-//                       }
-//                       break;
-//                   }
-//                   prev = tnode;
-//                   tnode = tnode->next;
-//                   ++i;
-//               }
-//           }
-        /* } while (0);*/
-//        spserial_mutex_unlock(t->mutex);
-
-//        if (found) 
-//        {
-            spserial_mutex_lock(node->item->mtx_off);
-            /*do {*/
-                node->item->isoff = 1;
-            /*} while (0); */
-            spserial_mutex_unlock(node->item->mtx_off);
-
-            SetEvent(node->item->hEvent);
-
-            spserial_wait_sem(node->item->sem_off);
-
-            SPSERIAL_CloseHandle(node->item->mtx_off);
-            SPSERIAL_CloseHandle(node->item->sem_off);
-            spserial_free(node->item->buff);
- //       }
- //       else {
- //           ret = SPSERIAL_ITEM_NOT_FOUND;
- //       }
+        SPSERIAL_CloseHandle(node->item->mtx_off);
+        SPSERIAL_CloseHandle(node->item->sem_off);
+        spserial_free(node->item->buff);
 
     } while (0);
     return ret;
