@@ -63,6 +63,7 @@ extern "C" {
 		SPSERIAL_MALLOC_ERROR,
 		SPSERIAL_INFO_NULL,
 		SPSERIAL_PARAM_NULL,
+		SPSERIAL_ITEM_NOT_FOUND,
 
 
 
@@ -129,7 +130,7 @@ extern "C" {
 
 	typedef struct __SPSERIAL_ARR_LIST_LINED__ {
 		SP_SERIAL_INFO_ST* item;
-		struct __SPSERIAL_ARR_LIST_LINED__* prev;
+		/* struct __SPSERIAL_ARR_LIST_LINED__* prev; */
 		struct __SPSERIAL_ARR_LIST_LINED__* next;
 	} SPSERIAL_ARR_LIST_LINED;
 

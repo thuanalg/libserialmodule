@@ -388,8 +388,10 @@ void CtestSerialPortDlg::OnBnClickedButtonRemove()
 		pcomid = *it;
 		objId = (SPSERIAL_ARR_LIST_LINED*)pcomid;
 		if (strcmp(port, objId->item->port_name) == 0) {
-			//spserial_inst_write_to_port(objId->item, data, 100);
-			spserial_inst_del(objId->item->iidd);
+			int ret = 0;
+			ret = spserial_inst_del(objId->item->iidd);
+			//m_listPort.erase(i);
+			//m_listPort.erase()
 		}
 	}
 }
