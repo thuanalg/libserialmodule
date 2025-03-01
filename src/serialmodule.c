@@ -15,7 +15,13 @@
     #include <fcntl.h> /* For O_* constants */
     #include <errno.h>
     #include <termios.h>
-
+    #include <stdlib.h> 
+    #include <unistd.h> 
+    #include <string.h> 
+    #include <sys/types.h> 
+    #include <sys/socket.h> 
+    #include <arpa/inet.h> 
+    #include <netinet/in.h> 
     #ifdef __TRUE_LINUX__
         #include <sys/epoll.h>
     #else
@@ -38,6 +44,9 @@
             ;}\
         }
 #else
+    #define SPSR_MAXLINE                1024
+    #define SPSR_PORT_TRIGGER                       10024
+    #define SPSR_PORT_CARTRIDGE                     (SPSR_PORT_TRIGGER + 10)
 #endif
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -580,7 +589,7 @@ int spserial_module_init() {
             break;
         }
         spserial_root_node.sem = spserial_sem_create();
-        if (!spserial_root_node.mutex) {
+        if (!spserial_root_node.sem) {
             ret = SPSERIAL_SEM_CREATE;
             break;
         }
@@ -1009,6 +1018,48 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 #ifndef UNIX_LINUX
 #else
     int spserial_init_trigger(void* obj) { 
+        SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+        int ret = 0;
+        int sockfd = 0;
+        int n = 0;
+        socklen_t len = 0;
+        char buffer[SPSR_MAXLINE];
+        const char* hello = "Hello from server";
+        struct sockaddr_in trigger_addr, cartridge_addr;
+
+        // Creating socket file descriptor 
+        if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+            perror("socket creation failed");
+            exit(EXIT_FAILURE);
+        }
+
+        memset(&trigger_addr, 0, sizeof(trigger_addr));
+        memset(&cartridge_addr, 0, sizeof(cartridge_addr));
+
+        // Filling server information 
+        trigger_addr.sin_family = AF_INET; // IPv4 
+        trigger_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;;
+        trigger_addr.sin_port = htons(SPSR_PORT_TRIGGER);
+
+        cartridge_addr.sin_family = AF_INET; // IPv4 
+        cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
+        cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
+
+        // Bind the socket with the server address 
+        if (bind(sockfd, (const struct sockaddr*)&trigger_addr,
+            sizeof(trigger_addr)) < 0)
+        {
+            perror("bind failed");
+            exit(EXIT_FAILURE);
+        }
+
+        while (1) {
+            spserial_wait_sem(t->sem);
+            len = sizeof(trigger_addr);  //len is value/result 
+            sendto(sockfd, (const char*)hello, strlen(hello),
+                MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr,
+                len);
+        }
         return 0;
     }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
