@@ -1027,7 +1027,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         const char* hello = "Hello from server";
         struct sockaddr_in trigger_addr, cartridge_addr;
 
-        // Creating socket file descriptor 
+        /* Creating socket file descriptor */
         if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
             perror("socket creation failed");
             exit(EXIT_FAILURE);
@@ -1036,16 +1036,16 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         memset(&trigger_addr, 0, sizeof(trigger_addr));
         memset(&cartridge_addr, 0, sizeof(cartridge_addr));
 
-        // Filling server information 
-        trigger_addr.sin_family = AF_INET; // IPv4 
+        /* Filling server information */
+        trigger_addr.sin_family = AF_INET; 
         trigger_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;;
         trigger_addr.sin_port = htons(SPSR_PORT_TRIGGER);
 
-        cartridge_addr.sin_family = AF_INET; // IPv4 
+        cartridge_addr.sin_family = AF_INET; 
         cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
         cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
 
-        // Bind the socket with the server address 
+        /* Bind the socket with the server address */
         if (bind(sockfd, (const struct sockaddr*)&trigger_addr,
             sizeof(trigger_addr)) < 0)
         {
@@ -1055,7 +1055,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 
         while (1) {
             spserial_wait_sem(t->sem);
-            len = sizeof(trigger_addr);  //len is value/result 
+            len = sizeof(trigger_addr);  
             sendto(sockfd, (const char*)hello, strlen(hello),
                 MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr,
                 len);
