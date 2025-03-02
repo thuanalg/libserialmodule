@@ -90,6 +90,8 @@ static DWORD WINAPI
 #else
 static void*
     spserial_thread_operating_routine(void*);
+static void* 
+    spsr_init_trigger_routine(void*);
 #endif
 
 static int 
@@ -596,6 +598,9 @@ int spserial_module_init() {
             break;
         }
 #else
+        pthread_t idd = 0;
+        int err = 0;
+
         t->sem_spsr = spserial_sem_create();
         if (!t->sem_spsr) {
             ret = SPSERIAL_SEM_CREATE;
@@ -608,6 +613,11 @@ int spserial_module_init() {
         }
 	    ret = spserial_start_listen(0);
         if (ret) {
+            break;
+        }
+        err = pthread_create(&idd, 0, spsr_init_trigger_routine, t);
+        if (err) {
+            ret = PSERIAL_CREATE_THREAD_ERROR;
             break;
         }
 #endif
@@ -1034,10 +1044,12 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #else
-static void* spsr_init_trigger_routine(void*);
-void* spsr_init_trigger_routine(void* obj) {
-    return 0;
-}
+
+    void* spsr_init_trigger_routine(void* obj) {
+        spsr_init_trigger(obj);
+        return 0;
+    }
+
     int spsr_init_trigger(void* obj) { 
         SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
         int ret = 0;
@@ -1081,6 +1093,9 @@ void* spsr_init_trigger_routine(void* obj) {
             spserial_mutex_lock(t->mutex);
             /*do {*/
                 isoff = t->spsr_off;
+                if (isoff) {
+                    t->spsr_off ++;
+                }
             /*} while (0);*/
             spserial_mutex_unlock(t->mutex);
             if (isoff) {
