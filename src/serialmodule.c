@@ -92,6 +92,8 @@ static void*
     spserial_thread_operating_routine(void*);
 static void* 
     spsr_init_trigger_routine(void*);
+static void*
+    spsr_init_cartridge_routine(void*);
 #endif
 
 static int 
@@ -606,7 +608,7 @@ int spserial_module_init() {
             ret = SPSERIAL_SEM_CREATE;
             break;
         }
-
+/*
         ret = spsr_init_trigger(0);
         if (ret) {
             break;
@@ -615,7 +617,15 @@ int spserial_module_init() {
         if (ret) {
             break;
         }
+*/
         err = pthread_create(&idd, 0, spsr_init_trigger_routine, t);
+        if (err) {
+            ret = PSERIAL_CREATE_THREAD_ERROR;
+            break;
+        }
+
+        idd = 0;
+        err = pthread_create(&idd, 0, spsr_init_cartridge_routine, t);
         if (err) {
             ret = PSERIAL_CREATE_THREAD_ERROR;
             break;
@@ -638,9 +648,21 @@ int spserial_module_close() {
     /*} while (0);*/
     spserial_mutex_unlock(t->mutex);
     /*----------------------------------------*/
-    spserial_rel_sem(t->sem);
-    /*t->sem_spsr*/
-    spserial_wait_sem(t->sem_spsr);
+    while (1) {
+        int is_off = 0;
+        spserial_rel_sem(t->sem);
+        /*t->sem_spsr*/
+        spserial_wait_sem(t->sem_spsr);
+
+        spserial_mutex_lock(t->mutex);
+        /*do {*/
+            is_off = t->spsr_off;
+        /*} while (0);*/
+        spserial_mutex_unlock(t->mutex);
+        if (is_off > 2) {
+            break;
+        }
+    }
 #endif
     return 0;
 }
@@ -1050,6 +1072,66 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         return 0;
     }
 
+    void* spsr_init_cartridge_routine(void* obj) {
+        SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+        int ret = 0;
+        int sockfd = 0;
+        int n = 0;
+        int isoff = 0;
+        socklen_t len = 0;
+        char buffer[SPSR_MAXLINE];
+        const char* hello = "Hello from server";
+        struct sockaddr_in cartridge_addr;
+        /* Creating socket file descriptor */
+        if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+            perror("socket creation failed");
+            exit(EXIT_FAILURE);
+        }
+
+        memset(&cartridge_addr, 0, sizeof(cartridge_addr));
+
+        /* Filling server information */
+
+        cartridge_addr.sin_family = AF_INET;
+        cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
+        cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
+
+        /* Bind the socket with the server address */
+        ret = bind(sockfd, (const struct sockaddr*)&cartridge_addr,
+            sizeof(cartridge_addr));
+        if (ret < 0)
+        {
+            /*
+            perror("bind failed");
+            exit(EXIT_FAILURE);
+            */
+            spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+
+        while (1) {
+            spserial_wait_sem(t->sem);
+
+            spserial_mutex_lock(t->mutex);
+            /*do {*/
+                isoff = t->spsr_off;
+                if (isoff) {
+                    t->spsr_off++;
+                }
+            /*} while (0);*/
+            spserial_mutex_unlock(t->mutex);
+        }
+
+        ret = shutdown(sockfd, SHUT_RDWR);
+        if (ret) {
+            spllog(SPL_LOG_ERROR, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            ret = PSERIAL_CREATE_SHUTDOWN_SOCK;
+        }
+        spserial_rel_sem(t->sem_spsr);
+
+        return 0;
+    }
+
     int spsr_init_trigger(void* obj) { 
         SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
         int ret = 0;
@@ -1080,10 +1162,12 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
 
         /* Bind the socket with the server address */
-        if (bind(sockfd, (const struct sockaddr*)&trigger_addr,
-            sizeof(trigger_addr)) < 0)
+        ret = bind(sockfd, (const struct sockaddr*)&trigger_addr,
+            sizeof(trigger_addr));
+        if ( ret < 0)
         {
-            perror("bind failed");
+            /* perror("bind failed"); */
+            spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
             exit(EXIT_FAILURE);
         }
 
@@ -1094,13 +1178,15 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
             /*do {*/
                 isoff = t->spsr_off;
                 if (isoff) {
-                    t->spsr_off ++;
+                    t->spsr_off++;
                 }
             /*} while (0);*/
             spserial_mutex_unlock(t->mutex);
+
             if (isoff) {
                 break;
             }
+
             len = sizeof(trigger_addr);  
             sendto(sockfd, (const char*)hello, strlen(hello),
                 MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr,
@@ -1108,7 +1194,8 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         }
         ret = shutdown(sockfd, SHUT_RDWR);
         if (ret) {
-
+            spllog(SPL_LOG_ERROR, "shutdown: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            ret = PSERIAL_CREATE_SHUTDOWN_SOCK;
         }
         spserial_rel_sem(t->sem_spsr);
         return 0;
