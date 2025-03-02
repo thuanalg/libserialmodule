@@ -69,7 +69,7 @@
 
 #ifndef UNIX_LINUX
 #else
-static int spserial_init_trigger(void*);
+static int spsr_init_trigger(void*);
 static int spserial_pull_trigger(void*);
 static int spserial_start_listen(void*);
 #endif
@@ -594,7 +594,7 @@ int spserial_module_init() {
             break;
         }
 #else
-        ret = spserial_init_trigger(0);
+        ret = spsr_init_trigger(0);
         if (ret) {
             break;
         }
@@ -1017,7 +1017,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #else
-    int spserial_init_trigger(void* obj) { 
+    int spsr_init_trigger(void* obj) { 
         SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
         int ret = 0;
         int sockfd = 0;
