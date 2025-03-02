@@ -473,7 +473,7 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                 }
             }
             else {
-                spl_console_log("WaitCommEvent OK");
+                spllog(SPL_LOG_DEBUG, "WaitCommEvent OK");
             }
             memset(&csta, 0, sizeof(csta));
             ClearCommError(p->handle, &dwError, &csta);
@@ -603,7 +603,7 @@ int spserial_module_init() {
             break;
         }
 #endif
-        spl_console_log("spserial_module_init: DONE");
+        spllog(SPL_LOG_DEBUG, "spserial_module_init: DONE");
     } while (0);
     return ret;
 }
@@ -758,7 +758,7 @@ int spserial_rel_sem(void* sem) {
         */
         ret = sem_post((sem_t*)sem);
         if (ret) {
-            spl_console_log("sem_post: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            spllog(SPL_LOG_DEBUG, "sem_post: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
         }
 #endif 
     } while (0);
@@ -847,14 +847,14 @@ int spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg) {
     hThread = CreateThread(NULL, 0, f, arg, 0, &dwThreadId);
     if (!hThread) {
         ret = SPSERIAL_THREAD_W32_CREATE;
-        spl_console_log("CreateThread error: %d", (int)GetLastError());
+        spllog(SPL_LOG_DEBUG, "CreateThread error: %d", (int)GetLastError());
     }
 #else
     pthread_t tidd = 0;
     ret = pthread_create(&tidd, 0, f, arg);
     if (ret) {
         ret = SPL_LOG_THREAD_PX_CREATE;
-        spl_console_log("pthread_create: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+        spllog(SPL_LOG_DEBUG, "pthread_create: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
     }
 #endif
     return ret;
