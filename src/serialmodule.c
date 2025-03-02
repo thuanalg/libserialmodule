@@ -22,6 +22,7 @@
     #include <sys/socket.h> 
     #include <arpa/inet.h> 
     #include <netinet/in.h> 
+
     #ifdef __TRUE_LINUX__
         #include <sys/epoll.h>
     #else
@@ -626,6 +627,10 @@ int spserial_module_close() {
         t->spsr_off = 1;
     /*} while (0);*/
     spserial_mutex_unlock(t->mutex);
+    /*----------------------------------------*/
+    spserial_rel_sem(t->sem);
+    /*t->sem_spsr*/
+    spserial_wait_sem(t->sem_spsr);
 #endif
     return 0;
 }
@@ -1029,6 +1034,10 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #else
+static void* spsr_init_trigger_routine(void*);
+void* spsr_init_trigger_routine(void* obj) {
+    return 0;
+}
     int spsr_init_trigger(void* obj) { 
         SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
         int ret = 0;
@@ -1068,6 +1077,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 
         while (1) {
             spserial_wait_sem(t->sem);
+
             spserial_mutex_lock(t->mutex);
             /*do {*/
                 isoff = t->spsr_off;
@@ -1081,6 +1091,11 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr,
                 len);
         }
+        ret = shutdown(sockfd, SHUT_RDWR);
+        if (ret) {
+
+        }
+        spserial_rel_sem(t->sem_spsr);
         return 0;
     }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
