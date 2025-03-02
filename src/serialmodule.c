@@ -45,7 +45,7 @@
             ;}\
         }
 #else
-    #define SPSR_MAXLINE                1024
+    #define SPSR_MAXLINE                            1024
     #define SPSR_PORT_TRIGGER                       10024
     #define SPSR_PORT_CARTRIDGE                     (SPSR_PORT_TRIGGER + 10)
 #endif
@@ -1101,10 +1101,6 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
             sizeof(cartridge_addr));
         if (ret < 0)
         {
-            /*
-            perror("bind failed");
-            exit(EXIT_FAILURE);
-            */
             spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
             exit(EXIT_FAILURE);
         }
@@ -1120,12 +1116,14 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 }
             /*} while (0);*/
             spserial_mutex_unlock(t->mutex);
+            /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+            /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
         }
 
-        ret = shutdown(sockfd, SHUT_RDWR);
+        ret = close(sockfd);
         if (ret) {
-            spllog(SPL_LOG_ERROR, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-            ret = PSERIAL_CREATE_SHUTDOWN_SOCK;
+            spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            ret = PSERIAL_CLOSE_SOCK;
         }
         spserial_rel_sem(t->sem_spsr);
 
@@ -1142,62 +1140,79 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         char buffer[SPSR_MAXLINE];
         const char* hello = "Hello from server";
         struct sockaddr_in trigger_addr, cartridge_addr;
-
-        /* Creating socket file descriptor */
-        if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-            perror("socket creation failed");
-            exit(EXIT_FAILURE);
-        }
-
-        memset(&trigger_addr, 0, sizeof(trigger_addr));
-        memset(&cartridge_addr, 0, sizeof(cartridge_addr));
-
-        /* Filling server information */
-        trigger_addr.sin_family = AF_INET; 
-        trigger_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;;
-        trigger_addr.sin_port = htons(SPSR_PORT_TRIGGER);
-
-        cartridge_addr.sin_family = AF_INET; 
-        cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
-        cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
-
-        /* Bind the socket with the server address */
-        ret = bind(sockfd, (const struct sockaddr*)&trigger_addr,
-            sizeof(trigger_addr));
-        if ( ret < 0)
-        {
-            /* perror("bind failed"); */
-            spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-            exit(EXIT_FAILURE);
-        }
-
-        while (1) {
-            spserial_wait_sem(t->sem);
-
-            spserial_mutex_lock(t->mutex);
-            /*do {*/
-                isoff = t->spsr_off;
-                if (isoff) {
-                    t->spsr_off++;
-                }
-            /*} while (0);*/
-            spserial_mutex_unlock(t->mutex);
-
-            if (isoff) {
+        do {
+        
+            /* Creating socket file descriptor */
+            if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+                spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
+                ret = PSERIAL_CREATE_CREATE_SOCK;
                 break;
             }
 
-            len = sizeof(trigger_addr);  
-            sendto(sockfd, (const char*)hello, strlen(hello),
-                MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr,
-                len);
-        }
-        ret = shutdown(sockfd, SHUT_RDWR);
-        if (ret) {
-            spllog(SPL_LOG_ERROR, "shutdown: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-            ret = PSERIAL_CREATE_SHUTDOWN_SOCK;
-        }
-        spserial_rel_sem(t->sem_spsr);
+            memset(&trigger_addr, 0, sizeof(trigger_addr));
+            memset(&cartridge_addr, 0, sizeof(cartridge_addr));
+
+            /* Filling server information */
+            trigger_addr.sin_family = AF_INET; 
+            trigger_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;;
+            trigger_addr.sin_port = htons(SPSR_PORT_TRIGGER);
+
+            cartridge_addr.sin_family = AF_INET; 
+            cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
+            cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
+
+            // Set socket to non-blocking mode
+            ret = fcntl(sockfd, F_GETFL, 0);
+            if (ret == -1) {
+                spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+                ret = PSERIAL_FCNTL_SOCK;
+                break;
+            }
+
+            if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
+                perror("fcntl F_SETFL failed");
+                return 1;
+            }
+
+            /* Bind the socket with the server address */
+            ret = bind(sockfd, (const struct sockaddr*)&trigger_addr,
+                sizeof(trigger_addr));
+            if ( ret < 0)
+            {
+                /* perror("bind failed"); */
+                spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+                exit(EXIT_FAILURE);
+            }
+            len = sizeof(trigger_addr);
+            while (1) {
+                spserial_wait_sem(t->sem);
+
+                spserial_mutex_lock(t->mutex);
+                /*do {*/
+                    isoff = t->spsr_off;
+                    if (isoff) {
+                        t->spsr_off++;
+                    }
+                /*} while (0);*/
+                spserial_mutex_unlock(t->mutex);
+
+                if (isoff) {
+                    break;
+                }
+                sendto(sockfd, (const char*)hello, strlen(hello),
+                    MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr,
+                    len);
+                /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+                /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+            }
+            ret = close(sockfd);
+            if (ret) {
+                spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+                ret = PSERIAL_CLOSE_SOCK;
+            }
+            spserial_rel_sem(t->sem_spsr);
+        } 
+        while (0);
         return 0;
     }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
