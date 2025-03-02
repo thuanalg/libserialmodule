@@ -64,6 +64,8 @@ extern "C" {
 		SPSERIAL_INFO_NULL,
 		SPSERIAL_PARAM_NULL,
 		SPSERIAL_ITEM_NOT_FOUND,
+		PSERIAL_CREATE_THREAD_ERROR,
+		PSERIAL_CREATE_SHUTDOWN_SOCK,
 
 
 
@@ -139,7 +141,13 @@ extern "C" {
 		int count;
 		void* mutex;
 		void* sem;
-
+#ifndef UNIX_LINUX
+#else
+		int
+			spsr_off;    /*Check off.*/
+		void* 
+			sem_spsr; /*Check off.*/
+#endif 
 		SPSERIAL_ARR_LIST_LINED* init_node;
 		SPSERIAL_ARR_LIST_LINED* last_node;
 	}SPSERIAL_ROOT_TYPE;

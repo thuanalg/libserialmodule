@@ -22,6 +22,7 @@
     #include <sys/socket.h> 
     #include <arpa/inet.h> 
     #include <netinet/in.h> 
+
     #ifdef __TRUE_LINUX__
         #include <sys/epoll.h>
     #else
@@ -69,7 +70,7 @@
 
 #ifndef UNIX_LINUX
 #else
-static int spserial_init_trigger(void*);
+static int spsr_init_trigger(void*);
 static int spserial_pull_trigger(void*);
 static int spserial_start_listen(void*);
 #endif
@@ -89,6 +90,10 @@ static DWORD WINAPI
 #else
 static void*
     spserial_thread_operating_routine(void*);
+static void* 
+    spsr_init_trigger_routine(void*);
+static void*
+    spsr_init_cartridge_routine(void*);
 #endif
 
 static int 
@@ -473,7 +478,7 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                 }
             }
             else {
-                spl_console_log("WaitCommEvent OK");
+                spllog(SPL_LOG_DEBUG, "WaitCommEvent OK");
             }
             memset(&csta, 0, sizeof(csta));
             ClearCommError(p->handle, &dwError, &csta);
@@ -581,20 +586,30 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_init() {
     int ret = 0;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     do {
 #ifndef UNIX_LINUX
-        spserial_root_node.mutex = spserial_mutex_create();
-        if (!spserial_root_node.mutex) {
+        t->mutex = spserial_mutex_create();
+        if (!t->mutex) {
             ret = SPSERIAL_MTX_CREATE;
             break;
         }
-        spserial_root_node.sem = spserial_sem_create();
-        if (!spserial_root_node.sem) {
+        t->sem = spserial_sem_create();
+        if (!t->sem) {
             ret = SPSERIAL_SEM_CREATE;
             break;
         }
 #else
-        ret = spserial_init_trigger(0);
+        pthread_t idd = 0;
+        int err = 0;
+
+        t->sem_spsr = spserial_sem_create();
+        if (!t->sem_spsr) {
+            ret = SPSERIAL_SEM_CREATE;
+            break;
+        }
+/*
+        ret = spsr_init_trigger(0);
         if (ret) {
             break;
         }
@@ -602,18 +617,52 @@ int spserial_module_init() {
         if (ret) {
             break;
         }
+*/
+        err = pthread_create(&idd, 0, spsr_init_trigger_routine, t);
+        if (err) {
+            ret = PSERIAL_CREATE_THREAD_ERROR;
+            break;
+        }
+
+        idd = 0;
+        err = pthread_create(&idd, 0, spsr_init_cartridge_routine, t);
+        if (err) {
+            ret = PSERIAL_CREATE_THREAD_ERROR;
+            break;
+        }
 #endif
-        spl_console_log("spserial_module_init: DONE");
+        spllog(SPL_LOG_DEBUG, "spserial_module_init: DONE");
     } while (0);
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_close() {
-    SPSERIAL_ROOT_TYPE* srl = &spserial_root_node;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
 #ifndef UNIX_LINUX
-    SPSERIAL_CloseHandle(srl->mutex);
-    SPSERIAL_CloseHandle(srl->sem);
+    SPSERIAL_CloseHandle(t->mutex);
+    SPSERIAL_CloseHandle(t->sem);
 #else
+    spserial_mutex_lock(t->mutex);
+    /*do {*/
+        t->spsr_off = 1;
+    /*} while (0);*/
+    spserial_mutex_unlock(t->mutex);
+    /*----------------------------------------*/
+    while (1) {
+        int is_off = 0;
+        spserial_rel_sem(t->sem);
+        /*t->sem_spsr*/
+        spserial_wait_sem(t->sem_spsr);
+
+        spserial_mutex_lock(t->mutex);
+        /*do {*/
+            is_off = t->spsr_off;
+        /*} while (0);*/
+        spserial_mutex_unlock(t->mutex);
+        if (is_off > 2) {
+            break;
+        }
+    }
 #endif
     return 0;
 }
@@ -758,7 +807,7 @@ int spserial_rel_sem(void* sem) {
         */
         ret = sem_post((sem_t*)sem);
         if (ret) {
-            spl_console_log("sem_post: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            spllog(SPL_LOG_DEBUG, "sem_post: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
         }
 #endif 
     } while (0);
@@ -847,14 +896,14 @@ int spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg) {
     hThread = CreateThread(NULL, 0, f, arg, 0, &dwThreadId);
     if (!hThread) {
         ret = SPSERIAL_THREAD_W32_CREATE;
-        spl_console_log("CreateThread error: %d", (int)GetLastError());
+        spllog(SPL_LOG_DEBUG, "CreateThread error: %d", (int)GetLastError());
     }
 #else
     pthread_t tidd = 0;
     ret = pthread_create(&tidd, 0, f, arg);
     if (ret) {
         ret = SPL_LOG_THREAD_PX_CREATE;
-        spl_console_log("pthread_create: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+        spllog(SPL_LOG_DEBUG, "pthread_create: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
     }
 #endif
     return ret;
@@ -1017,17 +1066,84 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #else
-    int spserial_init_trigger(void* obj) { 
+
+    void* spsr_init_trigger_routine(void* obj) {
+        spsr_init_trigger(obj);
+        return 0;
+    }
+
+    void* spsr_init_cartridge_routine(void* obj) {
         SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
         int ret = 0;
         int sockfd = 0;
         int n = 0;
+        int isoff = 0;
+        socklen_t len = 0;
+        char buffer[SPSR_MAXLINE];
+        const char* hello = "Hello from server";
+        struct sockaddr_in cartridge_addr;
+        /* Creating socket file descriptor */
+        if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+            perror("socket creation failed");
+            exit(EXIT_FAILURE);
+        }
+
+        memset(&cartridge_addr, 0, sizeof(cartridge_addr));
+
+        /* Filling server information */
+
+        cartridge_addr.sin_family = AF_INET;
+        cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
+        cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
+
+        /* Bind the socket with the server address */
+        ret = bind(sockfd, (const struct sockaddr*)&cartridge_addr,
+            sizeof(cartridge_addr));
+        if (ret < 0)
+        {
+            /*
+            perror("bind failed");
+            exit(EXIT_FAILURE);
+            */
+            spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+
+        while (1) {
+            spserial_wait_sem(t->sem);
+
+            spserial_mutex_lock(t->mutex);
+            /*do {*/
+                isoff = t->spsr_off;
+                if (isoff) {
+                    t->spsr_off++;
+                }
+            /*} while (0);*/
+            spserial_mutex_unlock(t->mutex);
+        }
+
+        ret = shutdown(sockfd, SHUT_RDWR);
+        if (ret) {
+            spllog(SPL_LOG_ERROR, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            ret = PSERIAL_CREATE_SHUTDOWN_SOCK;
+        }
+        spserial_rel_sem(t->sem_spsr);
+
+        return 0;
+    }
+
+    int spsr_init_trigger(void* obj) { 
+        SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+        int ret = 0;
+        int sockfd = 0;
+        int n = 0;
+        int isoff = 0;
         socklen_t len = 0;
         char buffer[SPSR_MAXLINE];
         const char* hello = "Hello from server";
         struct sockaddr_in trigger_addr, cartridge_addr;
 
-        // Creating socket file descriptor 
+        /* Creating socket file descriptor */
         if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
             perror("socket creation failed");
             exit(EXIT_FAILURE);
@@ -1036,30 +1152,52 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         memset(&trigger_addr, 0, sizeof(trigger_addr));
         memset(&cartridge_addr, 0, sizeof(cartridge_addr));
 
-        // Filling server information 
-        trigger_addr.sin_family = AF_INET; // IPv4 
+        /* Filling server information */
+        trigger_addr.sin_family = AF_INET; 
         trigger_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;;
         trigger_addr.sin_port = htons(SPSR_PORT_TRIGGER);
 
-        cartridge_addr.sin_family = AF_INET; // IPv4 
+        cartridge_addr.sin_family = AF_INET; 
         cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
         cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
 
-        // Bind the socket with the server address 
-        if (bind(sockfd, (const struct sockaddr*)&trigger_addr,
-            sizeof(trigger_addr)) < 0)
+        /* Bind the socket with the server address */
+        ret = bind(sockfd, (const struct sockaddr*)&trigger_addr,
+            sizeof(trigger_addr));
+        if ( ret < 0)
         {
-            perror("bind failed");
+            /* perror("bind failed"); */
+            spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
             exit(EXIT_FAILURE);
         }
 
         while (1) {
             spserial_wait_sem(t->sem);
-            len = sizeof(trigger_addr);  //len is value/result 
+
+            spserial_mutex_lock(t->mutex);
+            /*do {*/
+                isoff = t->spsr_off;
+                if (isoff) {
+                    t->spsr_off++;
+                }
+            /*} while (0);*/
+            spserial_mutex_unlock(t->mutex);
+
+            if (isoff) {
+                break;
+            }
+
+            len = sizeof(trigger_addr);  
             sendto(sockfd, (const char*)hello, strlen(hello),
                 MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr,
                 len);
         }
+        ret = shutdown(sockfd, SHUT_RDWR);
+        if (ret) {
+            spllog(SPL_LOG_ERROR, "shutdown: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            ret = PSERIAL_CREATE_SHUTDOWN_SOCK;
+        }
+        spserial_rel_sem(t->sem_spsr);
         return 0;
     }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
