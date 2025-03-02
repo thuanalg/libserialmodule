@@ -1084,8 +1084,8 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         struct sockaddr_in cartridge_addr;
         /* Creating socket file descriptor */
         if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-            perror("socket creation failed");
-            exit(EXIT_FAILURE);
+            spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
+            ret = PSERIAL_CREATE_SOCK;
         }
 
         memset(&cartridge_addr, 0, sizeof(cartridge_addr));
@@ -1102,7 +1102,8 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         if (ret < 0)
         {
             spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-            exit(EXIT_FAILURE);
+            ret = PSERIAL_BIND_SOCK;
+            break;
         }
 
         while (1) {
@@ -1116,6 +1117,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 }
             /*} while (0);*/
             spserial_mutex_unlock(t->mutex);
+            if (isoff) {
+                break;
+            }
             /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
             /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
         }
@@ -1181,7 +1185,8 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
             {
                 /* perror("bind failed"); */
                 spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-                exit(EXIT_FAILURE);
+                ret = PSERIAL_BIND_SOCK;
+                break;
             }
             len = sizeof(trigger_addr);
             while (1) {
