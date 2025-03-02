@@ -581,19 +581,26 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_init() {
     int ret = 0;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     do {
 #ifndef UNIX_LINUX
-        spserial_root_node.mutex = spserial_mutex_create();
-        if (!spserial_root_node.mutex) {
+        t->mutex = spserial_mutex_create();
+        if (!t->mutex) {
             ret = SPSERIAL_MTX_CREATE;
             break;
         }
-        spserial_root_node.sem = spserial_sem_create();
-        if (!spserial_root_node.sem) {
+        t->sem = spserial_sem_create();
+        if (!t->sem) {
             ret = SPSERIAL_SEM_CREATE;
             break;
         }
 #else
+        t->sem_spsr = spserial_sem_create();
+        if (!t->sem_spsr) {
+            ret = SPSERIAL_SEM_CREATE;
+            break;
+        }
+
         ret = spsr_init_trigger(0);
         if (ret) {
             break;
@@ -614,6 +621,11 @@ int spserial_module_close() {
     SPSERIAL_CloseHandle(t->mutex);
     SPSERIAL_CloseHandle(t->sem);
 #else
+    spserial_mutex_lock(t->mutex);
+    /*do {*/
+        t->spsr_off = 1;
+    /*} while (0);*/
+    spserial_mutex_unlock(t->mutex);
 #endif
     return 0;
 }
@@ -1022,6 +1034,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         int ret = 0;
         int sockfd = 0;
         int n = 0;
+        int isoff = 0;
         socklen_t len = 0;
         char buffer[SPSR_MAXLINE];
         const char* hello = "Hello from server";
@@ -1055,6 +1068,14 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 
         while (1) {
             spserial_wait_sem(t->sem);
+            spserial_mutex_lock(t->mutex);
+            /*do {*/
+                isoff = t->spsr_off;
+            /*} while (0);*/
+            spserial_mutex_unlock(t->mutex);
+            if (isoff) {
+                break;
+            }
             len = sizeof(trigger_addr);  
             sendto(sockfd, (const char*)hello, strlen(hello),
                 MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr,

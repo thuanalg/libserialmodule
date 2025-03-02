@@ -139,7 +139,13 @@ extern "C" {
 		int count;
 		void* mutex;
 		void* sem;
-
+#ifndef UNIX_LINUX
+#else
+		int
+			spsr_off;    /*Check off.*/
+		void* 
+			sem_spsr; /*Check off.*/
+#endif 
 		SPSERIAL_ARR_LIST_LINED* init_node;
 		SPSERIAL_ARR_LIST_LINED* last_node;
 	}SPSERIAL_ROOT_TYPE;
