@@ -609,10 +609,10 @@ int spserial_module_init() {
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_module_close() {
-    SPSERIAL_ROOT_TYPE* srl = &spserial_root_node;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
 #ifndef UNIX_LINUX
-    SPSERIAL_CloseHandle(srl->mutex);
-    SPSERIAL_CloseHandle(srl->sem);
+    SPSERIAL_CloseHandle(t->mutex);
+    SPSERIAL_CloseHandle(t->sem);
 #else
 #endif
     return 0;
