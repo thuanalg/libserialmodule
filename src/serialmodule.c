@@ -1145,7 +1145,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
             /* Creating socket file descriptor */
             if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
                 spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
-                ret = PSERIAL_CREATE_CREATE_SOCK;
+                ret = PSERIAL_CREATE_SOCK;
                 break;
             }
 
