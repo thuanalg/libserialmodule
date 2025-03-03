@@ -45,7 +45,7 @@
             ;}\
         }
 #else
-    #define SPSR_MAXLINE                1024
+    #define SPSR_MAXLINE                            1024
     #define SPSR_PORT_TRIGGER                       10024
     #define SPSR_PORT_CARTRIDGE                     (SPSR_PORT_TRIGGER + 10)
 #endif
@@ -271,11 +271,17 @@ int spserial_module_openport(void* obj) {
          }
          spllog(0, "Create hEvent: 0x%p.", p->hEvent);
          /* Set timeouts(e.g., read timeout of 500ms, write timeout of 500ms) */
-         timeouts.ReadIntervalTimeout = 500;
-         timeouts.ReadTotalTimeoutConstant = 500;
-         timeouts.ReadTotalTimeoutMultiplier = 500;
-         timeouts.WriteTotalTimeoutConstant = 500;
-         timeouts.WriteTotalTimeoutMultiplier = 500;
+         //timeouts.ReadIntervalTimeout = 500;
+         //timeouts.ReadTotalTimeoutConstant = 500;
+         //timeouts.ReadTotalTimeoutMultiplier = 500;
+         //timeouts.WriteTotalTimeoutConstant = 500;
+         //timeouts.WriteTotalTimeoutMultiplier = 500;
+
+         timeouts.ReadIntervalTimeout = 50;
+         timeouts.ReadTotalTimeoutConstant = 50;
+         timeouts.ReadTotalTimeoutMultiplier = 10;
+         timeouts.WriteTotalTimeoutConstant = 50;
+         timeouts.WriteTotalTimeoutMultiplier = 10;
 
          if (!SetCommTimeouts(hSerial, &timeouts)) {
              DWORD dwError = GetLastError();
@@ -374,12 +380,13 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
     spserial_malloc(step, buf, SP_SERIAL_GENERIC_ST);
     buf->total = step;
     buf->range = buf->total - sizeof(SP_SERIAL_GENERIC_ST);
-    int bytesRead = 0;
-    DWORD bRead = 0;
+    DWORD bytesRead = 0;
+    DWORD bytesWrite = 0;
+    //DWORD bRead = 0;
     while (1) {
         DWORD dwError = 0;
         int wrote = 0;
-        DWORD dwEvtMask = 0, flags = 0, bytesRead = 0;;
+        DWORD dwEvtMask = 0, flags = 0;
         OVERLAPPED olReadWrite = { 0 };
         //OVERLAPPED olRrite = { 0 };
         BOOL rs = FALSE;
@@ -426,10 +433,10 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
             spserial_mutex_unlock(p->mtx_off);
             while (buf->pl > 0) 
             {
-                bytesRead = 0;
+                bytesWrite = 0;
                 memset(&olReadWrite, 0, sizeof(olReadWrite));
                 olReadWrite.hEvent = p->hEvent;
-                wrs = WriteFile(p->handle, buf->data, buf->pl, &bytesRead, &olReadWrite);
+                wrs = WriteFile(p->handle, buf->data, buf->pl, &bytesWrite, &olReadWrite);
                 
                 if (!wrs) {
                     DWORD wErr = GetLastError();
@@ -437,9 +444,9 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                     if (wErr == ERROR_IO_PENDING) {
                         DWORD dwWaitResult = WaitForSingleObject(p->hEvent, INFINITE);
                         if (dwWaitResult == WAIT_OBJECT_0) {
-                            bytesRead = 0;
-                            if (GetOverlappedResult(p->handle, &olReadWrite, &bytesRead, TRUE)) {
-                                if (buf->pl == (int)bytesRead) {
+                            bytesWrite = 0;
+                            if (GetOverlappedResult(p->handle, &olReadWrite, &bytesWrite, TRUE)) {
+                                if (buf->pl == (int)bytesWrite) {
                                     spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
                                 }
                                 else {
@@ -504,15 +511,18 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                     BOOL rs1 = FALSE;
                     DWORD readErr = GetLastError();
                     if (readErr == ERROR_IO_PENDING) {
-                        bRead = 0;
+                        bytesRead = 0;
                         WaitForSingleObject(p->hEvent, INFINITE);
-                        rs1 = GetOverlappedResult(p->handle, &olReadWrite, &bRead, 1);
+                        rs1 = GetOverlappedResult(p->handle, &olReadWrite, &bytesRead, 1);
                         if (rs1) {
-                            spllog(SPL_LOG_DEBUG, "bRead: %d", (int)bRead);
+                            spllog(SPL_LOG_DEBUG, "bRead: %d", (int)bytesRead);
                         }
                         else {
                             spllog(SPL_LOG_ERROR, "PurgeComm: %d", (int)GetLastError());
                             PurgeComm(p->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
+                        }
+                        if (!bytesRead) {
+                            /*PurgeComm(p->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);*/
                         }
                     }
                     else {
@@ -529,15 +539,13 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
             if (csta.cbInQue > 0) {
                 spllog(SPL_LOG_ERROR, "Read Com not finished!!!");
             }
-            else if(cbInQue > 0)/*else start*/
+            else if(bytesRead > 0)/*else start*/
             {
-                if (cbInQue == 1) {
-                    int a = 0;
-                }
-                spllog(SPL_LOG_DEBUG, " ---------------->>>>>>>>>>>>>>>>  [[[ %s, cbInQue: %d, bRead: %d ]]]", readBuffer, cbInQue, bRead);
+                spllog(SPL_LOG_DEBUG, " ---------------->>>>>>>>>>>>>>>>  [[[ %s, cbInQue: %d, bRead: %d ]]]", 
+                    readBuffer, cbInQue, bytesRead);
                 if (p->cb_evt_fn) 
                 {
-                    int nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + bRead + sizeof(void*);
+                    int nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + bytesRead + sizeof(void*);
                     SP_SERIAL_GENERIC_ST* evt = 0;
                     spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);
                     
@@ -555,15 +563,15 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                             unsigned long long int tmp = (unsigned long long int)p->cb_obj;
                             memcpy((char*)evt->data, (char *)&tmp, evt->pc);
                         }
-                        memcpy(evt->data + evt->pc, readBuffer, bRead);
-                        evt->pl = evt->pc + bRead;
+                        memcpy(evt->data + evt->pc, readBuffer, bytesRead);
+                        evt->pl = evt->pc + bytesRead;
                         p->cb_evt_fn(evt);
                         spserial_free(evt);
                     }
                 }
                 /*p->cb end*/
             }
-            bRead = 0;
+            bytesRead = 0;
 
         }
 
@@ -1084,8 +1092,8 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         struct sockaddr_in cartridge_addr;
         /* Creating socket file descriptor */
         if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-            perror("socket creation failed");
-            exit(EXIT_FAILURE);
+            spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
+            ret = PSERIAL_CREATE_SOCK;
         }
 
         memset(&cartridge_addr, 0, sizeof(cartridge_addr));
@@ -1101,12 +1109,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
             sizeof(cartridge_addr));
         if (ret < 0)
         {
-            /*
-            perror("bind failed");
-            exit(EXIT_FAILURE);
-            */
             spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-            exit(EXIT_FAILURE);
+            ret = PSERIAL_BIND_SOCK;
+            break;
         }
 
         while (1) {
@@ -1120,12 +1125,17 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 }
             /*} while (0);*/
             spserial_mutex_unlock(t->mutex);
+            if (isoff) {
+                break;
+            }
+            /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+            /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
         }
 
-        ret = shutdown(sockfd, SHUT_RDWR);
+        ret = close(sockfd);
         if (ret) {
-            spllog(SPL_LOG_ERROR, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-            ret = PSERIAL_CREATE_SHUTDOWN_SOCK;
+            spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            ret = PSERIAL_CLOSE_SOCK;
         }
         spserial_rel_sem(t->sem_spsr);
 
@@ -1142,62 +1152,80 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         char buffer[SPSR_MAXLINE];
         const char* hello = "Hello from server";
         struct sockaddr_in trigger_addr, cartridge_addr;
-
-        /* Creating socket file descriptor */
-        if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-            perror("socket creation failed");
-            exit(EXIT_FAILURE);
-        }
-
-        memset(&trigger_addr, 0, sizeof(trigger_addr));
-        memset(&cartridge_addr, 0, sizeof(cartridge_addr));
-
-        /* Filling server information */
-        trigger_addr.sin_family = AF_INET; 
-        trigger_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;;
-        trigger_addr.sin_port = htons(SPSR_PORT_TRIGGER);
-
-        cartridge_addr.sin_family = AF_INET; 
-        cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
-        cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
-
-        /* Bind the socket with the server address */
-        ret = bind(sockfd, (const struct sockaddr*)&trigger_addr,
-            sizeof(trigger_addr));
-        if ( ret < 0)
-        {
-            /* perror("bind failed"); */
-            spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-            exit(EXIT_FAILURE);
-        }
-
-        while (1) {
-            spserial_wait_sem(t->sem);
-
-            spserial_mutex_lock(t->mutex);
-            /*do {*/
-                isoff = t->spsr_off;
-                if (isoff) {
-                    t->spsr_off++;
-                }
-            /*} while (0);*/
-            spserial_mutex_unlock(t->mutex);
-
-            if (isoff) {
+        do {
+        
+            /* Creating socket file descriptor */
+            if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+                spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
+                ret = PSERIAL_CREATE_SOCK;
                 break;
             }
 
-            len = sizeof(trigger_addr);  
-            sendto(sockfd, (const char*)hello, strlen(hello),
-                MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr,
-                len);
-        }
-        ret = shutdown(sockfd, SHUT_RDWR);
-        if (ret) {
-            spllog(SPL_LOG_ERROR, "shutdown: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-            ret = PSERIAL_CREATE_SHUTDOWN_SOCK;
-        }
-        spserial_rel_sem(t->sem_spsr);
+            memset(&trigger_addr, 0, sizeof(trigger_addr));
+            memset(&cartridge_addr, 0, sizeof(cartridge_addr));
+
+            /* Filling server information */
+            trigger_addr.sin_family = AF_INET; 
+            trigger_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;;
+            trigger_addr.sin_port = htons(SPSR_PORT_TRIGGER);
+
+            cartridge_addr.sin_family = AF_INET; 
+            cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
+            cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
+
+            // Set socket to non-blocking mode
+            ret = fcntl(sockfd, F_GETFL, 0);
+            if (ret == -1) {
+                spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+                ret = PSERIAL_FCNTL_SOCK;
+                break;
+            }
+
+            if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
+                perror("fcntl F_SETFL failed");
+                return 1;
+            }
+
+            /* Bind the socket with the server address */
+            ret = bind(sockfd, (const struct sockaddr*)&trigger_addr,
+                sizeof(trigger_addr));
+            if ( ret < 0)
+            {
+                /* perror("bind failed"); */
+                spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+                ret = PSERIAL_BIND_SOCK;
+                break;
+            }
+            len = sizeof(trigger_addr);
+            while (1) {
+                spserial_wait_sem(t->sem);
+
+                spserial_mutex_lock(t->mutex);
+                /*do {*/
+                    isoff = t->spsr_off;
+                    if (isoff) {
+                        t->spsr_off++;
+                    }
+                /*} while (0);*/
+                spserial_mutex_unlock(t->mutex);
+
+                if (isoff) {
+                    break;
+                }
+                sendto(sockfd, (const char*)hello, strlen(hello),
+                    MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr,
+                    len);
+                /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+                /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+            }
+            ret = close(sockfd);
+            if (ret) {
+                spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+                ret = PSERIAL_CLOSE_SOCK;
+            }
+            spserial_rel_sem(t->sem_spsr);
+        } 
+        while (0);
         return 0;
     }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
