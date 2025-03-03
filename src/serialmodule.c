@@ -374,12 +374,13 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
     spserial_malloc(step, buf, SP_SERIAL_GENERIC_ST);
     buf->total = step;
     buf->range = buf->total - sizeof(SP_SERIAL_GENERIC_ST);
-    int bytesRead = 0;
-    DWORD bRead = 0;
+    DWORD bytesRead = 0;
+    DWORD bytesWrite = 0;
+    //DWORD bRead = 0;
     while (1) {
         DWORD dwError = 0;
         int wrote = 0;
-        DWORD dwEvtMask = 0, flags = 0, bytesRead = 0;;
+        DWORD dwEvtMask = 0, flags = 0;
         OVERLAPPED olReadWrite = { 0 };
         //OVERLAPPED olRrite = { 0 };
         BOOL rs = FALSE;
