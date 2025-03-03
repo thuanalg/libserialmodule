@@ -467,6 +467,14 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                         }
                     }
                 }
+                else {
+                    if (buf->pl == (int)bytesWrite) {
+                        spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
+                    }
+                    else {
+                        spllog(SPL_LOG_ERROR, "Write Error, %d.", (int)GetLastError());
+                    }
+                }
                 buf->pl = 0; 
             }
 
@@ -1091,7 +1099,8 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         const char* hello = "Hello from server";
         struct sockaddr_in cartridge_addr;
         /* Creating socket file descriptor */
-        if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+        if (sockfd < 0) {
             spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
             ret = PSERIAL_CREATE_SOCK;
         }
@@ -1104,6 +1113,22 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
         cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
 
+        /* Set socket to non - blocking mode */
+
+        ret = fcntl(sockfd, F_GETFL, 0);
+        if (ret == -1) {
+            spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            ret = PSERIAL_FCNTL_SOCK;
+            break;
+        }
+
+        ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+        if (ret == -1) {
+            spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            ret = PSERIAL_FCNTL_SOCK;
+            break;
+        }
+
         /* Bind the socket with the server address */
         ret = bind(sockfd, (const struct sockaddr*)&cartridge_addr,
             sizeof(cartridge_addr));
@@ -1115,6 +1140,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         }
 
         while (1) {
+
             spserial_wait_sem(t->sem);
 
             spserial_mutex_lock(t->mutex);
@@ -1129,6 +1155,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 break;
             }
             /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+            /* Start epoll */
             /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
         }
 
@@ -1181,14 +1208,15 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 break;
             }
 
-            if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
-                perror("fcntl F_SETFL failed");
-                return 1;
+            ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+            if ( ret == -1) {
+                spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+                ret = PSERIAL_FCNTL_SOCK;
+                break;
             }
 
             /* Bind the socket with the server address */
-            ret = bind(sockfd, (const struct sockaddr*)&trigger_addr,
-                sizeof(trigger_addr));
+            ret = bind(sockfd, (const struct sockaddr*)&trigger_addr, sizeof(trigger_addr));
             if ( ret < 0)
             {
                 /* perror("bind failed"); */
@@ -1198,6 +1226,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
             }
             len = sizeof(trigger_addr);
             while (1) {
+
                 spserial_wait_sem(t->sem);
 
                 spserial_mutex_lock(t->mutex);
@@ -1213,8 +1242,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                     break;
                 }
                 sendto(sockfd, (const char*)hello, strlen(hello),
-                    MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr,
-                    len);
+                    MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr, len);
                 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
                 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
             }
