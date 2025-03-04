@@ -1085,7 +1085,10 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 }
             } while (0);
         spserial_mutex_unlock(item->mtx_off);
+#ifndef UNIX_LINUX		
         SetEvent(item->hEvent);
+#else
+#endif		
     } while (0);
     return ret;
 }
