@@ -1096,7 +1096,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         int ret = 0;
         int sockfd = 0;
         int n = 0;
-        int isoff = 0;
+        int isoff = 0, flags = 0;
         socklen_t len = 0;
         char buffer[SPSR_MAXLINE];
         const char* hello = "Hello from server";
