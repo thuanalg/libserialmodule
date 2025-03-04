@@ -3,8 +3,8 @@ target_2=libspserial.so
 debugFlag=-g -fPIC -Wall -shared 
 releaseFlag=-fPIC -Wall -shared
 LIBS+=-lpthread
-LIBS_1+=-L ./ -lsimplelog
-LIBS_2+=-L ./ -lspserial
+LIBS_1+=-L./ -lsimplelog
+LIBS_2+=-L./ -lspserial
 src=../simplelog/simplelog.c 
 src1=../serialmodule.c 
 INC=-I../simplelog/ -I../
@@ -25,4 +25,4 @@ release:
 	gcc -g -o test_main ../main.c ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2} ${INC}
 
 clean:
-	rm -rf ${target_1}  
+	rm -rf ${target_1} ${target_2}
