@@ -130,7 +130,8 @@ int spserial_inst_create(void *obj, int  *idd)
     int ret = 0;
     SP_SERIAL_INPUT_ST* p = (SP_SERIAL_INPUT_ST*)obj;
     SP_SERIAL_INPUT_ST* input_looper = 0;
-	fprintf(stdout, "hi!\n");
+	
+
     do {
         if (!idd) {
             ret = SPSERIAL_IDD_NULL;
@@ -148,6 +149,7 @@ int spserial_inst_create(void *obj, int  *idd)
             ret = SPSERIAL_PORT_NAME_ERROR;
             break;
         }
+#ifndef UNIX_LINUX
         /* Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation */
         /* https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea */
         HANDLE hSerial = CreateFile(p->port_name,                 
@@ -180,7 +182,9 @@ int spserial_inst_create(void *obj, int  *idd)
             ret = SPSERIAL_GEN_IDD;
             break;
         }
-        
+
+#else
+#endif        
     } while (0);
 
     if (input_looper) {
