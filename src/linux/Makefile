@@ -4,6 +4,7 @@ debugFlag=-g -fPIC -Wall -shared
 releaseFlag=-fPIC -Wall -shared
 LIBS+=-lpthread
 LIBS_1+=-L ./ -lsimplelog
+LIBS_2+=-L ./ -lspserial
 src=../simplelog/simplelog.c 
 src1=../serialmodule.c 
 INC=-I../simplelog/ -I../
@@ -16,10 +17,12 @@ CPPFLAGS=-D UNIX_LINUX -D __UNIX_LINUX_CPP11_AND_NEWERS__
 debug:
 	gcc ${debugFlag} -o ${target_1} ${src} ${LIBS} ${CFLAGS} ${INC}
 	gcc ${debugFlag} -o ${target_2} ${src} ${LIBS} ${CFLAGS} ${LIBS_1}
+	gcc -g -o test_main ../main.c ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2}
 
 release:
 	gcc ${releaseFlag} -o ${target_1} ${src} ${LIBS} ${CFLAGS}
 	gcc ${releaseFlag} -o ${target_2} ${src} ${LIBS} ${CFLAGS} ${LIBS_1}
+	gcc -g -o test_main ../main.c ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2}
 
 clean:
 	rm -rf ${target_1}  
