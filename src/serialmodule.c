@@ -1103,71 +1103,75 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         struct sockaddr_in cartridge_addr;
         spllog(SPL_LOG_DEBUG, "cartridge: ");
         /* Creating socket file descriptor */
-        sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-        if (sockfd < 0) {
-            spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
-            ret = PSERIAL_CREATE_SOCK;
-        }
-
-        memset(&cartridge_addr, 0, sizeof(cartridge_addr));
-
-        /* Filling server information */
-
-        cartridge_addr.sin_family = AF_INET;
-        cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
-        cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
-
-        /* Set socket to non - blocking mode */
-
-        ret = fcntl(sockfd, F_GETFL, 0);
-        if (ret == -1) {
-            spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-            ret = PSERIAL_FCNTL_SOCK;
-            break;
-        }
-
-        ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
-        if (ret == -1) {
-            spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-            ret = PSERIAL_FCNTL_SOCK;
-            break;
-        }
-
-        /* Bind the socket with the server address */
-        ret = bind(sockfd, (const struct sockaddr*)&cartridge_addr,
-            sizeof(cartridge_addr));
-        if (ret < 0)
-        {
-            spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-            ret = PSERIAL_BIND_SOCK;
-            break;
-        }
-
-        while (1) {
-
-            spserial_wait_sem(t->sem);
-
-            spserial_mutex_lock(t->mutex);
-            /*do {*/
-                isoff = t->spsr_off;
-                if (isoff) {
-                    t->spsr_off++;
-                }
-            /*} while (0);*/
-            spserial_mutex_unlock(t->mutex);
-            if (isoff) {
-                break;
-            }
-            /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-            /* Start epoll */
-            /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-        }
-
-        ret = close(sockfd);
-        if (ret) {
-            spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-            ret = PSERIAL_CLOSE_SOCK;
-        }
+		do {
+			sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+			if (sockfd < 0) {
+				spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
+				ret = PSERIAL_CREATE_SOCK;
+				break;
+			}
+	
+			memset(&cartridge_addr, 0, sizeof(cartridge_addr));
+	
+			/* Filling server information */
+	
+			cartridge_addr.sin_family = AF_INET;
+			cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
+			cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
+	
+			/* Set socket to non - blocking mode */
+	
+			ret = fcntl(sockfd, F_GETFL, 0);
+			if (ret == -1) {
+				spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+				ret = PSERIAL_FCNTL_SOCK;
+				break;
+			}
+	
+			ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+			if (ret == -1) {
+				spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+				ret = PSERIAL_FCNTL_SOCK;
+				break;
+			}
+	
+			/* Bind the socket with the server address */
+			ret = bind(sockfd, (const struct sockaddr*)&cartridge_addr,
+				sizeof(cartridge_addr));
+			if (ret < 0)
+			{
+				spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+				ret = PSERIAL_BIND_SOCK;
+				break;
+			}
+	
+			while (1) {
+	
+				spserial_wait_sem(t->sem);
+	
+				spserial_mutex_lock(t->mutex);
+				/*do {*/
+					isoff = t->spsr_off;
+					if (isoff) {
+						t->spsr_off++;
+					}
+				/*} while (0);*/
+				spserial_mutex_unlock(t->mutex);
+				if (isoff) {
+					break;
+				}
+				/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+				/* Start epoll */
+				/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+			}
+		} while(0);
+		if(sockfd > 0) {
+			ret = close(sockfd);
+			if (ret) {
+				spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+				ret = PSERIAL_CLOSE_SOCK;
+			}
+		}
         spserial_rel_sem(t->sem_spsr);
 
         return 0;
