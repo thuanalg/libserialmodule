@@ -1192,7 +1192,10 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 			if (ret) {
 				spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
 				ret = PSERIAL_CLOSE_SOCK;
-			}
+            }
+            else {
+                spllog(SPL_LOG_DEBUG, "close socket done.");
+            }
 		}
         spserial_rel_sem(t->sem_spsr);
 
@@ -1281,6 +1284,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
             if (ret) {
                 spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
                 ret = PSERIAL_CLOSE_SOCK;
+            }
+            else {
+                spllog(SPL_LOG_DEBUG, "close socket done.");
             }
             spserial_rel_sem(t->sem_spsr);
         } 
