@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 #else
 	snprintf(cfgpath, 1024, "simplelog.cfg");
 #endif
-	snprintf(is_port, "%s", "COM2");
+	snprintf(is_port, 32,"%s", "COM2");
 	baudrate = 115200;
 	for (i = 0; i < argc; ++i) {
 		if (strstr(argv[i], __ISMASTER__)) {
