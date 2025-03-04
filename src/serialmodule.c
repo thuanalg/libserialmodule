@@ -797,7 +797,11 @@ int spserial_mutex_unlock(void* obj) {
             break;
         }
 #else
-        SPL_pthread_mutex_unlock((pthread_mutex_t*)obj, ret);
+        ret = pthread_mutex_unlock((pthread_mutex_t*)obj);
+        if (ret) {
+            spllog(SPL_LOG_DEBUG, "pthread_mutex_unlock: ret: %d, errno: %d, text: %s.", 
+                ret, errno, strerror(errno));
+        }
 #endif
     } while (0);
     return ret;
