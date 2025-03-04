@@ -1,7 +1,9 @@
 target_1=libsimplelog.so
 target_2=libspserial.so
-debugFlag=-g -fPIC -Wall -shared 
-releaseFlag=-fPIC -Wall -shared
+#debugFlag=-g -fPIC -Wall -shared 
+debugFlag=-g -fPIC -shared 
+#releaseFlag=-fPIC -Wall -shared
+releaseFlag=-fPIC -shared
 LIBS+=-lpthread
 LIBS_1+=-L./ -lsimplelog
 LIBS_2+=-L./ -lspserial
