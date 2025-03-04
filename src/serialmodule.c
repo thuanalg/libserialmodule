@@ -603,8 +603,13 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
 int spserial_module_init() {
     int ret = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-    do {
 #ifndef UNIX_LINUX
+#else
+    pthread_t idd = 0;
+    int err = 0;
+#endif
+    do {
+
         t->mutex = spserial_mutex_create();
         if (!t->mutex) {
             ret = SPSERIAL_MTX_CREATE;
@@ -615,10 +620,8 @@ int spserial_module_init() {
             ret = SPSERIAL_SEM_CREATE;
             break;
         }
+#ifndef UNIX_LINUX
 #else
-        pthread_t idd = 0;
-        int err = 0;
-
         t->sem_spsr = spserial_sem_create();
         if (!t->sem_spsr) {
             ret = SPSERIAL_SEM_CREATE;

@@ -95,9 +95,11 @@ int main(int argc, char *argv[]) {
 	if (fp) {
 		fclose(fp);
 	}
+	/*
 	if (myid > 0) {
 		spserial_inst_del(myid);
 	}
+	*/
 	spserial_module_close();
 	spl_finish_log();
 	return 0;
