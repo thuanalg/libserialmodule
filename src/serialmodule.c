@@ -771,7 +771,11 @@ int spserial_mutex_lock(void* obj) {
             break;
         }
 #else
-        SPL_pthread_mutex_lock((pthread_mutex_t*)obj, ret);
+        ret = pthread_mutex_lock((pthread_mutex_t*)obj);
+        if (ret) {
+            spllog(SPL_LOG_ERROR, "pthread_mutex_lock: ret: %d, errno: %d, text: %s.",
+                ret, errno, strerror(errno));
+        }
 #endif
     } while (0);
     return ret;
@@ -799,7 +803,7 @@ int spserial_mutex_unlock(void* obj) {
 #else
         ret = pthread_mutex_unlock((pthread_mutex_t*)obj);
         if (ret) {
-            spllog(SPL_LOG_DEBUG, "pthread_mutex_unlock: ret: %d, errno: %d, text: %s.", 
+            spllog(SPL_LOG_ERROR, "pthread_mutex_unlock: ret: %d, errno: %d, text: %s.", 
                 ret, errno, strerror(errno));
         }
 #endif
