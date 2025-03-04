@@ -949,13 +949,17 @@ int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
             node->item->isoff = 1;
         /*} while (0); */
         spserial_mutex_unlock(node->item->mtx_off);
-
+#ifndef UNIX_LINUX
         SetEvent(node->item->hEvent);
-
+#else
+#endif
         spserial_wait_sem(node->item->sem_off);
 
+#ifndef UNIX_LINUX
         SPSERIAL_CloseHandle(node->item->mtx_off);
         SPSERIAL_CloseHandle(node->item->sem_off);
+#else
+#endif
         spserial_free(node->item->buff);
 
     } while (0);
