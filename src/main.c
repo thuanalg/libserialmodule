@@ -13,7 +13,7 @@ char cfgpath[1024];
 #define __ISBAUDRATE__				"--is_baudrate="
 
 #define TESTTEST "1234567"
-/* --is_port=COM2  --is_cfg=C:/z/serialmodule/win32/Debug/simplelog.cfg */
+/* --is_port=COM2  --is_cfg=C:/z/serialmodule/win32/Debug/simplelog.cfg --is_baudrate=115200*/
 int main(int argc, char *argv[]) {
 	int i = 0;
 	SP_SERIAL_INPUT_ST obj;
@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 		if (strstr(argv[i], __ISBAUDRATE__)) {
-			k = sscanf(argv[i], __ISBAUDRATE__"%d", baudrate);
+			k = sscanf(argv[i], __ISBAUDRATE__"%d", &baudrate);
 			spl_console_log("k = %d.", k);
 			continue;
 		}
@@ -63,14 +63,25 @@ int main(int argc, char *argv[]) {
 	if (ret) {
 		return EXIT_FAILURE;
 	}
+	/*
 	ret = spserial_inst_create(&obj, &myid);
+	if (ret) {
+		return 1;
+	}
+	
 	ret = spserial_get_objbyid(myid, &objId, 0);
+	if (ret) {
+		return 1;
+	}
+	*/
 	while (1) {
-		spl_sleep(1);
+		spl_sleep(5);
 		spl_console_log("-----------");
+		/*
 		if (!is_master) {
 			spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
 		}
+		*/
 #ifndef UNIX_LINUX
 		fp = fopen("C:/z/serialmodule/win32/Debug/trigger_serial.txt", "r");
 #else

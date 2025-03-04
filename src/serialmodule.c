@@ -1098,6 +1098,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         char buffer[SPSR_MAXLINE];
         const char* hello = "Hello from server";
         struct sockaddr_in cartridge_addr;
+        spllog(SPL_LOG_DEBUG, "cartridge: ");
         /* Creating socket file descriptor */
         sockfd = socket(AF_INET, SOCK_DGRAM, 0);
         if (sockfd < 0) {
@@ -1179,6 +1180,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         char buffer[SPSR_MAXLINE];
         const char* hello = "Hello from server";
         struct sockaddr_in trigger_addr, cartridge_addr;
+        spllog(SPL_LOG_DEBUG, "trigger: ");
         do {
         
             /* Creating socket file descriptor */
