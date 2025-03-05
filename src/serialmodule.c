@@ -1217,6 +1217,8 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                     break;
                 }
                 event.events = EPOLLIN | EPOLLET;
+				event.data.fd = sockfd;
+				
 				spllog(SPL_LOG_DEBUG, "epollfd------------------------");
                 ret = epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &event);
                 if (ret < 0) {
