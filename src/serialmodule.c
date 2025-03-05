@@ -1227,6 +1227,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                             memset(&client_addr, 0, sizeof(client_addr));
                             client_len = sizeof(client_addr);
                             memset(buffer, 0, sizeof(buffer));
+							spllog(SPL_LOG_DEBUG, "recvfrom------------------------");
                             lenmsg = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
                                 (struct sockaddr*)&client_addr, &client_len);
                             if (lenmsg < 0) {
