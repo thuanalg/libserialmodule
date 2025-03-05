@@ -1228,6 +1228,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 					}					
 					spllog(SPL_LOG_DEBUG, "epoll_wait------------------------");
                     int nfds = epoll_wait(epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
+					spllog(SPL_LOG_DEBUG, "epoll_wait------------------------, nfds: %d", nfds);
                     for (i = 0; i < nfds; i++) 
                     {
                         if (events[i].data.fd == sockfd) 
@@ -1243,7 +1244,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                                     (int)lenmsg, errno, strerror(errno));
                                 break;
                             }
+							
                             buffer[lenmsg] = 0;
+							spllog(SPL_LOG_DEBUG, "buffer: %s", buffer);
                             if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
 								spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
                                 isoff = 1;
@@ -1359,8 +1362,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 spserial_mutex_unlock(t->mutex);
 
                 if (isoff) {
-                    sendto(sockfd, (const char*)SPSR_MSG_OFF, strlen(SPSR_MSG_OFF),
+                    int kkk = sendto(sockfd, (const char*)SPSR_MSG_OFF, strlen(SPSR_MSG_OFF),
                         MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr, len);
+					spllog(SPL_LOG_DEBUG, "sendto kkk: %d", kkk);
                     break;
                 }
                 sendto(sockfd, (const char*)hello, strlen(hello),
