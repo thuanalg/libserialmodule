@@ -22,7 +22,10 @@
     #include <sys/socket.h> 
     #include <arpa/inet.h> 
     #include <netinet/in.h> 
-
+#ifdef __MACH__
+#else
+    #include <sys/epoll.h>
+#endif	
     #ifdef __TRUE_LINUX__
         #include <sys/epoll.h>
     #else
@@ -1129,12 +1132,13 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         const char* hello = "Hello from server";
         struct sockaddr_in cartridge_addr, client_addr;
         int i = 0;
+		ssize_t lenmsg = 0;
         socklen_t client_len = sizeof(client_addr);
 
 #ifdef __MACH__
 #else
         struct epoll_event event, events[SPSR_SIZE_MAX_EVENTS];
-        ssize_t len = 0;
+        
 #endif	
 
         spllog(SPL_LOG_DEBUG, "cartridge: ");
@@ -1152,6 +1156,10 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 			/* Filling server information */
 	
 			cartridge_addr.sin_family = AF_INET;
+			/*
+			cartridge_addr.sin_addr.s_addr = INADDR_ANY;
+			
+			*/
 			cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
 			cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
 	
@@ -1163,7 +1171,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 				ret = PSERIAL_FCNTL_SOCK;
 				break;
 			}
-	
+			spllog(SPL_LOG_DEBUG, "fcntl------------------------flags: %d", flags);
 			ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 			if (ret == -1) {
 				spllog(SPL_LOG_ERROR, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
@@ -1172,6 +1180,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 			}
 	
 			/* Bind the socket with the server address */
+			spllog(SPL_LOG_DEBUG, "bind------------------------");
 			ret = bind(sockfd, (const struct sockaddr*)&cartridge_addr,
 				sizeof(cartridge_addr));
 			if (ret < 0)
@@ -1182,9 +1191,10 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 			}
 	
 			while (1) {
-	
+				/*
+				spllog(SPL_LOG_DEBUG, "spserial_wait_sem------------------------");
 				spserial_wait_sem(t->sem);
-	
+				*/
 				spserial_mutex_lock(t->mutex);
 				/*do {*/
 					isoff = t->spsr_off;
@@ -1199,6 +1209,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 
            #else
                 /* Start epoll */
+				spllog(SPL_LOG_DEBUG, "epoll_create------------------------");
                 epollfd = epoll_create(SPSR_SIZE_CARTRIDGE);
                 if (epollfd < 0) {
                     spllog(SPL_LOG_ERROR, "epoll_create, epollfd: %d, errno: %d, text: %s.",
@@ -1207,6 +1218,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                     break;
                 }
                 event.events = EPOLLIN | EPOLLET;
+				event.data.fd = sockfd;
+				
+				spllog(SPL_LOG_DEBUG, "epollfd------------------------");
                 ret = epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &event);
                 if (ret < 0) {
                     spllog(SPL_LOG_ERROR, "epoll_ctl, ret: %d, errno: %d, text: %s.",
@@ -1215,23 +1229,38 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                     break;
                 }
                 while (1) {
+					spserial_mutex_lock(t->mutex);
+					/*do {*/
+						isoff = t->spsr_off;
+					/*} while (0);*/
+					spserial_mutex_unlock(t->mutex);					
+					if (isoff) {
+						break;
+					}					
+					spllog(SPL_LOG_DEBUG, "epoll_wait------------------------");
                     int nfds = epoll_wait(epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
+					spllog(SPL_LOG_DEBUG, "epoll_wait------------------------, nfds: %d", nfds);
                     for (i = 0; i < nfds; i++) 
                     {
+						spllog(SPL_LOG_DEBUG, "(data.fd, sockfd)------------------------(%d, %d)", events[i].data.fd, sockfd);
                         if (events[i].data.fd == sockfd) 
                         {
                             memset(&client_addr, 0, sizeof(client_addr));
                             client_len = sizeof(client_addr);
                             memset(buffer, 0, sizeof(buffer));
-                            len = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
+							spllog(SPL_LOG_DEBUG, "recvfrom------------------------");
+                            lenmsg = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
                                 (struct sockaddr*)&client_addr, &client_len);
-                            if (len < 0) {
-                                spllog(SPL_LOG_ERROR, "epoll_ctl, len: %d, errno: %d, text: %s.",
-                                    (int)len, errno, strerror(errno));
+                            if (lenmsg < 0) {
+                                spllog(SPL_LOG_ERROR, "epoll_ctl, lenmsg: %d, errno: %d, text: %s.",
+                                    (int)lenmsg, errno, strerror(errno));
                                 break;
                             }
-                            buffer[len] = 0;
+							
+                            buffer[lenmsg] = 0;
+							spllog(SPL_LOG_DEBUG, "buffer: %s", buffer);
                             if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
+								spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
                                 isoff = 1;
                                 break;
                             }
@@ -1345,6 +1374,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 spserial_mutex_unlock(t->mutex);
 
                 if (isoff) {
+                    int kkk = sendto(sockfd, (const char*)SPSR_MSG_OFF, strlen(SPSR_MSG_OFF),
+                        MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr, len);
+					spllog(SPL_LOG_DEBUG, "sendto kkk: %d", kkk);
                     break;
                 }
                 sendto(sockfd, (const char*)hello, strlen(hello),
