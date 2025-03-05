@@ -1245,25 +1245,27 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 						spllog(SPL_LOG_DEBUG, "(data.fd, sockfd)------------------------(%d, %d)", events[i].data.fd, sockfd);
                         if (events[i].data.fd == sockfd) 
                         {
-                            memset(&client_addr, 0, sizeof(client_addr));
-                            client_len = sizeof(client_addr);
-                            memset(buffer, 0, sizeof(buffer));
-							spllog(SPL_LOG_DEBUG, "recvfrom------------------------");
-                            lenmsg = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
-                                (struct sockaddr*)&client_addr, &client_len);
-                            if (lenmsg < 0) {
-                                spllog(SPL_LOG_ERROR, "epoll_ctl, lenmsg: %d, errno: %d, text: %s.",
-                                    (int)lenmsg, errno, strerror(errno));
-                                break;
-                            }
-							
-                            buffer[lenmsg] = 0;
-							spllog(SPL_LOG_DEBUG, "buffer: %s", buffer);
-                            if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
-								spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
-                                isoff = 1;
-                                break;
-                            }
+							while(1) {
+								memset(&client_addr, 0, sizeof(client_addr));
+								client_len = sizeof(client_addr);
+								memset(buffer, 0, sizeof(buffer));
+								spllog(SPL_LOG_DEBUG, "recvfrom------------------------");
+								lenmsg = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
+									(struct sockaddr*)&client_addr, &client_len);
+								if (lenmsg < 1) {
+									spllog(SPL_LOG_ERROR, "epoll_ctl, lenmsg: %d, errno: %d, text: %s.",
+										(int)lenmsg, errno, strerror(errno));
+									break;
+								}
+								
+								buffer[lenmsg] = 0;
+								spllog(SPL_LOG_DEBUG, "buffer: %s", buffer);
+								if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
+									spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
+									isoff = 1;
+									break;
+								}
+							}
                         }
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
                     }
