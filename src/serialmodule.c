@@ -1167,7 +1167,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 				ret = PSERIAL_FCNTL_SOCK;
 				break;
 			}
-			spllog(SPL_LOG_DEBUG, "fcntl------------------------");
+			spllog(SPL_LOG_DEBUG, "fcntl------------------------flags: %d", flags);
 			ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 			if (ret == -1) {
 				spllog(SPL_LOG_ERROR, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
