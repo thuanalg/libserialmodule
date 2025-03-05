@@ -1107,7 +1107,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #else
-
+#define SPSR_SIZE_CARTRIDGE         10
+#define SPSR_SIZE_TRIGGER           2
+#define SPSR_SIZE_MAX_EVENTS        10
     void* spsr_init_trigger_routine(void* obj) {
         spsr_init_trigger(obj);
         return 0;
@@ -1116,13 +1118,24 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
     void* spsr_init_cartridge_routine(void* obj) {
         SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
         int ret = 0;
+        int epollfd = 0;;
         int sockfd = 0;
         int n = 0;
-        int isoff = 0, flags = 0;
+        int isoff = 0; 
+        int flags = 0;
         socklen_t len = 0;
-        char buffer[SPSR_MAXLINE];
+        char buffer[SPSR_MAXLINE + 1];
         const char* hello = "Hello from server";
-        struct sockaddr_in cartridge_addr;
+        struct sockaddr_in cartridge_addr, client_addr;
+        int i = 0;
+        socklen_t client_len = sizeof(client_addr);
+
+#ifdef __MACH__
+#else
+        struct epoll_event event, events[SPSR_SIZE_MAX_EVENTS];
+        ssize_t len = 0;
+#endif	
+
         spllog(SPL_LOG_DEBUG, "cartridge: ");
         /* Creating socket file descriptor */
 		do {
@@ -1143,8 +1156,8 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 	
 			/* Set socket to non - blocking mode */
 	
-			ret = fcntl(sockfd, F_GETFL, 0);
-			if (ret == -1) {
+            flags = fcntl(sockfd, F_GETFL, 0);
+			if (flags == -1) {
 				spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
 				ret = PSERIAL_FCNTL_SOCK;
 				break;
@@ -1183,7 +1196,47 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 					break;
 				}
 				/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-				/* Start epoll */
+				
+           #ifdef __MACH__
+
+           #else
+                /* Start epoll */
+                epollfd = epoll_create(SPSR_SIZE_CARTRIDGE);
+                if (epollfd < 0) {
+                    spllog(SPL_LOG_DEBUG, "epoll_create, epollfd: %d, errno: %d, text: %s.", 
+                        epollfd, errno, strerror(errno));
+                    ret = PSERIAL_EPOLL_CREATE;
+                    break;
+                }
+                event.events = EPOLLIN | EPOLLET;
+                ret = epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &event);
+                if (ret < 0) {
+                    spllog(SPL_LOG_DEBUG, "epoll_ctl, ret: %d, errno: %d, text: %s.",
+                        ret, errno, strerror(errno));
+                    ret = PSERIAL_EPOLL_CTL;
+                    break;
+                }
+                while (1) {
+                    int nfds = epoll_wait(epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
+                    for (i = 0; i < nfds; i++) 
+                    {
+                        if (events[i].data.fd == sockfd) 
+                        {
+                            memset(&client_addr, 0, sizeof(client_addr));
+                            client_len = sizeof(client_addr);
+                            len = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
+                                (struct sockaddr*)&client_addr, &client_len);
+                            if (len < 0) {
+                                spllog(SPL_LOG_DEBUG, "epoll_ctl, len: %d, errno: %d, text: %s.",
+                                    (int)len, errno, strerror(errno));
+                                break;
+                            }
+                        }
+                        /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+                    }
+                    /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+                }
+           #endif	
 				/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 			}
 		} while(0);
@@ -1197,17 +1250,27 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 spllog(SPL_LOG_DEBUG, "close socket done.");
             }
 		}
+#ifdef __MACH__
+#else
+        if (epollfd > -1) {
+
+        }
+#endif	
+
         spserial_rel_sem(t->sem_spsr);
 
         return 0;
     }
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
     int spsr_init_trigger(void* obj) { 
         SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
         int ret = 0;
         int sockfd = 0;
         int n = 0;
-        int isoff = 0, flags = 0;
+        int isoff = 0;
+        int flags = 0;
         socklen_t len = 0;
         char buffer[SPSR_MAXLINE];
         const char* hello = "Hello from server";
