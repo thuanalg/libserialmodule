@@ -1223,6 +1223,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                     break;
                 }
                 while (1) {
+					if (isoff) {
+						break;
+					}					
 					spllog(SPL_LOG_DEBUG, "epoll_wait------------------------");
                     int nfds = epoll_wait(epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
                     for (i = 0; i < nfds; i++) 
