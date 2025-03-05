@@ -1157,9 +1157,10 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 	
 			cartridge_addr.sin_family = AF_INET;
 			/*
-			cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
-			*/
 			cartridge_addr.sin_addr.s_addr = INADDR_ANY;
+			
+			*/
+			cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
 			cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
 	
 			/* Set socket to non - blocking mode */
@@ -1228,6 +1229,11 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                     break;
                 }
                 while (1) {
+					spserial_mutex_lock(t->mutex);
+					/*do {*/
+						isoff = t->spsr_off;
+					/*} while (0);*/
+					spserial_mutex_unlock(t->mutex);					
 					if (isoff) {
 						break;
 					}					
