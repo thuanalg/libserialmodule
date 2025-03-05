@@ -1132,12 +1132,13 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         const char* hello = "Hello from server";
         struct sockaddr_in cartridge_addr, client_addr;
         int i = 0;
+		ssize_t lenmsg = 0;
         socklen_t client_len = sizeof(client_addr);
 
 #ifdef __MACH__
 #else
         struct epoll_event event, events[SPSR_SIZE_MAX_EVENTS];
-        ssize_t lenmsg = 0;
+        
 #endif	
 
         spllog(SPL_LOG_DEBUG, "cartridge: ");
@@ -1235,6 +1236,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                             }
                             buffer[lenmsg] = 0;
                             if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
+								spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
                                 isoff = 1;
                                 break;
                             }
