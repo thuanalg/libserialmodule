@@ -1137,7 +1137,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 #ifdef __MACH__
 #else
         struct epoll_event event, events[SPSR_SIZE_MAX_EVENTS];
-        ssize_t len = 0;
+        ssize_t lenmsg = 0;
 #endif	
 
         spllog(SPL_LOG_DEBUG, "cartridge: ");
@@ -1226,14 +1226,14 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                             memset(&client_addr, 0, sizeof(client_addr));
                             client_len = sizeof(client_addr);
                             memset(buffer, 0, sizeof(buffer));
-                            len = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
+                            lenmsg = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
                                 (struct sockaddr*)&client_addr, &client_len);
-                            if (len < 0) {
-                                spllog(SPL_LOG_ERROR, "epoll_ctl, len: %d, errno: %d, text: %s.",
-                                    (int)len, errno, strerror(errno));
+                            if (lenmsg < 0) {
+                                spllog(SPL_LOG_ERROR, "epoll_ctl, lenmsg: %d, errno: %d, text: %s.",
+                                    (int)lenmsg, errno, strerror(errno));
                                 break;
                             }
-                            buffer[len] = 0;
+                            buffer[lenmsg] = 0;
                             if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
                                 isoff = 1;
                                 break;
