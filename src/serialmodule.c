@@ -22,7 +22,10 @@
     #include <sys/socket.h> 
     #include <arpa/inet.h> 
     #include <netinet/in.h> 
-
+#ifdef __MACH__
+#else
+    #include <sys/epoll.h>
+#endif	
     #ifdef __TRUE_LINUX__
         #include <sys/epoll.h>
     #else
@@ -1345,6 +1348,8 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 spserial_mutex_unlock(t->mutex);
 
                 if (isoff) {
+                    sendto(sockfd, (const char*)SPSR_MSG_OFF, strlen(SPSR_MSG_OFF),
+                        MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr, len);
                     break;
                 }
                 sendto(sockfd, (const char*)hello, strlen(hello),
