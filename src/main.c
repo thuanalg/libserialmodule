@@ -14,7 +14,7 @@ char cfgpath[1024];
 
 #define TESTTEST "1234567"
 /* --is_port=COM2  --is_cfg=C:/z/serialmodule/win32/Debug/simplelog.cfg --is_baudrate=115200*/
-int main__(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 	int i = 0;
 	SP_SERIAL_INPUT_ST obj;
 	FILE* fp = 0;

@@ -1110,6 +1110,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 #define SPSR_SIZE_CARTRIDGE         10
 #define SPSR_SIZE_TRIGGER           2
 #define SPSR_SIZE_MAX_EVENTS        10
+#define SPSR_MSG_OFF        		"SPSR_MSG_OFF"
     void* spsr_init_trigger_routine(void* obj) {
         spsr_init_trigger(obj);
         return 0;
@@ -1141,7 +1142,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 		do {
 			sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 			if (sockfd < 0) {
-				spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
+				spllog(SPL_LOG_ERROR, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
 				ret = PSERIAL_CREATE_SOCK;
 				break;
 			}
@@ -1158,14 +1159,14 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 	
             flags = fcntl(sockfd, F_GETFL, 0);
 			if (flags == -1) {
-				spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+				spllog(SPL_LOG_ERROR, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
 				ret = PSERIAL_FCNTL_SOCK;
 				break;
 			}
 	
 			ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 			if (ret == -1) {
-				spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+				spllog(SPL_LOG_ERROR, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
 				ret = PSERIAL_FCNTL_SOCK;
 				break;
 			}
@@ -1175,7 +1176,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 				sizeof(cartridge_addr));
 			if (ret < 0)
 			{
-				spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+				spllog(SPL_LOG_ERROR, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
 				ret = PSERIAL_BIND_SOCK;
 				break;
 			}
@@ -1187,9 +1188,6 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 				spserial_mutex_lock(t->mutex);
 				/*do {*/
 					isoff = t->spsr_off;
-					if (isoff) {
-						t->spsr_off++;
-					}
 				/*} while (0);*/
 				spserial_mutex_unlock(t->mutex);
 				if (isoff) {
@@ -1203,7 +1201,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 /* Start epoll */
                 epollfd = epoll_create(SPSR_SIZE_CARTRIDGE);
                 if (epollfd < 0) {
-                    spllog(SPL_LOG_DEBUG, "epoll_create, epollfd: %d, errno: %d, text: %s.", 
+                    spllog(SPL_LOG_ERROR, "epoll_create, epollfd: %d, errno: %d, text: %s.",
                         epollfd, errno, strerror(errno));
                     ret = PSERIAL_EPOLL_CREATE;
                     break;
@@ -1211,7 +1209,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 event.events = EPOLLIN | EPOLLET;
                 ret = epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &event);
                 if (ret < 0) {
-                    spllog(SPL_LOG_DEBUG, "epoll_ctl, ret: %d, errno: %d, text: %s.",
+                    spllog(SPL_LOG_ERROR, "epoll_ctl, ret: %d, errno: %d, text: %s.",
                         ret, errno, strerror(errno));
                     ret = PSERIAL_EPOLL_CTL;
                     break;
@@ -1224,11 +1222,17 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                         {
                             memset(&client_addr, 0, sizeof(client_addr));
                             client_len = sizeof(client_addr);
+                            memset(buffer, 0, sizeof(buffer));
                             len = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
                                 (struct sockaddr*)&client_addr, &client_len);
                             if (len < 0) {
-                                spllog(SPL_LOG_DEBUG, "epoll_ctl, len: %d, errno: %d, text: %s.",
+                                spllog(SPL_LOG_ERROR, "epoll_ctl, len: %d, errno: %d, text: %s.",
                                     (int)len, errno, strerror(errno));
+                                break;
+                            }
+                            buffer[len] = 0;
+                            if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
+                                isoff = 1;
                                 break;
                             }
                         }
@@ -1240,6 +1244,11 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 				/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 			}
 		} while(0);
+        spserial_mutex_lock(t->mutex);
+        /*do {*/
+             t->spsr_off++;
+        /*} while (0);*/
+        spserial_mutex_unlock(t->mutex);
 		if(sockfd > 0) {
 			ret = close(sockfd);
 			if (ret) {
@@ -1343,6 +1352,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
                 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
             }
+
+
+
             ret = close(sockfd);
             if (ret) {
                 spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
