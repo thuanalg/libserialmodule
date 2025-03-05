@@ -1203,6 +1203,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 
            #else
                 /* Start epoll */
+				spllog(SPL_LOG_DEBUG, "epoll_create------------------------");
                 epollfd = epoll_create(SPSR_SIZE_CARTRIDGE);
                 if (epollfd < 0) {
                     spllog(SPL_LOG_ERROR, "epoll_create, epollfd: %d, errno: %d, text: %s.",
@@ -1211,6 +1212,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                     break;
                 }
                 event.events = EPOLLIN | EPOLLET;
+				spllog(SPL_LOG_DEBUG, "epollfd------------------------");
                 ret = epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &event);
                 if (ret < 0) {
                     spllog(SPL_LOG_ERROR, "epoll_ctl, ret: %d, errno: %d, text: %s.",
@@ -1219,6 +1221,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                     break;
                 }
                 while (1) {
+					spllog(SPL_LOG_DEBUG, "epoll_wait------------------------");
                     int nfds = epoll_wait(epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
                     for (i = 0; i < nfds; i++) 
                     {
