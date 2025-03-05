@@ -1231,7 +1231,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 					spllog(SPL_LOG_DEBUG, "epoll_wait------------------------, nfds: %d", nfds);
                     for (i = 0; i < nfds; i++) 
                     {
-						spllog(SPL_LOG_DEBUG, "(data.fd, sockfd)------------------------(%d, %d), events[i].data.fd, sockfd);
+						spllog(SPL_LOG_DEBUG, "(data.fd, sockfd)------------------------(%d, %d)", events[i].data.fd, sockfd);
                         if (events[i].data.fd == sockfd) 
                         {
                             memset(&client_addr, 0, sizeof(client_addr));
