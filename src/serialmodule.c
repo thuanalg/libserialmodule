@@ -1187,9 +1187,10 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 			}
 	
 			while (1) {
+				/*
 				spllog(SPL_LOG_DEBUG, "spserial_wait_sem------------------------");
 				spserial_wait_sem(t->sem);
-	
+				*/
 				spserial_mutex_lock(t->mutex);
 				/*do {*/
 					isoff = t->spsr_off;
