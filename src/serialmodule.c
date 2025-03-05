@@ -1167,7 +1167,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 				ret = PSERIAL_FCNTL_SOCK;
 				break;
 			}
-	
+			spllog(SPL_LOG_DEBUG, "fcntl------------------------");
 			ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 			if (ret == -1) {
 				spllog(SPL_LOG_ERROR, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
@@ -1176,6 +1176,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 			}
 	
 			/* Bind the socket with the server address */
+			spllog(SPL_LOG_DEBUG, "bind------------------------");
 			ret = bind(sockfd, (const struct sockaddr*)&cartridge_addr,
 				sizeof(cartridge_addr));
 			if (ret < 0)
@@ -1186,7 +1187,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 			}
 	
 			while (1) {
-	
+				spllog(SPL_LOG_DEBUG, "spserial_wait_sem------------------------");
 				spserial_wait_sem(t->sem);
 	
 				spserial_mutex_lock(t->mutex);
