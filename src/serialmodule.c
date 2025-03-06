@@ -1477,7 +1477,6 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         while (0);
         return 0;
     }
-	int spserial_add_com(int, char*);
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_add_com(int epollfd, char* info,int n) {
 	int ret = 0;
