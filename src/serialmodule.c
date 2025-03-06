@@ -77,7 +77,7 @@
 static int spsr_init_trigger(void*);
 static int spserial_pull_trigger(void*);
 static int spserial_start_listen(void*);
-static int spserial_add_com(int, char*);
+static int spserial_add_com(int, char*, int n);
 #endif
 
 
@@ -1290,6 +1290,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                         {
 							while(1) {
 								char *p = 0;
+								int lp = 0;
 								memset(&client_addr, 0, sizeof(client_addr));
 								client_len = sizeof(client_addr);
 								memset(buffer, 0, sizeof(buffer));
@@ -1312,21 +1313,23 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 								if(isoff) {
 									break;
 								}
+								lp = 0;
 								spserial_mutex_lock(t->mutex);
 								do {
 									if(t->cmd_buff){
-										if(t->cmd_buff->pl) {
-											spserial_malloc((t->cmd_buff->pl), p, char);
+										lp = t->cmd_buff->pl;
+										if(lp) {
+											spserial_malloc(lp, p, char);
 											if(p) {
 												break;
 											}
-											memcpy(p, t->cmd_buff->data, t->cmd_buff->pl);
+											memcpy(p, t->cmd_buff->data, lp);
 											t->cmd_buff->pl = 0;
 										}
 									}
 								} while (0);
 								spserial_mutex_unlock(t->mutex);	
-								ret = spserial_add_com(epollfd, p);
+								ret = spserial_add_com(epollfd, p, lp);
 							}
 							continue;
                         }
@@ -1476,8 +1479,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
     }
 	int spserial_add_com(int, char*);
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_add_com(int epollfd, char* info) {
+int spserial_add_com(int epollfd, char* info,int n) {
 	int ret = 0;
+	SP_SERIAL_INFO_ST* item;
 	do {
 		
 	} while(0);
