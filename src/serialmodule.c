@@ -209,7 +209,7 @@ int spserial_inst_create(void *obj, int  *idd)
             if (!t->cmd_buff) {
 
                 int total = sizeof(SP_SERIAL_INPUT_ST) + SPSR_DATA_RANGE;
-                spserial_malloc(total, t->cmd_buff, SP_SERIAL_INPUT_ST);
+                spserial_malloc(total, t->cmd_buff, SP_SERIAL_GENERIC_ST);
                 t->cmd_buff->total = total;
                 t->cmd_buff->range = SPSR_DATA_RANGE;
                 t->cmd_buff->type = SPSR_CMD_STORAGE_INPUT_INFO_ARR;
