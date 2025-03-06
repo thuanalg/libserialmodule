@@ -33,7 +33,18 @@ extern "C" {
 #ifndef LLU
 	#define LLU				unsigned long long
 #endif
+	typedef enum {
+		SPSR_CMD_STORAGE_INPUT_INFO_ARR,
+		SPSR_CMD_ADD,
+		SPSR_CMD_REM,
+
+
+
+		SPSR_CMD_PEAK
+	} SPSR_CMD_TYPE;
+
 	typedef int (*SPSERIAL_module_cb)(void*);
+
 	typedef enum {
 		SPSERIAL_PORT_OK,
 		SPSERIAL_PORT_INFO_NULL,
@@ -74,6 +85,7 @@ extern "C" {
 		PSERIAL_BIND_SOCK,
 		PSERIAL_EPOLL_CREATE,
 		PSERIAL_EPOLL_CTL,
+		PSERIAL_BUFF_EXCEED,
 
 
 
@@ -152,9 +164,11 @@ extern "C" {
 #ifndef UNIX_LINUX
 #else
 		int
-			spsr_off;    /*Check off.*/
+			spsr_off;			/* Check off.*/
 		void* 
-			sem_spsr; /*Check off.*/
+			sem_spsr;			/* Check off.*/
+		SP_SERIAL_GENERIC_ST*
+			cmd_buff;			/* Command list .*/
 #endif 
 		SPSERIAL_ARR_LIST_LINED* init_node;
 		SPSERIAL_ARR_LIST_LINED* last_node;
