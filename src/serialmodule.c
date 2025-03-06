@@ -1310,6 +1310,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 								if(isoff) {
 									break;
 								}
+								
 							}
                         }
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -1419,7 +1420,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                         t->spsr_off++;
                     }
                     if (t->cmd_buff) {
-                        if (cmd_buff->pl > 0) {
+                        if (t->cmd_buff->pl > 0) {
                             had_cmd = 1;
                         }
                     }
