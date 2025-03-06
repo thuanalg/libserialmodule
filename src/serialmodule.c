@@ -1481,9 +1481,14 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_add_com(int epollfd, char* info,int n) {
 	int ret = 0;
-	SP_SERIAL_INFO_ST* item;
+	SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+	SP_SERIAL_INFO_ST* item = 0;;
+	int i = 0;
+	int count = n/sizeof(SP_SERIAL_INFO_ST);
 	do {
-		
+		for(i = 0; i < n; ++i) {
+			
+		}
 	} while(0);
 	return ret;
 }
