@@ -187,6 +187,19 @@ int spserial_inst_create(void *obj, int  *idd)
         }
 
 #else
+        int fd = 0;
+        fd = open(p->port_name, O_RDWR | O_NOCTTY | O_NDELAY);
+        if (fd < -1) {
+            ret = SPSERIAL_PORT_OPEN_UNIX;
+            spllog(SPL_LOG_ERROR, "open port: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            break;
+        }
+        ret = close(fd);
+        if (ret) {
+            ret = SPSERIAL_PORT_CLOSE_UNIX;
+            spllog(SPL_LOG_ERROR, "close port: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            break;
+        }
 #endif        
     } while (0);
 
@@ -1229,11 +1242,6 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                     break;
                 }
                 while (1) {
-					spserial_mutex_lock(t->mutex);
-					/*do {*/
-						isoff = t->spsr_off;
-					/*} while (0);*/
-					spserial_mutex_unlock(t->mutex);					
 					if (isoff) {
 						break;
 					}					
@@ -1263,6 +1271,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 								if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
 									spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
 									isoff = 1;
+									break;
+								}
+								if(isoff) {
 									break;
 								}
 							}
