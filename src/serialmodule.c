@@ -1328,7 +1328,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 								spserial_mutex_unlock(t->mutex);	
 								ret = spserial_add_com(epollfd, p);
 							}
-							continue
+							continue;
                         }
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
                     }
