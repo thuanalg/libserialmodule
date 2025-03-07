@@ -1604,8 +1604,12 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 					ret = PSERIAL_UNIX_EPOLL_CTL;
 					break;
 				}	
-				/* Add to linked list. TODO 1.*/
-				spsr_add2_list(input);
+                input->handle = fd;
+				/* Add to linked list. */
+				ret = spsr_add2_list(input);
+                if (ret) {
+                    spllog(SPL_LOG_ERROR, "spsr_add2_list.");
+                }
 			}
 			if(ret) {
 				break;
