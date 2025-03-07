@@ -1424,7 +1424,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
             if ( ret < 0)
             {
                 /* perror("bind failed"); */
-                spllog(SPL_LOG_DEBUG, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+                spllog(SPL_LOG_ERROR, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
                 ret = PSERIAL_BIND_SOCK;
                 break;
             }
@@ -1481,14 +1481,60 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 int spserial_add_com(int epollfd, char* info,int n) {
 	int ret = 0;
 	SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-	SP_SERIAL_INFO_ST* item = 0;;
+	SP_SERIAL_GENERIC_ST* item = 0;;
+	SP_SERIAL_GENERIC_ST* obj = (SP_SERIAL_GENERIC_ST*)info;;
+	SP_SERIAL_INFO_ST *input = 0;
 	int i = 0;
-	int count = n/sizeof(SP_SERIAL_INFO_ST);
+	int fd = 0;
+	struct termios options = {0};
+	int count = n/sizeof(SP_SERIAL_GENERIC_ST);
 	do {
 		for(i = 0; i < n; ++i) {
+			item = obj + i;
+			if(item->type == SPSR_CMD_ADD) {
+				input = (SP_SERIAL_INFO_ST *) item->data;
+				fd = open(input->port_name, O_RDWR | O_NOCTTY | O_NONBLOCK);
+				if (fd == -1) {
+					spllog(SPL_LOG_ERROR, "open port error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+					ret = PSERIAL_UNIX_OPEN_PORT;
+					break;
+				}		
+				memset(&options, 0, sizeof(options));
+				if (tcgetattr(fd, &options) < 0) {
+					spllog(SPL_LOG_ERROR, "tcgetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+					ret = PSERIAL_UNIX_GET_ATTR;
+					break;
+				}
 			
+				cfsetispeed(&options, input->baudrate);
+				cfsetospeed(&options, input->baudrate);			
+				
+				options.c_cflag &= ~PARENB;    
+				options.c_cflag &= ~CSTOPB;    
+				options.c_cflag &= ~CSIZE;
+				options.c_cflag |= CS8;        
+				options.c_cflag &= ~CRTSCTS;   
+				options.c_cflag |= CREAD | CLOCAL; 	
+				options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); 
+				options.c_iflag &= ~(IXON | IXOFF | IXANY);         
+				options.c_oflag &= ~OPOST;      
+				
+				if (tcsetattr(fd, TCSANOW, &options) < 0) {
+					spllog(SPL_LOG_ERROR, "tcsetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+					ret = PSERIAL_UNIX_SET_ATTR;
+					break;
+				}
+			}
+			if(ret) {
+				break;
+			}
 		}
 	} while(0);
+	if(ret) {
+		if(fd >= 0) {
+			close(fd);
+		}
+	}
 	return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
