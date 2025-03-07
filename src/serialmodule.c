@@ -207,7 +207,7 @@ int spserial_inst_create(void *obj, int  *idd)
         spserial_mutex_lock(t->mutex);
         /*do {*/
             if (!t->cmd_buff) {
-
+				/* Error TODO*/
                 int total = sizeof(SP_SERIAL_GENERIC_ST) + SPSR_DATA_RANGE;
                 spserial_malloc(total, t->cmd_buff, SP_SERIAL_GENERIC_ST);
                 t->cmd_buff->total = total;
@@ -217,6 +217,7 @@ int spserial_inst_create(void *obj, int  *idd)
                 t->cmd_buff->pl += sizeof(SP_SERIAL_INPUT_ST);
             }
             else {
+				/* Error TODO*/
                 int k = sizeof(SP_SERIAL_INPUT_ST);
                 if (t->cmd_buff->range < (t->cmd_buff->pl + k)) {
                     memcpy(t->cmd_buff->data + t->cmd_buff->pl, (char*)p, sizeof(SP_SERIAL_INPUT_ST));
@@ -1485,6 +1486,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
             else {
                 spllog(SPL_LOG_DEBUG, "close socket done.");
             }
+			/* Clean linked list. TODO.*/
             spserial_rel_sem(t->sem_spsr);
         } 
         while (0);
@@ -1549,7 +1551,9 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 					spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
 					ret = PSERIAL_UNIX_EPOLL_CTL;
 					break;
-				}				
+				}	
+				/* Add to linked list. TODO.*/
+				
 			}
 			if(ret) {
 				break;
