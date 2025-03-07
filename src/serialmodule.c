@@ -1330,6 +1330,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 								} while (0);
 								spserial_mutex_unlock(t->mutex);	
 								ret = spserial_add_com(epollfd, p, lp);
+								spserial_free(p);
 							}
 							continue;
                         }
