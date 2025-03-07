@@ -1486,7 +1486,9 @@ int spserial_add_com(int epollfd, char* info,int n) {
 	SP_SERIAL_INFO_ST *input = 0;
 	int i = 0;
 	int fd = 0;
+	int rerr = 0;
 	struct termios options = {0};
+	struct epoll_event event = {0};
 	int count = n/sizeof(SP_SERIAL_GENERIC_ST);
 	do {
 		for(i = 0; i < n; ++i) {
@@ -1500,7 +1502,8 @@ int spserial_add_com(int epollfd, char* info,int n) {
 					break;
 				}		
 				memset(&options, 0, sizeof(options));
-				if (tcgetattr(fd, &options) < 0) {
+				rerr = tcgetattr(fd, &options);
+				if ( rerr < 0) {
 					spllog(SPL_LOG_ERROR, "tcgetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
 					ret = PSERIAL_UNIX_GET_ATTR;
 					break;
@@ -1519,11 +1522,21 @@ int spserial_add_com(int epollfd, char* info,int n) {
 				options.c_iflag &= ~(IXON | IXOFF | IXANY);         
 				options.c_oflag &= ~OPOST;      
 				
-				if (tcsetattr(fd, TCSANOW, &options) < 0) {
+				rerr = tcsetattr(fd, TCSANOW, &options);
+				if (rerr < 0) {
 					spllog(SPL_LOG_ERROR, "tcsetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
 					ret = PSERIAL_UNIX_SET_ATTR;
 					break;
 				}
+				memset(&event, 0, sizeof(event));
+				event.events = EPOLLIN | EPOLLET;
+				event.data.fd = fd;
+				rerr = epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
+				if (rerr == -1) {
+					spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+					ret = PSERIAL_UNIX_EPOLL_CTL;
+					break;
+				}				
 			}
 			if(ret) {
 				break;
