@@ -77,7 +77,7 @@
 static int spsr_init_trigger(void*);
 static int spserial_pull_trigger(void*);
 static int spserial_start_listen(void*);
-static int spserial_add_com(int, char*, int n);
+static int spserial_fetch_commands(int, char*, int n);
 #endif
 
 
@@ -1336,11 +1336,16 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 									}
 								} while (0);
 								spserial_mutex_unlock(t->mutex);	
-								ret = spserial_add_com(epollfd, p, lp);
+								ret = spserial_fetch_commands(epollfd, p, lp);
 								spserial_free(p);
 							}
 							continue;
-                        }
+                        } 
+						if (events[i].data.fd >= 0) {
+							int bytesRead = 0;
+							memset(buffer, 0, sizeof(buffer));
+							bytesRead = (int)read(fd, buffer, sizeof(buffer));
+						}
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
                     }
                     /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -1486,7 +1491,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
         return 0;
     }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_add_com(int epollfd, char* info,int n) {
+int spserial_fetch_commands(int epollfd, char* info,int n) {
 	int ret = 0;
 	SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
 	SP_SERIAL_GENERIC_ST* item = 0;;
