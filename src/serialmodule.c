@@ -1288,8 +1288,8 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 						spllog(SPL_LOG_DEBUG, "(data.fd, sockfd)------------------------(%d, %d)", events[i].data.fd, sockfd);
                         if (events[i].data.fd == sockfd) 
                         {
+							char *p = 0;
 							while(1) {
-								char *p = 0;
 								int lp = 0;
 								memset(&client_addr, 0, sizeof(client_addr));
 								client_len = sizeof(client_addr);
@@ -1315,11 +1315,18 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 								}
 								lp = 0;
 								spserial_mutex_lock(t->mutex);
+								/*SPSERIAL_BUFFER_SIZE*/
+								spserial_malloc(SPSERIAL_BUFFER_SIZE, p, char);
 								do {
 									if(t->cmd_buff){
 										lp = t->cmd_buff->pl;
 										if(lp) {
+											if(lp > SPSERIAL_BUFFER_SIZE) {
+												p = realloc(p, lp);
+											}
+											/*
 											spserial_malloc(lp, p, char);
+											*/
 											if(p) {
 												break;
 											}
