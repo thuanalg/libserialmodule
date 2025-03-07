@@ -1603,13 +1603,15 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 					spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
 					ret = PSERIAL_UNIX_EPOLL_CTL;
 					break;
-				}	
-                input->handle = fd;
-				/* Add to linked list. */
-				ret = spsr_add2_list(input);
-                if (ret) {
-                    spllog(SPL_LOG_ERROR, "spsr_add2_list.");
-                }
+				}
+				spserial_mutex_lock(t->mutex);
+					input->handle = fd;
+					/* Add to linked list. */
+					ret = spsr_add2_list(input);
+					if (ret) {
+						spllog(SPL_LOG_ERROR, "spsr_add2_list.");
+					}
+				spserial_mutex_unlock(t->mutex);
 			}
 			if(ret) {
 				break;
@@ -1652,7 +1654,7 @@ int spsr_add2_list(SP_SERIAL_INFO_ST* input)
         }
 
         memcpy(item, input, sizeof(SP_SERIAL_INFO_ST));
-
+		/* Create Mutex here TODO */
         obj->item = item;
         if (!t->init_node) {
             t->init_node = obj;
