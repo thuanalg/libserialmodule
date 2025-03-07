@@ -79,7 +79,8 @@ static int spserial_pull_trigger(void*);
 static int spserial_start_listen(void*);
 static int spserial_fetch_commands(int, char*, int n);
 #endif
-
+static int spsr_add2_list(SP_SERIAL_INFO_ST*);
+static int spsr_remv_list(char *nameport);
 
 
 void thuan() { }
@@ -918,6 +919,57 @@ int spserial_wait_sem(void* sem) {
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spserial_get_obj_by_name(char* portname, void** obj, int takeoff) {
+    int ret = 0;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+    SPSERIAL_ARR_LIST_LINED* node = 0, * prev = 0;;
+    int found = 0;
+    do {
+        if (!obj) {
+
+            break;
+        }
+        spserial_mutex_lock(t->mutex);
+        node = t->init_node;
+        while (node) {
+            if ( strcpm(portname, node->item->port_name) == 0) {
+                *obj = node;
+                if (takeoff)
+                {
+                    if (node->item->iidd == t->init_node->item->iidd)
+                    {
+                        t->init_node = t->init_node->next;
+                    }
+                    else {
+                        if (prev) {
+                            prev->next = node->next;
+                            if (!prev->next) {
+                                t->last_node = prev;
+                            }
+                        }
+                    }
+                    t->count--;
+                    if (t->count < 1) {
+                        t->init_node = 0;
+                        t->last_node = 0;
+                    }
+                }
+                found = 1;
+                break;
+            }
+            prev = node;
+            node = node->next;
+        }
+        spserial_mutex_unlock(t->mutex);
+    } while (0);
+
+    if (!found) {
+        ret = SPSERIAL_ITEM_NOT_FOUND;
+    }
+
+    return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_get_objbyid(int idd, void** obj, int takeoff) {
     int ret = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
@@ -1486,7 +1538,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
             else {
                 spllog(SPL_LOG_DEBUG, "close socket done.");
             }
-			/* Clean linked list. TODO.*/
+			/* Clean linked list. TODO 2.*/
             spserial_rel_sem(t->sem_spsr);
         } 
         while (0);
@@ -1552,8 +1604,8 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 					ret = PSERIAL_UNIX_EPOLL_CTL;
 					break;
 				}	
-				/* Add to linked list. TODO.*/
-				
+				/* Add to linked list. TODO 1.*/
+				spsr_add2_list(input);
 			}
 			if(ret) {
 				break;
@@ -1567,6 +1619,8 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 	}
 	return ret;
 }
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
     int spserial_pull_trigger(void* obj) { return 0;}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -1574,7 +1628,48 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+    int spsr_add2_list(SP_SERIAL_INFO_ST* input) {
+	int ret = 0;
+	SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+	SPSERIAL_ARR_LIST_LINED *obj = 0;
+    SP_SERIAL_INFO_ST* item = 0;
+	do {
+        /*do {*/
+        spserial_malloc(sizeof(SPSERIAL_ARR_LIST_LINED), obj, SPSERIAL_ARR_LIST_LINED);
+        if (!obj) {
+            ret = 1;
+            break;
+        }
+        spserial_malloc(sizeof(SP_SERIAL_INFO_ST), item, SP_SERIAL_INFO_ST);
+        if (!item) {
+            ret = 1;
+            break;
+        }
+
+        memcpy(item, input, sizeof(SP_SERIAL_INFO_ST));
+
+        obj->item = item;
+        if (!t->init_node) {
+            t->init_node = obj;
+            t->last_node = obj;
+            /**/
+        }
+        else {
+            t->last_node->next = obj;
+            t->last_node = obj;
+            /*t->last_node->next = 0;*/
+        }
+        t->count++;
+        /* } while (0);*/
+	} while(0);
+	return ret;
+}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spsr_remv_list(char *nameport) {
+	return 0;
+} 
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #else

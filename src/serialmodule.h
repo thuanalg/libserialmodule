@@ -198,7 +198,10 @@ DLL_API_SERIAL_MODULE int
 	spserial_inst_write_data(int iid, char*, int sz);
 
 DLL_API_SERIAL_MODULE int
-	spserial_get_objbyid(int, void** obj, int);
+	spserial_get_objbyid(int iddd, void** obj, int takeoff);
+
+DLL_API_SERIAL_MODULE int
+	spserial_get_obj_by_name(char *portname, void** obj, int takeoff);
 
 DLL_API_SERIAL_MODULE int
 	spserial_inst_write_to_port(SP_SERIAL_INFO_ST*, char*, int sz);
