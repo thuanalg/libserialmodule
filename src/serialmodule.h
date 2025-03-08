@@ -108,6 +108,8 @@ extern "C" {
 		int type;
 		char data[0];
 	} SP_SERIAL_GENERIC_ST;
+	
+	
 	typedef struct __SP_SERIAL_INPUT_ST__ {
 		int
 			baudrate;
@@ -117,6 +119,7 @@ extern "C" {
 			cb_evt_fn;
 		void* cb_obj;
 	} SP_SERIAL_INPUT_ST;
+	
 	
 	typedef struct __SP_SERIAL_INFO_ST__ {
 		int
@@ -154,12 +157,18 @@ extern "C" {
 			buff;
 	} SP_SERIAL_INFO_ST;
 
+	
+	
+	
 	typedef struct __SPSERIAL_ARR_LIST_LINED__ {
 		SP_SERIAL_INFO_ST* item;
 		/* struct __SPSERIAL_ARR_LIST_LINED__* prev; */
 		struct __SPSERIAL_ARR_LIST_LINED__* next;
 	} SPSERIAL_ARR_LIST_LINED;
 
+	
+	
+	
 	typedef struct __SPSERIAL_ROOT_TYPE__ {
 		int n;
 		int count;
