@@ -100,6 +100,8 @@ static void*
     spsr_init_trigger_routine(void*);
 static void*
     spsr_init_cartridge_routine(void*);
+static int
+    spsr_send_cmd(int cmd, void* data);
 #endif
 
 static int 
@@ -614,8 +616,15 @@ int spserial_module_init() {
             ret = PSERIAL_CREATE_THREAD_ERROR;
             break;
         }
+        //t->cmd_buff
+        spserial_malloc(SPSERIAL_BUFFER_SIZE, t->cmd_buff, SP_SERIAL_GENERIC_ST);
+        if (!t->cmd_buff) {
+            spllog(SPL_LOG_ERROR, "spserial_malloc error");
+            exit(1);
+        }
 #endif
         spllog(SPL_LOG_DEBUG, "spserial_module_init: DONE");
+
     } while (0);
     return ret;
 }
@@ -1535,6 +1544,27 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spsr_send_cmd(int cmd, void* data) {
+    int ret = 0;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+    do {
+        if (cmd == SPSR_CMD_ADD) {
+            SP_SERIAL_GENERIC_ST obj = { 0 };
+            obj.total = nsize;
+            obj.type = cmd;
+            if (t->cmd_buff->range > t->cmd_buff->pl + sizeof(obj)) {
+                memcpy(t->cmd_buff->data + t->cmd_buff->pl, &obj, sizeof(obj));
+                t->cmd_buff->pl += sizeof(obj);
+            }
+            break;
+        }
+        if (cmd == SPSR_CMD_REM) {
+            break;
+        }
+    } while (0);
+    spserial_rel_sem(t->sem);
+    return ret;
+}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
     int spserial_pull_trigger(void* obj) { return 0;}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -1740,6 +1770,7 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
 #else
         /* TODO; */
         item->handle = -1;
+        ret = spsr_send_cmd(SPSR_CMD_ADD, 0);
 #endif
 
 
