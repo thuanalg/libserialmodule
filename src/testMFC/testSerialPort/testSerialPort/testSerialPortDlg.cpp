@@ -210,11 +210,11 @@ HCURSOR CtestSerialPortDlg::OnQueryDragIcon()
 void CtestSerialPortDlg::OnBnClickedOk()
 {
 	int ret = 0;
-	SPSERIAL_ARR_LIST_LINED* objId = 0;
+	SP_SERIAL_INFO_ST* item = 0;
 
 	while (m_listPort.size() > 0) {
-		objId = (SPSERIAL_ARR_LIST_LINED*)m_listPort.front();
-		spserial_inst_del(objId->item->iidd);
+		item = (SP_SERIAL_INFO_ST*)m_listPort.front();
+		spserial_inst_del(item->port_name);
 		m_listPort.pop_front();
 	}
 	ret = spserial_module_close();
@@ -228,11 +228,11 @@ void CtestSerialPortDlg::OnBnClickedOk()
 void CtestSerialPortDlg::OnBnClickedCancel()
 {
 	int ret = 0;
-	SPSERIAL_ARR_LIST_LINED* objId = 0;
+	SP_SERIAL_INFO_ST* item = 0;
 
 	while (m_listPort.size() > 0) {
-		objId = (SPSERIAL_ARR_LIST_LINED*)m_listPort.front();
-		spserial_inst_del(objId->item->iidd);
+		item = (SP_SERIAL_INFO_ST*)m_listPort.front();
+		spserial_inst_del(item->port_name);
 		m_listPort.pop_front();
 	}
 	ret = spserial_module_close();
@@ -288,9 +288,9 @@ void CtestSerialPortDlg::OnBnClickedButtonmsg()
 	for (i = 0; i < n; ++i) {
 		std::advance(it, i);
 		pcomid = *it;
-		objId = (SPSERIAL_ARR_LIST_LINED*)pcomid;
-		if (strcmp(portport, objId->item->port_name) == 0) {
-			spserial_inst_write_to_port(objId->item, data, strlen(data));
+		item = (SP_SERIAL_INFO_ST*)pcomid;
+		if (strcmp(portport, item->port_name) == 0) {
+			spserial_inst_write_to_port(item, data, strlen(data));
 		}
 	}
 }
@@ -339,9 +339,10 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 		port[i] = (char)txt[i];
 	}
 	SP_SERIAL_INPUT_ST obj;
+	SP_SERIAL_INFO_ST* output = 0;;
 	FILE* fp = 0;
 	int k = 0;
-	
+
 	SPSERIAL_ARR_LIST_LINED* objId = 0;
 
 	memset(&obj, 0, sizeof(obj));
@@ -355,15 +356,19 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 	if (ret) {
 		exit(EXIT_FAILURE);
 	}
-	ret = spserial_inst_create(&obj, &m_myid);
+	
+	ret = spserial_inst_create(&obj, (SP_SERIAL_INFO_ST**) &output);
 	if (ret) {
 		exit(1);
 	}
-	ret = spserial_get_objbyid(m_myid, (void **) & objId, 0);
-	if (ret) {
+	if (!output) {
 		exit(1);
 	}
-	m_listPort.push_back((void*)objId);
+//	ret = spserial_get_objbyid(m_myid, (void **) & objId, 0);
+//	if (ret) {
+//		exit(1);
+//	}
+	m_listPort.push_back((void*)output);
 }
 
 
@@ -382,14 +387,15 @@ void CtestSerialPortDlg::OnBnClickedButtonRemove()
 	std::list<void*>::iterator it = m_listPort.begin();
 	n = m_listPort.size();
 	SPSERIAL_ARR_LIST_LINED* objId = 0;
+	SP_SERIAL_INFO_ST* item = 0;
 	void* pcomid = 0;
 	for (i = 0; i < n; ++i) {
 		std::advance(it, i);
 		pcomid = *it;
-		objId = (SPSERIAL_ARR_LIST_LINED*)pcomid;
-		if (strcmp(port, objId->item->port_name) == 0) {
+		item = (SP_SERIAL_INFO_ST*)pcomid;
+		if (strcmp(port, item->port_name) == 0) {
 			int ret = 0;
-			ret = spserial_inst_del(objId->item->iidd);
+			ret = spserial_inst_del(item->port_name);
 			m_listPort.remove(pcomid);
 			break;
 		}
