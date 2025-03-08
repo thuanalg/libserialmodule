@@ -147,11 +147,22 @@ int spserial_inst_create(void *obj, SP_SERIAL_INFO_ST **output)
             ret = SPSERIAL_OUTPUT_NULL;
             break;
         }
+        /*-------------------------------------------------------------------*/
         spserial_mutex_lock(t->mutex);
         /*do {*/
             ret = spserial_verify_info(p, output);
         /*} while (0); */
         spserial_mutex_unlock(t->mutex);
+        /*-------------------------------------------------------------------*/
+        spserial_mutex_lock(t->mutex);
+#ifndef UNIX_LINUX
+#else
+        /*do {*/
+            ret = spsr_send_cmd(SPSR_CMD_ADD, 0);
+        /*} while (0); */
+#endif
+        spserial_mutex_unlock(t->mutex);
+        /*-------------------------------------------------------------------*/
     } while (0);
 
 	return ret;
@@ -574,6 +585,7 @@ int spserial_module_init() {
 #else
     pthread_t idd = 0;
     int err = 0;
+    int nsize = 0;
 #endif
     do {
 
@@ -617,11 +629,14 @@ int spserial_module_init() {
             break;
         }
         //t->cmd_buff
-        spserial_malloc(SPSERIAL_BUFFER_SIZE, t->cmd_buff, SP_SERIAL_GENERIC_ST);
+        nsize = SPSERIAL_BUFFER_SIZE + sizeof(int);
+        spserial_malloc(nsize, t->cmd_buff, SP_SERIAL_GENERIC_ST);
         if (!t->cmd_buff) {
             spllog(SPL_LOG_ERROR, "spserial_malloc error");
             exit(1);
         }
+        t->cmd_buff->total = nsize;
+        t->cmd_buff->range = SPSERIAL_BUFFER_SIZE;
 #endif
         spllog(SPL_LOG_DEBUG, "spserial_module_init: DONE");
 
@@ -1549,12 +1564,15 @@ int spsr_send_cmd(int cmd, void* data) {
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     do {
         if (cmd == SPSR_CMD_ADD) {
+            int* pend = 0;
             SP_SERIAL_GENERIC_ST obj = { 0 };
             obj.total = nsize;
             obj.type = cmd;
             if (t->cmd_buff->range > t->cmd_buff->pl + sizeof(obj)) {
                 memcpy(t->cmd_buff->data + t->cmd_buff->pl, &obj, sizeof(obj));
                 t->cmd_buff->pl += sizeof(obj);
+                pend = (int*)(t->cmd_buff->data + t->cmd_buff->pl);
+                *pend = 0;
             }
             break;
         }
@@ -1770,7 +1788,7 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
 #else
         /* TODO; */
         item->handle = -1;
-        ret = spsr_send_cmd(SPSR_CMD_ADD, 0);
+
 #endif
 
 
