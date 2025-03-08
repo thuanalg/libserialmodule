@@ -1724,6 +1724,10 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p) {
     int ret = 0;
     SP_SERIAL_INFO_ST* item = 0;
     SPSERIAL_ARR_LIST_LINED* node = 0;
+#ifndef UNIX_LINUX
+    HANDLE hSerial = 0;
+#else
+#endif
     do {
 
         if (!p) {
@@ -1739,10 +1743,29 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p) {
             break;
         }
 
+        if (t->init_node) 
+        {
+            SPSERIAL_ARR_LIST_LINED* tmp = 0;
+            tmp = t->init_node;
+            while (tmp) 
+            {
+                if (strcmp(tmp->item->port_name, p->port_name) == 0) {
+                    ret = PSERIAL_PORTNAME_EXISTED;
+                    break;
+                }
+                tmp = tmp->next;
+            }
+        }
+
+        if (ret) 
+        {
+            break;
+        }
+
 #ifndef UNIX_LINUX
         /* Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation */
         /* https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea */
-        HANDLE hSerial = CreateFile(p->port_name,
+        hSerial = CreateFile(p->port_name,
             GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
 
         if (hSerial == INVALID_HANDLE_VALUE) {
@@ -1752,37 +1775,76 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p) {
             break;
         }
         else {
-            spllog(0, "Create hSerial: 0x%p.", hSerial);
+            spllog(SPL_LOG_DEBUG, "Create hSerial: 0x%p.", hSerial);
             SPSERIAL_CloseHandle(hSerial);
         }
 #else
+        fd = open(p->port_name, O_RDWR | O_NOCTTY | O_NDELAY);
+        if (fd < -1) {
+            ret = SPSERIAL_PORT_OPEN_UNIX;
+            spllog(SPL_LOG_ERROR, "open port: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            break;
+        }
+        spllog(SPL_LOG_DEBUG, "fd: %d.", fd);
+        ret = close(fd);
+        if (ret) {
+            ret = SPSERIAL_PORT_CLOSE_UNIX;
+            spllog(SPL_LOG_ERROR, "close port: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            break;
+        }
 #endif
+
+        /*It is good. */
+        spserial_malloc(sizeof(SPSERIAL_ARR_LIST_LINED), node, SPSERIAL_ARR_LIST_LINED);
+        if (!node) {
+            ret = SPSERIAL_MEM_NULL;
+            spllog(SPL_LOG_ERROR, "SPSERIAL_MEM_NULL");
+            break;
+        }
+        spserial_malloc(sizeof(SP_SERIAL_INFO_ST), item, SP_SERIAL_INFO_ST);
+        if (!item) {
+            ret = SPSERIAL_MEM_NULL;
+            spllog(SPL_LOG_ERROR, "SPSERIAL_MEM_NULL");
+            break;
+        }
+        
+        /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+        snprintf(item->port_name, SPSERIAL_PORT_LEN, "%s", p->port_name);
+        item->baudrate = p->baudrate;
+        item->cb_evt_fn = p->cb_evt_fn;
+        item->cb_obj = p->cb_obj;
+        node->item = item;
+
+        /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
         if (!t->init_node) {
-            /*It is good. */
-            spserial_malloc(sizeof(SPSERIAL_ARR_LIST_LINED), node, SPSERIAL_ARR_LIST_LINED);
-            if (!node) {
-                break;
-            }
-            spserial_malloc(sizeof(SP_SERIAL_INFO_ST), item, SP_SERIAL_INFO_ST);
-            if (!item) {
-                break;
-            }
-            
-            snprintf(item->port_name, SPSERIAL_PORT_LEN, "%s", p->port_name);
-            item->baudrate = p->baudrate;
-            item->cb_evt_fn = p->cb_evt_fn;
-            item->cb_obj = p->cb_obj;
-            /*item->iidd = *idd;*/
-            node->item = item;
-            /* ret = spserial_create_thread(spserial_thread_operating_routine, obj); */
-#ifndef UNIX_LINUX
-            ret = spserial_create_thread(spserial_thread_operating_routine, node);
-#else
-#endif
+            t->init_node = node;
+            t->last_node = node;
         }
         else {
+            t->last_node->next = node;
+            t->last_node = node;
+            /*t->last_node->next = 0;*/
         }
+#ifndef UNIX_LINUX
+        /* ret = spserial_create_thread(spserial_thread_operating_routine, obj); */
+        ret = spserial_create_thread(spserial_thread_operating_routine, node);
+#else
+        /* ret = spserial_create_thread(spserial_thread_operating_routine, obj); */
+#endif
+
+
     } while (0);
+
+    if (ret) {
+        if (item) {
+            spserial_free(item);
+        }
+        if (node) {
+            spserial_free(node);
+        }
+    }
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
