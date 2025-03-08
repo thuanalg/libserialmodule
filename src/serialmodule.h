@@ -50,6 +50,7 @@ extern "C" {
 		SPSERIAL_PORT_INFO_NULL,
 		SPSERIAL_PORT_INPUT_NULL,
 		SPSERIAL_IDD_NULL,
+		SPSERIAL_OUTPUT_NULL,
 		SPSERIAL_PORT_OPEN,
 		SPSERIAL_PORT_OPEN_UNIX,
 		SPSERIAL_PORT_CLOSE_UNIX,
@@ -199,16 +200,16 @@ DLL_API_SERIAL_MODULE int
 	spserial_module_close();
 
 DLL_API_SERIAL_MODULE int
-	spserial_inst_create(void*, int *);
+	spserial_inst_create(void*, SP_SERIAL_INFO_ST** output);
 
 DLL_API_SERIAL_MODULE int
-	spserial_inst_del(int id);
+	spserial_inst_del(char* portname);
 
 DLL_API_SERIAL_MODULE int
 	spserial_inst_write_data(int iid, char*, int sz);
 
 DLL_API_SERIAL_MODULE int
-	spserial_get_objbyid(int iddd, void** obj, int takeoff);
+	spserial_get_objbyid(char* portname, void** obj, int takeoff);
 
 DLL_API_SERIAL_MODULE int
 	spserial_get_obj_by_name(char *portname, void** obj, int takeoff);
