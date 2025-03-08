@@ -1739,6 +1739,7 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
         ret = spserial_create_thread(spserial_thread_operating_routine, node);
 #else
         /* TODO; */
+        item->handle = -1;
 #endif
 
 
