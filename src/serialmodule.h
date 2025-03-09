@@ -208,7 +208,7 @@ DLL_API_SERIAL_MODULE int
 DLL_API_SERIAL_MODULE int
 	spserial_inst_write_data(int iid, char*, int sz);
 
-DLL_API_SERIAL_MODULE int
+DLL_API_SERIAL_MODULE int 
 	spserial_get_objbyid(char* portname, void** obj, int takeoff);
 
 DLL_API_SERIAL_MODULE int

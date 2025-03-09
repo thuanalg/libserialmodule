@@ -100,6 +100,8 @@ static void*
     spsr_init_trigger_routine(void*);
 static void*
     spsr_init_cartridge_routine(void*);
+static int
+    spsr_send_cmd(int cmd, void* data);
 #endif
 
 static int 
@@ -145,11 +147,22 @@ int spserial_inst_create(void *obj, SP_SERIAL_INFO_ST **output)
             ret = SPSERIAL_OUTPUT_NULL;
             break;
         }
+        /*-------------------------------------------------------------------*/
         spserial_mutex_lock(t->mutex);
         /*do {*/
             ret = spserial_verify_info(p, output);
         /*} while (0); */
         spserial_mutex_unlock(t->mutex);
+        /*-------------------------------------------------------------------*/
+        spserial_mutex_lock(t->mutex);
+#ifndef UNIX_LINUX
+#else
+        /*do {*/
+            ret = spsr_send_cmd(SPSR_CMD_ADD, 0);
+        /*} while (0); */
+#endif
+        spserial_mutex_unlock(t->mutex);
+        /*-------------------------------------------------------------------*/
     } while (0);
 
 	return ret;
@@ -572,6 +585,7 @@ int spserial_module_init() {
 #else
     pthread_t idd = 0;
     int err = 0;
+    int nsize = 0;
 #endif
     do {
 
@@ -614,8 +628,18 @@ int spserial_module_init() {
             ret = PSERIAL_CREATE_THREAD_ERROR;
             break;
         }
+        //t->cmd_buff
+        nsize = SPSERIAL_BUFFER_SIZE + sizeof(int);
+        spserial_malloc(nsize, t->cmd_buff, SP_SERIAL_GENERIC_ST);
+        if (!t->cmd_buff) {
+            spllog(SPL_LOG_ERROR, "spserial_malloc error");
+            exit(1);
+        }
+        t->cmd_buff->total = nsize;
+        t->cmd_buff->range = SPSERIAL_BUFFER_SIZE;
 #endif
         spllog(SPL_LOG_DEBUG, "spserial_module_init: DONE");
+
     } while (0);
     return ret;
 }
@@ -1304,8 +1328,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                         } 
 						if (events[i].data.fd >= 0) {
 							int bytesRead = 0;
+							int comfd = events[i].data.fd;
 							memset(buffer, 0, sizeof(buffer));
-							bytesRead = (int)read(fd, buffer, sizeof(buffer));
+							bytesRead = (int)read(comfd, buffer, sizeof(buffer));
 						}
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
                     }
@@ -1535,6 +1560,32 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spsr_send_cmd(int cmd, void* data) {
+    int ret = 0;
+    int nsize = 0;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+    do {
+        if (cmd == SPSR_CMD_ADD) {
+            int* pend = 0;
+            SP_SERIAL_GENERIC_ST obj = { 0 };
+            nsize = sizeof(obj);
+            obj.total = nsize;
+            obj.type = cmd;
+            if (t->cmd_buff->range > t->cmd_buff->pl + sizeof(obj)) {
+                memcpy(t->cmd_buff->data + t->cmd_buff->pl, &obj, sizeof(obj));
+                t->cmd_buff->pl += sizeof(obj);
+                pend = (int*)(t->cmd_buff->data + t->cmd_buff->pl);
+                *pend = 0;
+            }
+            break;
+        }
+        if (cmd == SPSR_CMD_REM) {
+            break;
+        }
+    } while (0);
+    spserial_rel_sem(t->sem);
+    return ret;
+}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
     int spserial_pull_trigger(void* obj) { return 0;}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -1592,7 +1643,7 @@ int spsr_remv_list(char * portname)
         }
         node = t->init_node;
         while (node) {
-            if (strcpm(portname, node->item->port_name) == 0) 
+            if (strcmp(portname, node->item->port_name) == 0) 
             {
                 if (node->item->iidd == t->init_node->item->iidd)
                 {
@@ -1622,6 +1673,7 @@ int spsr_remv_list(char * portname)
     if (!found) {
         ret = SPSERIAL_ITEM_NOT_FOUND;
     }
+    return ret;
 } 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
@@ -1632,6 +1684,7 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
 #ifndef UNIX_LINUX
     HANDLE hSerial = 0;
 #else
+    int fd = 0;
 #endif
     do {
         if (!output) {
@@ -1739,6 +1792,8 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
         ret = spserial_create_thread(spserial_thread_operating_routine, node);
 #else
         /* TODO; */
+        item->handle = -1;
+
 #endif
 
 
