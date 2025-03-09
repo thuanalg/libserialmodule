@@ -1343,6 +1343,8 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 							buffer[didread] = 0;
 							spllog(0, "------------>>> data read didread: %d: %s", didread, buffer);
 							//buffer[nr] = 0;
+                            //nr = write(comfd, buffer, didread);
+                            //spllog(0, "------------>>> data read didwrite: %d: %s", nr, buffer);
 						}
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
                     }
@@ -1572,6 +1574,8 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 						break;
 					}
 					temp->item->handle = fd;
+                    int k = write(fd, "buffer", strlen("buffer"));
+                    spllog(0, "write: %d", k);
 					temp = temp->next;
 				}
 			}
