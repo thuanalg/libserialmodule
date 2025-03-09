@@ -1327,10 +1327,13 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 							continue;
                         } 
 						if (events[i].data.fd >= 0) {
-							int bytesRead = 0;
+							int nr = 0;
 							int comfd = events[i].data.fd;
 							memset(buffer, 0, sizeof(buffer));
-							bytesRead = (int)read(comfd, buffer, sizeof(buffer));
+							nr = (int)read(comfd, buffer, sizeof(buffer));
+							buffer[nr] = 0;
+							spllog(0, "------------>>> data read: %s", buffer);
+							//buffer[nr] = 0;
 						}
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
                     }
@@ -1742,16 +1745,16 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
         }
 #else
         fd = open(p->port_name, O_RDWR | O_NOCTTY | O_NDELAY);
-        if (fd < -1) {
+        if (fd == -1) {
             ret = SPSERIAL_PORT_OPEN_UNIX;
             spllog(SPL_LOG_ERROR, "open port: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
             break;
         }
-        spllog(SPL_LOG_DEBUG, "fd: %d.", fd);
+        spllog(SPL_LOG_DEBUG, "open portname: %s, fd: %d.", p->port_name,fd);
         ret = close(fd);
         if (ret) {
             ret = SPSERIAL_PORT_CLOSE_UNIX;
-            spllog(SPL_LOG_ERROR, "close port: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            spllog(SPL_LOG_ERROR, "close port fd: %d, ret: %d, errno: %d, text: %s.", fd, ret, errno, strerror(errno));
             break;
         }
 #endif
