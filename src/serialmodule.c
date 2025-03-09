@@ -1328,8 +1328,9 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                         } 
 						if (events[i].data.fd >= 0) {
 							int bytesRead = 0;
+							int comfd = events[i].data.fd;
 							memset(buffer, 0, sizeof(buffer));
-							bytesRead = (int)read(fd, buffer, sizeof(buffer));
+							bytesRead = (int)read(comfd, buffer, sizeof(buffer));
 						}
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
                     }
@@ -1561,11 +1562,13 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spsr_send_cmd(int cmd, void* data) {
     int ret = 0;
+    int nsize = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     do {
         if (cmd == SPSR_CMD_ADD) {
             int* pend = 0;
             SP_SERIAL_GENERIC_ST obj = { 0 };
+            nsize = sizeof(obj);
             obj.total = nsize;
             obj.type = cmd;
             if (t->cmd_buff->range > t->cmd_buff->pl + sizeof(obj)) {
@@ -1640,7 +1643,7 @@ int spsr_remv_list(char * portname)
         }
         node = t->init_node;
         while (node) {
-            if (strcpm(portname, node->item->port_name) == 0) 
+            if (strcmp(portname, node->item->port_name) == 0) 
             {
                 if (node->item->iidd == t->init_node->item->iidd)
                 {
@@ -1670,6 +1673,7 @@ int spsr_remv_list(char * portname)
     if (!found) {
         ret = SPSERIAL_ITEM_NOT_FOUND;
     }
+    return ret;
 } 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
@@ -1680,6 +1684,7 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
 #ifndef UNIX_LINUX
     HANDLE hSerial = 0;
 #else
+    int fd = 0;
 #endif
     do {
         if (!output) {
