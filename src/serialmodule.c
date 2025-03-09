@@ -1552,7 +1552,7 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 					options.c_cc[VMIN]= 1;      
 					options.c_cc[VTIME]= 0;      
 					*/
-                    
+
 					rerr = tcsetattr(fd, TCSANOW, &options);
 					if (rerr < 0) {
 						spllog(SPL_LOG_ERROR, "tcsetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
@@ -1592,24 +1592,47 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 int spsr_send_cmd(int cmd, void* data) {
     int ret = 0;
     int nsize = 0;
+    int* pend = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     do {
-        if (cmd == SPSR_CMD_ADD) {
-            int* pend = 0;
-            SP_SERIAL_GENERIC_ST obj = { 0 };
-            nsize = sizeof(obj);
-            obj.total = nsize;
-            obj.type = cmd;
-            spllog(0, "cmd------------------------------------: %d, size: %d", obj.type, obj.total);
+        if (cmd == SPSR_CMD_ADD ) {
+            
+            SP_SERIAL_GENERIC_ST *obj = 0;
+            nsize = sizeof(SP_SERIAL_GENERIC_ST);
+            
             if (t->cmd_buff->range > t->cmd_buff->pl + sizeof(obj)) {
-                memcpy(t->cmd_buff->data + t->cmd_buff->pl, &obj, sizeof(obj));
-                t->cmd_buff->pl += sizeof(obj);
+                obj = (SP_SERIAL_GENERIC_ST *) (t->cmd_buff->data + t->cmd_buff->pl);
+                memset(obj, 0, nsize);
+                obj->total = nsize;
+                obj->type = cmd;
+                
+                t->cmd_buff->pl += nsize;
                 pend = (int*)(t->cmd_buff->data + t->cmd_buff->pl);
                 *pend = 0;
+                spllog(0, "cmd------------------------------------: %d, size: %d", obj->type, obj->total);
             }
             break;
         }
         if (cmd == SPSR_CMD_REM) {
+            char *portname = (char *)data;
+            int lport = 0;
+
+            SP_SERIAL_GENERIC_ST *obj = 0;
+            lport = strlen(portname);            
+            nsize = sizeof(SP_SERIAL_GENERIC_ST) + lport;
+
+            if (t->cmd_buff->range > t->cmd_buff->pl + nsize) {
+                obj = (SP_SERIAL_GENERIC_ST *) (t->cmd_buff->data + t->cmd_buff->pl);
+                memset(obj, 0, nsize);
+                obj->total = nsize;
+                obj->type = cmd;
+                obj->range = lport;
+                memcpy(obj->data, portname, lport);
+                obj->pl = lport;
+                t->cmd_buff->pl += nsize;
+                pend = (int*)(t->cmd_buff->data + t->cmd_buff->pl);
+                *pend = 0;
+            }
             break;
         }
     } while (0);
