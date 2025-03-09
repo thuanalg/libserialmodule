@@ -1305,6 +1305,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 								do {
 									if(t->cmd_buff){
 										lp = t->cmd_buff->pl;
+										spllog(0, "lp: ================= %d.", lp);
 										if(lp) {
 											if(lp > SPSERIAL_BUFFER_SIZE) {
 												p = realloc(p, lp);
@@ -1312,7 +1313,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 											/*
 											spserial_malloc(lp, p, char);
 											*/
-											if(p) {
+											if(!p) {
 												break;
 											}
 											memcpy(p, t->cmd_buff->data, lp);
@@ -1321,6 +1322,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 									}
 								} while (0);
 								spserial_mutex_unlock(t->mutex);	
+								spllog(0, "lppppppppppppppppppppppppppp: %d", lp);
 								ret = spserial_fetch_commands(epollfd, p, lp);
 								spserial_free(p);
 							}
@@ -1328,11 +1330,18 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
                         } 
 						if (events[i].data.fd >= 0) {
 							int nr = 0;
+							int didread = 0;
 							int comfd = events[i].data.fd;
 							memset(buffer, 0, sizeof(buffer));
-							nr = (int)read(comfd, buffer, sizeof(buffer));
-							buffer[nr] = 0;
-							spllog(0, "------------>>> data read: %s", buffer);
+							while(1) {
+								nr = (int)read(comfd, buffer + didread, sizeof(buffer) - didread -1);
+								if(nr == -1) {
+									break;
+								}
+								didread += nr;
+							}
+							buffer[didread] = 0;
+							spllog(0, "------------>>> data read didread: %d: %s", didread, buffer);
 							//buffer[nr] = 0;
 						}
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -1484,6 +1493,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 int spserial_fetch_commands(int epollfd, char* info,int n) {
 	int ret = 0;
 	SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+	SPSERIAL_ARR_LIST_LINED * temp = 0;
 	SP_SERIAL_GENERIC_ST* item = 0;;
 	SP_SERIAL_GENERIC_ST* obj = (SP_SERIAL_GENERIC_ST*)info;;
 	SP_SERIAL_INFO_ST *input = 0;
@@ -1493,61 +1503,77 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 	struct termios options = {0};
 	struct epoll_event event = {0};
 	int count = n/sizeof(SP_SERIAL_GENERIC_ST);
+    int step = 0;
+	spllog(0, "-------------------------------------------------------------------enterfetch command, n: %d", n);
 	do {
-		for(i = 0; i < n; ++i) {
-			item = obj + i;
+		for(step = 0; step < n;) {
+			item = (SP_SERIAL_GENERIC_ST*) (info + step);
+            step += item->total;
+			spllog(0, "-------------------------------------------------------------------CMD: %d", item->type);
 			if(item->type == SPSR_CMD_ADD) {
-				input = (SP_SERIAL_INFO_ST *) item->data;
-				fd = open(input->port_name, O_RDWR | O_NOCTTY | O_NONBLOCK);
-				if (fd == -1) {
-					spllog(SPL_LOG_ERROR, "open port error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-					ret = PSERIAL_UNIX_OPEN_PORT;
-					break;
-				}		
-				memset(&options, 0, sizeof(options));
-				rerr = tcgetattr(fd, &options);
-				if ( rerr < 0) {
-					spllog(SPL_LOG_ERROR, "tcgetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-					ret = PSERIAL_UNIX_GET_ATTR;
-					break;
-				}
-			
-				cfsetispeed(&options, input->baudrate);
-				cfsetospeed(&options, input->baudrate);			
-				
-				options.c_cflag &= ~PARENB;    
-				options.c_cflag &= ~CSTOPB;    
-				options.c_cflag &= ~CSIZE;
-				options.c_cflag |= CS8;        
-				options.c_cflag &= ~CRTSCTS;   
-				options.c_cflag |= CREAD | CLOCAL; 	
-				options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); 
-				options.c_iflag &= ~(IXON | IXOFF | IXANY);         
-				options.c_oflag &= ~OPOST;      
-				
-				rerr = tcsetattr(fd, TCSANOW, &options);
-				if (rerr < 0) {
-					spllog(SPL_LOG_ERROR, "tcsetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-					ret = PSERIAL_UNIX_SET_ATTR;
-					break;
-				}
-				memset(&event, 0, sizeof(event));
-				event.events = EPOLLIN | EPOLLET;
-				event.data.fd = fd;
-				rerr = epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
-				if (rerr == -1) {
-					spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-					ret = PSERIAL_UNIX_EPOLL_CTL;
-					break;
-				}
-				spserial_mutex_lock(t->mutex);
-					input->handle = fd;
-					/* Add to linked list. */
-					ret = spsr_add2_list(input);
-					if (ret) {
-						spllog(SPL_LOG_ERROR, "spsr_add2_list.");
+				temp = t->init_node;
+				spllog(0, "-------------------------------------------------------------------CMD_ADD");
+				while(temp) {
+					if(temp->item->handle > -1) {
+						temp = temp->next;
+						continue;
 					}
-				spserial_mutex_unlock(t->mutex);
+					input = temp->item;
+					fd = open(input->port_name, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY);
+					if (fd == -1) {
+						spllog(SPL_LOG_ERROR, "open port error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+						ret = PSERIAL_UNIX_OPEN_PORT;
+						break;
+					}		
+					spllog(0, "fd: %d, portname: %s", fd, input->port_name);
+					memset(&options, 0, sizeof(options));
+					rerr = tcgetattr(fd, &options);
+					if ( rerr < 0) {
+						spllog(SPL_LOG_ERROR, "tcgetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+						ret = PSERIAL_UNIX_GET_ATTR;
+						break;
+					}
+			
+					spllog(0, "fd: %d, portname: %s, rate: %d", fd, input->port_name, input->baudrate);
+					cfsetispeed(&options, input->baudrate);
+					cfsetospeed(&options, input->baudrate);			
+					
+					options.c_cflag &= ~PARENB;    
+					options.c_cflag &= ~CSTOPB;    
+					options.c_cflag &= ~CSIZE;
+					options.c_cflag |= CS8;        
+					options.c_cflag &= ~CRTSCTS;   
+					options.c_cflag |= CREAD | CLOCAL; 	
+					options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); 
+					options.c_iflag &= ~(IXON | IXOFF | IXANY);         
+					options.c_oflag &= ~OPOST;      
+					
+                    /*
+					options.c_cc[VMIN]= 1;      
+					options.c_cc[VTIME]= 0;      
+					*/
+                    
+					rerr = tcsetattr(fd, TCSANOW, &options);
+					if (rerr < 0) {
+						spllog(SPL_LOG_ERROR, "tcsetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+						ret = PSERIAL_UNIX_SET_ATTR;
+						break;
+					}
+                    else {
+                        spllog(0, "tcsetattr -------------> DONE.")
+                    }
+					memset(&event, 0, sizeof(event));
+					event.events = EPOLLIN | EPOLLET;
+					event.data.fd = fd;
+					rerr = epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
+					if (rerr == -1) {
+						spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+						ret = PSERIAL_UNIX_EPOLL_CTL;
+						break;
+					}
+					temp->item->handle = fd;
+					temp = temp->next;
+				}
 			}
 			if(ret) {
 				break;
@@ -1574,6 +1600,7 @@ int spsr_send_cmd(int cmd, void* data) {
             nsize = sizeof(obj);
             obj.total = nsize;
             obj.type = cmd;
+            spllog(0, "cmd------------------------------------: %d, size: %d", obj.type, obj.total);
             if (t->cmd_buff->range > t->cmd_buff->pl + sizeof(obj)) {
                 memcpy(t->cmd_buff->data + t->cmd_buff->pl, &obj, sizeof(obj));
                 t->cmd_buff->pl += sizeof(obj);

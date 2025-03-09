@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 		}
 		if (strstr(argv[i], __ISBAUDRATE__)) {
 			k = sscanf(argv[i], __ISBAUDRATE__"%d", &baudrate);
-			spl_console_log("k = %d.", k);
+			spl_console_log("k = %d, baudrate: %d.", k, baudrate);
 			continue;
 		}
 	}
