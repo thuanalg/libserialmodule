@@ -14,14 +14,41 @@ char cfgpath[1024];
 #define __ISBAUDRATE__				"--is_baudrate="
 
 GtkWidget *entries[7];
+void *arr_obj[10];
 
 void on_button_clicked_00(GtkWidget *widget, gpointer data) {
-    
-    const char *entry_text = gtk_entry_get_text(GTK_ENTRY(entries[0])); 
-    spllog(0, "Button %s clicked, text: %s!\n", (char *)data, entry_text);
+    int i = 0;
+    int ret = 0;
+    SP_SERIAL_INPUT_ST *obj = 0;
+    SP_SERIAL_INFO_ST *obj1 = 0;
+    const char *portname = gtk_entry_get_text(GTK_ENTRY(entries[0])); 
+    spllog(0, "Button %s clicked, text: %s!\n", (char *)data, portname);
+    spserial_malloc(sizeof(SP_SERIAL_INPUT_ST), obj, SP_SERIAL_INPUT_ST);
+    if(!obj) {
+        exit(1);
+    }
+    for(i = 0; i < 10; ++i) {
+        if(!arr_obj[i]) {
+            arr_obj[i] = (void*) obj;
+            break;
+        }
+    }
+	snprintf(obj->port_name, SPSERIAL_PORT_LEN, "%s", portname);
+	/*obj.baudrate = 115200;*/
+	obj->baudrate = baudrate; 
+    spllog(0, "baudrate:=========================++++++++++++> %d, portname: %s", 
+        obj->baudrate, obj->port_name);
+    ret = spserial_inst_create(obj, &obj1);
+    if(ret) {
+        spllog(0, "spserial_inst_create:=========================> %d", ret);
+    }
+    spserial_free(obj);   
 }
 void on_button_clicked_01(GtkWidget *widget, gpointer data) {
+    int ret = 0;
+    const char *portname = gtk_entry_get_text(GTK_ENTRY(entries[1])); 
     spllog(0, "Button %s clicked!\n", (char *)data);
+    ret = spserial_inst_del((char*)portname);
 }
 void on_button_clicked_02(GtkWidget *widget, gpointer data) {
     spllog(0, "Button %s clicked!\n", (char *)data);
@@ -36,7 +63,7 @@ int main(int argc, char *argv[]) {
 	snprintf(cfgpath, 1024, "/home/thuannt/x/serialmodule/src/linux/simplelog.cfg");
 #endif
 	snprintf(is_port, 32,"%s", "COM2");
-	baudrate = 115200;
+	baudrate = 9600;
 	for (i = 0; i < argc; ++i) {
 		if (strstr(argv[i], __ISMASTER__)) {
 			 k = sscanf(argv[i], __ISMASTER__"%d", &is_master);
@@ -107,12 +134,13 @@ int main(int argc, char *argv[]) {
 
             gtk_grid_attach(GTK_GRID(grid), buttons[i], 0, i, 1, 1);
             gtk_grid_attach(GTK_GRID(grid), entries[i], 1, i, 1, 1);
-            gtk_entry_set_text(GTK_ENTRY(entries[i]), "Hello, enter text!");
+            gtk_entry_set_text(GTK_ENTRY(entries[i]), "/dev/ttyUSB0");
         }
 
         gtk_widget_show_all(window);
         gtk_main();
 
+        
         spserial_module_close();
     } while(0);
     spl_finish_log();
