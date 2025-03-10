@@ -1,41 +1,37 @@
-
 #include <gtk/gtk.h>
 
-// Hàm xử lý sự kiện khi nhấn nút
-static void on_button_clicked(GtkWidget *widget, gpointer entry) {
-    const gchar *text = gtk_entry_get_text(GTK_ENTRY(entry)); // Lấy nội dung textbox
-    g_print("Bạn đã nhập: %s\n", text); // In ra terminal
-    gtk_entry_set_text(GTK_ENTRY(entry), ""); // Xóa nội dung textbox sau khi nhấn nút
+void on_button_clicked(GtkWidget *widget, gpointer data) {
+    g_print("Button %s clicked!\n", (char *)data);
 }
 
 int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
-
-    // Tạo cửa sổ chính
+    
     GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(window), "Ứng dụng GTK");
-    gtk_window_set_default_size(GTK_WINDOW(window), 300, 150);
+    gtk_window_set_title(GTK_WINDOW(window), "GTK 7 Buttons & 7 Textboxes");
+    gtk_window_set_default_size(GTK_WINDOW(window), 400, 300);
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
-
-    // Tạo layout chính (hộp dọc)
-    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
-    gtk_container_add(GTK_CONTAINER(window), vbox);
-
-    // Tạo textbox (entry)
-    GtkWidget *entry = gtk_entry_new();
-    gtk_box_pack_start(GTK_BOX(vbox), entry, FALSE, FALSE, 5);
-
-    // Tạo nút bấm
-    GtkWidget *button = gtk_button_new_with_label("Nhấn Tôi!");
-    gtk_box_pack_start(GTK_BOX(vbox), button, FALSE, FALSE, 5);
-
-    // Gắn sự kiện click vào button
-    g_signal_connect(button, "clicked", G_CALLBACK(on_button_clicked), entry);
-
-    // Hiển thị toàn bộ giao diện
+    
+    GtkWidget *grid = gtk_grid_new();
+    gtk_container_add(GTK_CONTAINER(window), grid);
+    
+    GtkWidget *buttons[7];
+    GtkWidget *entries[7];
+    char labels[7][10] = {"1", "2", "3", "4", "5", "6", "7"};
+    
+    for (int i = 0; i < 7; i++) {
+        buttons[i] = gtk_button_new_with_label(labels[i]);
+        g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked), labels[i]);
+        
+        entries[i] = gtk_entry_new();
+        
+        gtk_grid_attach(GTK_GRID(grid), buttons[i], 0, i, 1, 1);
+        gtk_grid_attach(GTK_GRID(grid), entries[i], 1, i, 1, 1);
+    }
+    
     gtk_widget_show_all(window);
-
-    gtk_main(); // Chạy vòng lặp GTK
+    gtk_main();
+    
     return 0;
 }
 
