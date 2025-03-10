@@ -17,6 +17,7 @@ char cfgpath[1024];
 int main(int argc, char *argv[]) {
 	int i = 0;
 	SP_SERIAL_INPUT_ST obj;
+	SP_SERIAL_INFO_ST *obj1 = 0;
 	FILE* fp = 0;
 	int k = 0;
 	int myid = 0;
@@ -48,7 +49,7 @@ int main(int argc, char *argv[]) {
 		}
 		if (strstr(argv[i], __ISBAUDRATE__)) {
 			k = sscanf(argv[i], __ISBAUDRATE__"%d", &baudrate);
-			spl_console_log("k = %d.", k);
+			spl_console_log("k = %d, baudrate: %d.", k, baudrate);
 			continue;
 		}
 	}
@@ -63,12 +64,11 @@ int main(int argc, char *argv[]) {
 	if (ret) {
 		return EXIT_FAILURE;
 	}
-	/*
-	ret = spserial_inst_create(&obj, &myid);
+	ret = spserial_inst_create(&obj, &obj1);
 	if (ret) {
 		return 1;
 	}
-	
+	/*	
 	ret = spserial_get_objbyid(myid, &objId, 0);
 	if (ret) {
 		return 1;
@@ -95,11 +95,9 @@ int main(int argc, char *argv[]) {
 	if (fp) {
 		fclose(fp);
 	}
-	/*
-	if (myid > 0) {
-		spserial_inst_del(myid);
+	if (obj1) {
+		spserial_inst_del(obj1->port_name);
 	}
-	*/
 	spserial_module_close();
 	spl_finish_log();
 	return 0;
