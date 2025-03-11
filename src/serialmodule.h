@@ -37,6 +37,7 @@ extern "C" {
 		SPSR_CMD_STORAGE_INPUT_INFO_ARR,
 		SPSR_CMD_ADD,
 		SPSR_CMD_REM,
+		SPSR_CMD_WRITE,
 
 
 
@@ -207,6 +208,9 @@ DLL_API_SERIAL_MODULE int
 
 DLL_API_SERIAL_MODULE int
 	spserial_inst_write_data(int iid, char*, int sz);
+
+DLL_API_SERIAL_MODULE int
+	spserial_inst_write(char* portname, char*data, int sz);
 
 DLL_API_SERIAL_MODULE int 
 	spserial_get_objbyid(char* portname, void** obj, int takeoff);
