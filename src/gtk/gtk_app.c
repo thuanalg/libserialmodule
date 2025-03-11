@@ -51,7 +51,13 @@ void on_button_clicked_01(GtkWidget *widget, gpointer data) {
     ret = spserial_inst_del((char*)portname);
 }
 void on_button_clicked_02(GtkWidget *widget, gpointer data) {
-    spllog(0, "Button %s clicked!\n", (char *)data);
+    int ret = 0;
+    char *datawrtite = (char*)gtk_entry_get_text(GTK_ENTRY(entries[4])); 
+    char *portname = (char*)gtk_entry_get_text(GTK_ENTRY(entries[2])); 
+    spllog(0, "Button %s clicked, portname: %s, data: %s!\n", (char *)data, portname, datawrtite);
+    //ret = spserial_inst_del((char*)portname);
+    ret = spserial_inst_write(portname, datawrtite, strlen(datawrtite));
+    spllog(0, "ret %d!\n", ret);
 }
 int main(int argc, char *argv[]) {
     int ret = 0;
@@ -104,7 +110,7 @@ int main(int argc, char *argv[]) {
         
         GtkWidget *buttons[7];
         
-        char labels[7][100] = {"ADD COM port", "REM COM port", "WRITE COM port", "4", "5", "6", "7"};
+        char labels[7][100] = {"ADD COM port", "REM COM port", "WRITE COM port", "write data", "5", "6", "7"};
         
         for (i = 0; i < 7; i++) {
             buttons[i] = gtk_button_new_with_label(labels[i]);
@@ -115,19 +121,19 @@ int main(int argc, char *argv[]) {
                 g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked_01), labels[i]);
             }
             else if(i == 2) {
-                g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked_01), labels[i]);
+                g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked_02), labels[i]);
             }
             else if(i == 3) {
-                g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked_01), labels[i]);
+                //g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked_01), labels[i]);
             }
             else if(i == 4) {
-                g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked_01), labels[i]);
+                //g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked_01), labels[i]);
             }
             else if(i == 5) {
-                g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked_01), labels[i]);
+                //g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked_01), labels[i]);
             }
             else if(i == 6) {
-                g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked_01), labels[i]);
+                //g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked_01), labels[i]);
             }       
 
             entries[i] = gtk_entry_new();

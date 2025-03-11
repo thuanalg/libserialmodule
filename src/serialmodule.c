@@ -1155,7 +1155,7 @@ int spserial_inst_write(char* portname, char*data, int sz) {
 #else
         SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
         spserial_mutex_lock(t->mutex);
-            ret = spsr_send_cmd(SPSR_CMD_REM, portname, data, sz);
+            ret = spsr_send_cmd(SPSR_CMD_WRITE, portname, data, sz);
         spserial_mutex_unlock(t->mutex);
         if(ret) {
             spllog(SPL_LOG_ERROR, "SEND command error ret: %d.", ret);
@@ -1732,7 +1732,7 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
                 char *portname = 0;
                 portname = item->data;
                 temp = t->init_node;
-                spllog(0, "----------------SPSR_CMD_REM-------------------pl: %d, portname: %s, total: %d, initnode: 0x%p", 
+                spllog(0, "----------------SPSR_CMD_WRITE-------------------pl: %d, portname: %s, total: %d, initnode: 0x%p", 
                     item->pl, portname, item->total, temp);   
                 while(temp) {
                     spllog(0, "portname: %s", temp->item->port_name);
@@ -1746,7 +1746,7 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
                             if(nwrote < 0) {
                                 spllog(SPL_LOG_ERROR, "write error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
                             } else {
-                                spllog(SPL_LOG_DEBUG, "write error, fd: %d, nwrote: %d", fd, nwrote); 
+                                spllog(SPL_LOG_DEBUG, "write DONE, fd: %d, nwrote: %d, p: %s", fd, nwrote, p); 
                             }
                         }
                         break;
