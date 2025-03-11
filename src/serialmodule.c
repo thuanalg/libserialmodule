@@ -1153,7 +1153,13 @@ int spserial_inst_write(char* portname, char*data, int sz) {
 
         SetEvent(item->hEvent);
 #else
-        ret = spsr_send_cmd(SPSR_CMD_REM,portname, data, sz);
+        SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+        spserial_mutex_lock(t->mutex);
+            ret = spsr_send_cmd(SPSR_CMD_REM, portname, data, sz);
+        spserial_mutex_unlock(t->mutex);
+        if(ret) {
+            spllog(SPL_LOG_ERROR, "SEND command error ret: %d.", ret);
+        }
 #endif
     } while(0);
     return ret;
@@ -1722,6 +1728,33 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
                 } 
                 continue;
             }
+            if(item->type == SPSR_CMD_WRITE) {
+                char *portname = 0;
+                portname = item->data;
+                temp = t->init_node;
+                spllog(0, "----------------SPSR_CMD_REM-------------------pl: %d, portname: %s, total: %d, initnode: 0x%p", 
+                    item->pl, portname, item->total, temp);   
+                while(temp) {
+                    spllog(0, "portname: %s", temp->item->port_name);
+                    if( strcmp(temp->item->port_name, portname) == 0) {
+                        if(temp->item->handle >= 0) {
+                            int nwrote = 0;
+                            int fd = temp->item->handle;
+                            char *p = 0;
+                            p = item->data + item->pc;
+                            nwrote = write(fd, p, item->pl - item->pc);
+                            if(nwrote < 0) {
+                                spllog(SPL_LOG_ERROR, "write error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
+                            } else {
+                                spllog(SPL_LOG_DEBUG, "write error, fd: %d, nwrote: %d", fd, nwrote); 
+                            }
+                        }
+                        break;
+                    }
+                    temp = temp->next;
+                }                
+                continue;
+            }
 			if(ret) {
 				break;
 			}
@@ -1783,6 +1816,32 @@ int spsr_send_cmd(int cmd, char *portname, void* data, int datasz) {
                 *pend = 0;
             }
             break;
+        }
+        if (cmd == SPSR_CMD_WRITE) {
+            /*char *portname = (char *)data;*/
+            int lport = 0;
+            int len = strlen(portname);
+
+            SP_SERIAL_GENERIC_ST *obj = 0;
+            lport = (len + 1) + datasz;            
+            nsize = sizeof(SP_SERIAL_GENERIC_ST) + lport;
+            spllog(0, "SPSR_CMD_REM, nsize: %d, portname: %s", nsize, portname);
+            if (t->cmd_buff->range > t->cmd_buff->pl + nsize) {
+                obj = (SP_SERIAL_GENERIC_ST *) (t->cmd_buff->data + t->cmd_buff->pl);
+                memset(obj, 0, nsize);
+                obj->total = nsize;
+                obj->type = cmd;
+                obj->range = lport;
+                memcpy(obj->data, portname, len);
+                obj->data[len] = 0;
+                obj->pc = len + 1;
+                memcpy(obj->data + obj->pc, (char*) data, datasz);
+                obj->pl = lport;
+                t->cmd_buff->pl += nsize;
+                pend = (int*)(t->cmd_buff->data + t->cmd_buff->pl);
+                *pend = 0;
+            }
+            break;            
         }
     } while (0);
     spserial_rel_sem(t->sem);
