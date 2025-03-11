@@ -154,6 +154,10 @@ int spserial_inst_create(void *obj, SP_SERIAL_INFO_ST **output)
         /*} while (0); */
         spserial_mutex_unlock(t->mutex);
         /*-------------------------------------------------------------------*/
+        if(ret) {
+            spllog(SPL_LOG_ERROR, "==================>>> ret error: %d.", ret);
+            break;
+        }
         spserial_mutex_lock(t->mutex);
 #ifndef UNIX_LINUX
 #else
@@ -1511,7 +1515,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
 int spserial_fetch_commands(int epollfd, char* info,int n) {
 	int ret = 0;
 	SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-	SPSERIAL_ARR_LIST_LINED * temp = 0;
+	SPSERIAL_ARR_LIST_LINED * temp = 0, *prev = 0, *next = 0;
 	SP_SERIAL_GENERIC_ST* item = 0;;
 	SP_SERIAL_GENERIC_ST* obj = (SP_SERIAL_GENERIC_ST*)info;;
 	SP_SERIAL_INFO_ST *input = 0;
@@ -1606,10 +1610,46 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
                     spllog(0, "portname: %s", temp->item->port_name);
                     if( strcmp(temp->item->port_name, portname) == 0) {
                         if(temp->item->handle >= 0) {
-                            spllog(0, ">>>>>>>>>>>>>>--handle: %d", temp->item->handle);
+                            int fd = temp->item->handle;
+                            int errr = 0;
+                            spllog(0, ">>>>>>>>>>>>>>--handle: %d", fd);
+                            /* Remove fd out of epoll*/
+                            errr = epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, 0);
+                            if(errr == -1) {
+                                spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
+                            } else {
+                                spllog(SPL_LOG_DEBUG, "EPOLL_CTL_DEL, fd: %d DONE", fd); 
+                            }
+                            /* Close handle*/
+                            errr = close(fd);
+                            if(errr) {
+                                spllog(SPL_LOG_ERROR, "close error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
+                            } else {
+                                spllog(SPL_LOG_DEBUG, "close, fd: %d, DONE", fd); 
+                            }
+                            /* Remove out of root list*/
+                            if(t->count < 2) {
+                                t->init_node = 0;
+                                t->last_node = 0;
+                            }
+                            else {
+                                if(prev){
+                                    prev->next = temp->next;
+                                    if(!prev->next) {
+                                        t->last_node = prev;
+                                    }
+                                } else {
+                                    t->init_node = temp->next;
+                                }
+                            }
+                            spserial_free(temp->item);
+                            spserial_free(temp);
+                            t->count--;
+                            spllog(SPL_LOG_DEBUG, "t->count: %d", t->count); 
                         }
                         break;
                     }
+                    prev = temp;
                     temp = temp->next;
                 } 
                 continue;
@@ -1889,6 +1929,7 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
             t->last_node = node;
             /*t->last_node->next = 0;*/
         }
+        t->count++;
 #ifndef UNIX_LINUX
         ret = spserial_create_thread(spserial_thread_operating_routine, node);
 #else
