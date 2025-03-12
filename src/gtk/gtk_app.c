@@ -52,7 +52,7 @@ void on_button_clicked_01(GtkWidget *widget, gpointer data) {
 }
 void on_button_clicked_02(GtkWidget *widget, gpointer data) {
     int ret = 0;
-    char *datawrtite = (char*)gtk_entry_get_text(GTK_ENTRY(entries[4])); 
+    char *datawrtite = (char*)gtk_entry_get_text(GTK_ENTRY(entries[3])); 
     char *portname = (char*)gtk_entry_get_text(GTK_ENTRY(entries[2])); 
     spllog(0, "Button %s clicked, portname: %s, data: %s!\n", (char *)data, portname, datawrtite);
     //ret = spserial_inst_del((char*)portname);

@@ -1639,6 +1639,7 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 					options.c_cflag &= ~CSIZE;
 					options.c_cflag |= CS8;        
 					options.c_cflag &= ~CRTSCTS;   
+                    //options.c_cflag |= CRTSCTS;   
 					options.c_cflag |= CREAD | CLOCAL; 	
 					options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); 
 					options.c_iflag &= ~(IXON | IXOFF | IXANY);         
@@ -1738,16 +1739,36 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
                     spllog(0, "portname: %s", temp->item->port_name);
                     if( strcmp(temp->item->port_name, portname) == 0) {
                         if(temp->item->handle >= 0) {
-                            int nwrote = 0;
+                            /*int j = 0;*/
+                            int nwrote = 0, wlen = 0;;
                             int fd = temp->item->handle;
                             char *p = 0;
                             p = item->data + item->pc;
-                            nwrote = write(fd, p, item->pl - item->pc);
-                            if(nwrote < 0) {
-                                spllog(SPL_LOG_ERROR, "write error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
+                            wlen = item->pl - item->pc;
+                            /*for(j = 0; j < wlen; ++j) {*/
+                                nwrote = write(fd, p, wlen);
+                                if(nwrote < 0) {
+                                    spllog(SPL_LOG_ERROR, "write error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
+                                } else {
+                                    spllog(SPL_LOG_DEBUG, "write DONE, fd: %d, nwrote: %d, p: %s, wlen: %d.", 
+                                        fd, nwrote, p, wlen); 
+                                }
+                                //sleep(1);
+                            /*}*/
+                            if (tcdrain(fd) == -1) {
+                                spllog(SPL_LOG_ERROR, "Error flushing the serial port buffer");
+                                //close(fd);
+                                //return 1;
                             } else {
-                                spllog(SPL_LOG_DEBUG, "write DONE, fd: %d, nwrote: %d, p: %s", fd, nwrote, p); 
+                                spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
                             }
+                            if (tcflush(fd, TCIOFLUSH) == -1) {
+                                spllog(SPL_LOG_ERROR, "Error flushing the serial port buffer");
+                                //close(fd);
+                                //return 1;
+                            } else {
+                                spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
+                            }                            
                         }
                         break;
                     }
