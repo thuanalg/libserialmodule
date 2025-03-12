@@ -1336,7 +1336,7 @@ int spserial_inst_write_data(int idd, char* data, int sz) {
            #else
                 /* Start epoll */
 				spllog(SPL_LOG_DEBUG, "epoll_create------------------------");
-                epollfd = epoll_create(SPSR_SIZE_CARTRIDGE);
+                epollfd = epoll_create1(0);
                 if (epollfd < 0) {
                     spllog(SPL_LOG_ERROR, "epoll_create, epollfd: %d, errno: %d, text: %s.",
                         epollfd, errno, strerror(errno));
@@ -1617,6 +1617,7 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 					input = temp->item;
 					//fd = open(input->port_name, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY | O_SYNC);
                     fd = open(input->port_name, O_RDWR | O_NOCTTY | O_NONBLOCK  | O_SYNC);
+                    //fd = open(input->port_name, O_RDWR | O_NOCTTY  | O_SYNC);
 					if (fd == -1) {
 						spllog(SPL_LOG_ERROR, "open port error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
 						ret = PSERIAL_UNIX_OPEN_PORT;
@@ -1640,7 +1641,8 @@ int spserial_fetch_commands(int epollfd, char* info,int n) {
 					options.c_cflag &= ~CSIZE;
 					options.c_cflag |= CS8;        
 					options.c_cflag &= ~CRTSCTS;   
-                    //options.c_cflag |= CRTSCTS;   
+                    //options.c_cflag |= CRTSCTS; 
+                    options.c_iflag = IGNPAR;
 					options.c_cflag |= CREAD | CLOCAL; 	
 					options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); 
 					options.c_iflag &= ~(IXON | IXOFF | IXANY);  
