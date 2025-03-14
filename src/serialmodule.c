@@ -1095,6 +1095,9 @@ int spserial_inst_write(char* portname, char*data, int sz) {
     int ret = 0;
     do {
 #ifndef UNIX_LINUX
+        SPSERIAL_ARR_LIST_LINED* node = 0;
+        SP_SERIAL_INFO_ST* item = 0;
+        void* p = 0;
         ret = spserial_get_obj_by_name(portname, &p, 0);
         if (!p) {
             ret = SPSERIAL_NOT_FOUND_IDD;
