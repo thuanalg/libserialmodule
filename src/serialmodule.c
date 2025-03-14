@@ -179,7 +179,7 @@ int spserial_inst_del(char* portname)
     void *p = 0;
     SPSERIAL_ARR_LIST_LINED* node = 0;
     do {
-        ret = spserial_get_objbyid(portname, &p, 1);
+        ret = spsr_get_obj(portname, &p, 1);
         if (p) {
             spllog(0, "Delete port: %s.", portname);
             node = (SPSERIAL_ARR_LIST_LINED*)p;
@@ -722,8 +722,8 @@ int spserial_get_newid(SP_SERIAL_INPUT_ST *p, int *idd) {
         }
         spserial_mutex_lock(t->mutex);
         /*do {*/
-            t->n++;
-            (*idd) = t->n;
+            //t->n++;
+            //(*idd) = t->n;
             if (!t->init_node) {
                 t->init_node = obj;
                 t->last_node = obj;
@@ -742,7 +742,7 @@ int spserial_get_newid(SP_SERIAL_INPUT_ST *p, int *idd) {
         obj->item->baudrate = p->baudrate;
         obj->item->cb_evt_fn = p->cb_evt_fn;
         obj->item->cb_obj = p->cb_obj;
-        obj->item->iidd = *idd;
+        //obj->item->iidd = *idd;
 #ifndef UNIX_LINUX
         ret = spserial_create_thread(spserial_thread_operating_routine, obj);
 #else
@@ -868,7 +868,7 @@ int spserial_wait_sem(void* sem) {
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_get_obj_by_name(char* portname, void** obj, int takeoff) {
+int spsr_get_obj(char* portname, void** obj, int takeoff) {
     int ret = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     SPSERIAL_ARR_LIST_LINED* node = 0, * prev = 0;;
@@ -885,17 +885,26 @@ int spserial_get_obj_by_name(char* portname, void** obj, int takeoff) {
                 *obj = node;
                 if (takeoff)
                 {
-                    if (node->item->iidd == t->init_node->item->iidd)
-                    {
-                        t->init_node = t->init_node->next;
+                    //if (node->item->iidd == t->init_node->item->iidd)
+                    //{
+                    //    t->init_node = t->init_node->next;
+                    //}
+                    //else {
+                    //    if (prev) {
+                    //        prev->next = node->next;
+                    //        if (!prev->next) {
+                    //            t->last_node = prev;
+                    //        }
+                    //    }
+                    //}
+                    if (prev) {
+                        prev->next = node->next;
+                        if (!prev->next) {
+                            t->last_node = prev;
+                        }
                     }
                     else {
-                        if (prev) {
-                            prev->next = node->next;
-                            if (!prev->next) {
-                                t->last_node = prev;
-                            }
-                        }
+                        t->init_node = t->init_node->next;
                     }
                     t->count--;
                     if (t->count < 1) {
@@ -920,57 +929,57 @@ int spserial_get_obj_by_name(char* portname, void** obj, int takeoff) {
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_get_objbyid(char* portname, void** obj, int takeoff) {
-    int ret = 0;
-    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-    SPSERIAL_ARR_LIST_LINED* node = 0, * prev = 0;;
-    int found = 0;
-    do {
-        if (!obj) {
-
-            break;
-        }
-        spserial_mutex_lock(t->mutex);
-        node = t->init_node;
-        while (node) {
-            if (strcmp(node->item->port_name, portname) == 0) {
-                *obj = node;
-                if (takeoff) 
-                {
-                    if (node->item->iidd == t->init_node->item->iidd)
-                    {
-                        t->init_node = t->init_node->next;
-                    }
-                    else {
-                        if (prev) {
-                            prev->next = node->next;
-                            if (!prev->next) {
-                                t->last_node = prev;
-                            }
-                        }
-                    }
-                    t->count--;
-                    if (t->count < 1) {
-                        t->init_node = 0;
-                        t->last_node = 0;
-                    }
-                }
-                found = 1;
-                break;
-            }
-            prev = node;
-            node = node->next;
-        }
-        spserial_mutex_unlock(t->mutex);
-    } while (0);
-
-    if (!found) {
-        spllog(0, "Cannot find port: %s", portname);
-        ret = SPSERIAL_ITEM_NOT_FOUND;
-    }
-
-    return ret;
-}
+//int spserial_get_objbyid(char* portname, void** obj, int takeoff) {
+//    int ret = 0;
+//    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+//    SPSERIAL_ARR_LIST_LINED* node = 0, * prev = 0;;
+//    int found = 0;
+//    do {
+//        if (!obj) {
+//
+//            break;
+//        }
+//        spserial_mutex_lock(t->mutex);
+//        node = t->init_node;
+//        while (node) {
+//            if (strcmp(node->item->port_name, portname) == 0) {
+//                *obj = node;
+//                if (takeoff) 
+//                {
+//                    if (node->item->iidd == t->init_node->item->iidd)
+//                    {
+//                        t->init_node = t->init_node->next;
+//                    }
+//                    else {
+//                        if (prev) {
+//                            prev->next = node->next;
+//                            if (!prev->next) {
+//                                t->last_node = prev;
+//                            }
+//                        }
+//                    }
+//                    t->count--;
+//                    if (t->count < 1) {
+//                        t->init_node = 0;
+//                        t->last_node = 0;
+//                    }
+//                }
+//                found = 1;
+//                break;
+//            }
+//            prev = node;
+//            node = node->next;
+//        }
+//        spserial_mutex_unlock(t->mutex);
+//    } while (0);
+//
+//    if (!found) {
+//        spllog(0, "Cannot find port: %s", portname);
+//        ret = SPSERIAL_ITEM_NOT_FOUND;
+//    }
+//
+//    return ret;
+//}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 
@@ -1098,7 +1107,7 @@ int spserial_inst_write(char* portname, char*data, int sz) {
         SPSERIAL_ARR_LIST_LINED* node = 0;
         SP_SERIAL_INFO_ST* item = 0;
         void* p = 0;
-        ret = spserial_get_obj_by_name(portname, &p, 0);
+        ret = spsr_get_obj(portname, &p, 0);
         if (!p) {
             ret = SPSERIAL_NOT_FOUND_IDD;
             spllog(SPL_LOG_ERROR, "Cannot find the object.");
@@ -1168,74 +1177,74 @@ int spserial_inst_write(char* portname, char*data, int sz) {
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_inst_write_data(int idd, char* data, int sz) {
-    int ret = 0;
-    void* p = 0;
-    SPSERIAL_ARR_LIST_LINED* node = 0;
-    SP_SERIAL_INFO_ST* item = 0;
-    char *portname = 0;
-    do {
-        ret = spserial_get_objbyid(portname, &p, 0);
-        if (!p) {
-            ret = SPSERIAL_NOT_FOUND_IDD;
-            break;
-        }
-        node = (SPSERIAL_ARR_LIST_LINED*) p;
-        item = node->item;
-        spserial_mutex_lock(item->mtx_off);
-            do {
-                if (item->buff) {
-                    if (item->buff->range > item->buff->pl + sz) {
-                        memcpy(item->buff->data + item->buff->pl, data, sz);
-                        item->buff->pl += sz;
-                        break;
-                    }
-                    else {
-                        int range = 0;
-                        int total = 0;
-                        int addition = 0; 
-                        SP_SERIAL_GENERIC_ST* tmp = 0;
-                        addition = SPSERIAL_MAX_AB(sz, SPSERIAL_STEP_MEM);
-                        range = item->buff->range;
-                        total = item->buff->total;
-                        tmp = (SP_SERIAL_GENERIC_ST*)realloc(item->buff, total + addition);
-                        if (!tmp) {
-                            ret = SPSERIAL_REALLOC_ERROR;
-                            break;
-                        }
-                        item->buff = tmp;
-                        item->buff->range = addition + range;
-                        item->buff->total = addition + total;
-
-                        memcpy(item->buff->data + item->buff->pl, data, sz);
-                        item->buff->pl += sz;
-                        break;
-                    }
-                }
-                else {
-                    int step = 0;
-                    step = SPSERIAL_MAX_AB(sz, SPSERIAL_STEP_MEM);
-                    step += sizeof(SP_SERIAL_GENERIC_ST);
-                    spserial_malloc(step, item->buff, SP_SERIAL_GENERIC_ST);
-                    if (!item->buff) {
-                        ret = SPSERIAL_MALLOC_ERROR;
-                        break;
-                    }
-                    item->buff->total = step;
-                    item->buff->range = item->buff->total - sizeof(SP_SERIAL_GENERIC_ST);
-                    memcpy(item->buff->data + item->buff->pl, data, sz);
-                    item->buff->pl += sz;
-                    break;
-                }
-            } while (0);
-        spserial_mutex_unlock(item->mtx_off);
-#ifndef UNIX_LINUX		
-        SetEvent(item->hEvent);
-#else
-#endif		
-    } while (0);
-    return ret;
-}
+//int spserial_inst_write_data(int idd, char* data, int sz) {
+//    int ret = 0;
+//    void* p = 0;
+//    SPSERIAL_ARR_LIST_LINED* node = 0;
+//    SP_SERIAL_INFO_ST* item = 0;
+//    char *portname = 0;
+//    do {
+//        ret = spsr_get_obj(portname, &p, 0);
+//        if (!p) {
+//            ret = SPSERIAL_NOT_FOUND_IDD;
+//            break;
+//        }
+//        node = (SPSERIAL_ARR_LIST_LINED*) p;
+//        item = node->item;
+//        spserial_mutex_lock(item->mtx_off);
+//            do {
+//                if (item->buff) {
+//                    if (item->buff->range > item->buff->pl + sz) {
+//                        memcpy(item->buff->data + item->buff->pl, data, sz);
+//                        item->buff->pl += sz;
+//                        break;
+//                    }
+//                    else {
+//                        int range = 0;
+//                        int total = 0;
+//                        int addition = 0; 
+//                        SP_SERIAL_GENERIC_ST* tmp = 0;
+//                        addition = SPSERIAL_MAX_AB(sz, SPSERIAL_STEP_MEM);
+//                        range = item->buff->range;
+//                        total = item->buff->total;
+//                        tmp = (SP_SERIAL_GENERIC_ST*)realloc(item->buff, total + addition);
+//                        if (!tmp) {
+//                            ret = SPSERIAL_REALLOC_ERROR;
+//                            break;
+//                        }
+//                        item->buff = tmp;
+//                        item->buff->range = addition + range;
+//                        item->buff->total = addition + total;
+//
+//                        memcpy(item->buff->data + item->buff->pl, data, sz);
+//                        item->buff->pl += sz;
+//                        break;
+//                    }
+//                }
+//                else {
+//                    int step = 0;
+//                    step = SPSERIAL_MAX_AB(sz, SPSERIAL_STEP_MEM);
+//                    step += sizeof(SP_SERIAL_GENERIC_ST);
+//                    spserial_malloc(step, item->buff, SP_SERIAL_GENERIC_ST);
+//                    if (!item->buff) {
+//                        ret = SPSERIAL_MALLOC_ERROR;
+//                        break;
+//                    }
+//                    item->buff->total = step;
+//                    item->buff->range = item->buff->total - sizeof(SP_SERIAL_GENERIC_ST);
+//                    memcpy(item->buff->data + item->buff->pl, data, sz);
+//                    item->buff->pl += sz;
+//                    break;
+//                }
+//            } while (0);
+//        spserial_mutex_unlock(item->mtx_off);
+//#ifndef UNIX_LINUX		
+//        SetEvent(item->hEvent);
+//#else
+//#endif		
+//    } while (0);
+//    return ret;
+//}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #else
@@ -1937,17 +1946,14 @@ int spsr_remv_list(char * portname)
         while (node) {
             if (strcmp(portname, node->item->port_name) == 0) 
             {
-                if (node->item->iidd == t->init_node->item->iidd)
-                {
-                    t->init_node = t->init_node->next;
+                if (prev) {
+                    prev->next = node->next;
+                    if (!prev->next) {
+                        t->last_node = prev;
+                    }
                 }
                 else {
-                    if (prev) {
-                        prev->next = node->next;
-                        if (!prev->next) {
-                            t->last_node = prev;
-                        }
-                    }
+                    t->init_node = t->init_node->next;
                 }
                 t->count--;
                 if (t->count < 1) {
@@ -1980,11 +1986,11 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
     int fd = 0;
 #endif
     do {
-        spllog(SPL_LOG_DEBUG, "spserial_verify_info:");
-        if (!output) {
-            ret = SPSERIAL_OUTPUT_NULL;
-            break;
-        }
+        //spllog(SPL_LOG_DEBUG, "spserial_verify_info:");
+        //if (!output) {
+        //    ret = SPSERIAL_OUTPUT_NULL;
+        //    break;
+        //}
         spllog(SPL_LOG_DEBUG, "spserial_verify_info:");
         if (!p) {
             ret = SPSERIAL_PORT_INPUT_NULL;
@@ -2074,7 +2080,9 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
         item->cb_evt_fn = p->cb_evt_fn;
         item->cb_obj = p->cb_obj;
         node->item = item;
-        *output = item;
+        if (output) {
+            *output = item;
+        }
         /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
         if (!t->init_node) {

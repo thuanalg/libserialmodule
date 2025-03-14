@@ -125,8 +125,8 @@ extern "C" {
 	
 	
 	typedef struct __SP_SERIAL_INFO_ST__ {
-		int
-			iidd;
+	//	int
+	//		iidd;
 		char
 			isoff;
 		char
@@ -173,7 +173,7 @@ extern "C" {
 	
 	
 	typedef struct __SPSERIAL_ROOT_TYPE__ {
-		int n;
+		//int n;
 		int count;
 		void* mutex;
 		void* sem;
@@ -206,17 +206,17 @@ DLL_API_SERIAL_MODULE int
 DLL_API_SERIAL_MODULE int
 	spserial_inst_del(char* portname);
 
-DLL_API_SERIAL_MODULE int
-	spserial_inst_write_data(int iid, char*, int sz);
+//DLL_API_SERIAL_MODULE int
+//	spserial_inst_write_data(int iid, char*, int sz);
 
 DLL_API_SERIAL_MODULE int
 	spserial_inst_write(char* portname, char*data, int sz);
 
-DLL_API_SERIAL_MODULE int 
-	spserial_get_objbyid(char* portname, void** obj, int takeoff);
+//DLL_API_SERIAL_MODULE int 
+//	spserial_get_objbyid(char* portname, void** obj, int takeoff);
 
 DLL_API_SERIAL_MODULE int
-	spserial_get_obj_by_name(char *portname, void** obj, int takeoff);
+	spsr_get_obj(char *portname, void** obj, int takeoff);
 
 DLL_API_SERIAL_MODULE int
 	spserial_inst_write_to_port(SP_SERIAL_INFO_ST*, char*, int sz);

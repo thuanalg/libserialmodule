@@ -284,15 +284,16 @@ void CtestSerialPortDlg::OnBnClickedButtonmsg()
 		}
 	}
 	/*----------------------------------------------------------------------------------------*/
-	n = m_listPort.size();
-	for (i = 0; i < n; ++i) {
-		std::advance(it, i);
-		pcomid = *it;
-		item = (SP_SERIAL_INFO_ST*)pcomid;
-		if (strcmp(portport, item->port_name) == 0) {
-			spserial_inst_write_to_port(item, data, strlen(data));
-		}
-	}
+	//n = m_listPort.size();
+	//for (i = 0; i < n; ++i) {
+	//	std::advance(it, i);
+	//	pcomid = *it;
+	//	item = (SP_SERIAL_INFO_ST*)pcomid;
+	//	if (strcmp(portport, item->port_name) == 0) {
+	//		spserial_inst_write_to_port(item, data, strlen(data));
+	//	}
+	//}
+	spserial_inst_write(portport, data, strlen(data));
 }
 
 
