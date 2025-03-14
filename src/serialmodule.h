@@ -201,7 +201,7 @@ DLL_API_SERIAL_MODULE int
 	spserial_module_close();
 
 DLL_API_SERIAL_MODULE int
-	spserial_inst_create(void*, SP_SERIAL_INFO_ST** output);
+	spserial_inst_create(SP_SERIAL_INPUT_ST* input);
 
 DLL_API_SERIAL_MODULE int
 	spserial_inst_del(char* portname);

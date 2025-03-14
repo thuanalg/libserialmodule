@@ -108,7 +108,7 @@ static int
     spserial_module_isoff(SP_SERIAL_INFO_ST* obj);
 
 static int
-    spserial_verify_info(SP_SERIAL_INPUT_ST* obj, SP_SERIAL_INFO_ST** output);
+    spserial_verify_info(SP_SERIAL_INPUT_ST* obj);
 
 static int 
     spserial_get_newid(SP_SERIAL_INPUT_ST *, int *);
@@ -136,21 +136,20 @@ static int
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spserial_inst_create(void *obj, SP_SERIAL_INFO_ST **output)
+int spserial_inst_create(SP_SERIAL_INPUT_ST *p)
 {
     int ret = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-    SP_SERIAL_INPUT_ST* p = (SP_SERIAL_INPUT_ST*)obj;
     //SP_SERIAL_INPUT_ST* input_looper = 0;
     do {
-        if (!output) {
-            ret = SPSERIAL_OUTPUT_NULL;
-            break;
-        }
+        //if (!output) {
+        //    ret = SPSERIAL_OUTPUT_NULL;
+        //    break;
+        //}
         /*-------------------------------------------------------------------*/
         spserial_mutex_lock(t->mutex);
         /*do {*/
-            ret = spserial_verify_info(p, output);
+            ret = spserial_verify_info(p);
         /*} while (0); */
         spserial_mutex_unlock(t->mutex);
         /*-------------------------------------------------------------------*/
@@ -1974,7 +1973,7 @@ int spsr_remv_list(char * portname)
     return ret;
 } 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
+int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) {
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     int ret = 0;
     SP_SERIAL_INFO_ST* item = 0;
@@ -2080,9 +2079,9 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p, SP_SERIAL_INFO_ST** output) {
         item->cb_evt_fn = p->cb_evt_fn;
         item->cb_obj = p->cb_obj;
         node->item = item;
-        if (output) {
-            *output = item;
-        }
+        //if (output) {
+        //    *output = item;
+        //}
         /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
         if (!t->init_node) {
