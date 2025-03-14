@@ -357,19 +357,11 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 	if (ret) {
 		exit(EXIT_FAILURE);
 	}
-	
-	ret = spserial_inst_create(&obj, (SP_SERIAL_INFO_ST**) &output);
+
+	ret = spserial_inst_create(&obj);
 	if (ret) {
 		exit(1);
 	}
-	if (!output) {
-		exit(1);
-	}
-//	ret = spserial_get_objbyid(m_myid, (void **) & objId, 0);
-//	if (ret) {
-//		exit(1);
-//	}
-	m_listPort.push_back((void*)output);
 }
 
 

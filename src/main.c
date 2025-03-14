@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 	if (ret) {
 		return EXIT_FAILURE;
 	}
-	ret = spserial_inst_create(&obj, &obj1);
+	ret = spserial_inst_create(&obj);
 	if (ret) {
 		return 1;
 	}
