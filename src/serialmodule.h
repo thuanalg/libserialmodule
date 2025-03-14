@@ -218,8 +218,8 @@ DLL_API_SERIAL_MODULE int
 DLL_API_SERIAL_MODULE int
 	spsr_get_obj(char *portname, void** obj, int takeoff);
 
-DLL_API_SERIAL_MODULE int
-	spserial_inst_write_to_port(SP_SERIAL_INFO_ST*, char*, int sz);
+//DLL_API_SERIAL_MODULE int
+//	spserial_inst_write_to_port(SP_SERIAL_INFO_ST*, char*, int sz);
 
 #ifdef __cplusplus
 }
