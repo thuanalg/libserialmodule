@@ -214,7 +214,7 @@ void CtestSerialPortDlg::OnBnClickedOk()
 
 	while (m_listPort.size() > 0) {
 		item = (SP_SERIAL_INFO_ST*)m_listPort.front();
-		spserial_inst_del(item->port_name);
+		spsr_inst_del(item->port_name);
 		m_listPort.pop_front();
 	}
 	ret = spsr_module_close();
@@ -232,7 +232,7 @@ void CtestSerialPortDlg::OnBnClickedCancel()
 
 	while (m_listPort.size() > 0) {
 		item = (SP_SERIAL_INFO_ST*)m_listPort.front();
-		spserial_inst_del(item->port_name);
+		spsr_inst_del(item->port_name);
 		m_listPort.pop_front();
 	}
 	ret = spsr_module_close();
@@ -358,7 +358,7 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 		exit(EXIT_FAILURE);
 	}
 
-	ret = spserial_inst_create(&obj);
+	ret = spsr_inst_create(&obj);
 	if (ret) {
 		exit(1);
 	}
@@ -388,7 +388,7 @@ void CtestSerialPortDlg::OnBnClickedButtonRemove()
 		item = (SP_SERIAL_INFO_ST*)pcomid;
 		if (strcmp(port, item->port_name) == 0) {
 			int ret = 0;
-			ret = spserial_inst_del(item->port_name);
+			ret = spsr_inst_del(item->port_name);
 			m_listPort.remove(pcomid);
 			break;
 		}

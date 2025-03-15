@@ -136,7 +136,7 @@ static int
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spserial_inst_create(SP_SERIAL_INPUT_ST *p)
+int spsr_inst_create(SP_SERIAL_INPUT_ST *p)
 {
     int ret = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
@@ -170,7 +170,7 @@ int spserial_inst_create(SP_SERIAL_INPUT_ST *p)
 
 	return ret;
 }
-int spserial_inst_del(char* portname)
+int spsr_inst_del(char* portname)
 {    
     int ret = 0;
     spllog(0, "-------------  Delete port --------------------------------------------------------------- : %s.", portname);

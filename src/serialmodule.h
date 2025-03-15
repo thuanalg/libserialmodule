@@ -201,10 +201,10 @@ DLL_API_SERIAL_MODULE int
 	spsr_module_close();
 
 DLL_API_SERIAL_MODULE int
-	spserial_inst_create(SP_SERIAL_INPUT_ST* input);
+	spsr_inst_create(SP_SERIAL_INPUT_ST* input);
 
 DLL_API_SERIAL_MODULE int
-	spserial_inst_del(char* portname);
+	spsr_inst_del(char* portname);
 
 DLL_API_SERIAL_MODULE int
 	spserial_inst_write(char* portname, char*data, int sz);

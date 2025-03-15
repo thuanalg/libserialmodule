@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 	if (ret) {
 		return EXIT_FAILURE;
 	}
-	ret = spserial_inst_create(&obj);
+	ret = spsr_inst_create(&obj);
 	if (ret) {
 		return 1;
 	}
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
 		fclose(fp);
 	}
 	if (obj1) {
-		spserial_inst_del(obj1->port_name);
+		spsr_inst_del(obj1->port_name);
 	}
 	spsr_module_close();
 	spl_finish_log();
