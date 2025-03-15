@@ -217,7 +217,7 @@ void CtestSerialPortDlg::OnBnClickedOk()
 		spserial_inst_del(item->port_name);
 		m_listPort.pop_front();
 	}
-	ret = spserial_module_close();
+	ret = spsr_module_close();
 	ret = spl_finish_log();
 	// TODO: Add your control notification handler code here
 	CDialogEx::OnOK();
@@ -235,7 +235,7 @@ void CtestSerialPortDlg::OnBnClickedCancel()
 		spserial_inst_del(item->port_name);
 		m_listPort.pop_front();
 	}
-	ret = spserial_module_close();
+	ret = spsr_module_close();
 	ret = spl_finish_log();
 	// TODO: Add your control notification handler code here
 	CDialogEx::OnCancel();
@@ -314,7 +314,7 @@ void CtestSerialPortDlg::OnBnClickedButtonInitModule()
 		exit(1);
 	}
 	spllog(SPL_LOG_INFO, "test");
-	ret = spserial_module_init();
+	ret = spsr_module_init();
 	if (ret) {
 		exit(1);
 	}

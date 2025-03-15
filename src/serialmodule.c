@@ -594,7 +594,7 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
     }
 #endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_module_init() {
+int spsr_module_init() {
     int ret = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
 #ifndef UNIX_LINUX
@@ -654,13 +654,13 @@ int spserial_module_init() {
         t->cmd_buff->total = nsize;
         t->cmd_buff->range = SPSERIAL_BUFFER_SIZE;
 #endif
-        spllog(SPL_LOG_DEBUG, "spserial_module_init: DONE");
+        spllog(SPL_LOG_DEBUG, "spsr_module_init: DONE");
 
     } while (0);
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_module_close() {
+int spsr_module_close() {
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
 #ifndef UNIX_LINUX
     SPSERIAL_CloseHandle(t->mutex);

@@ -194,11 +194,11 @@ extern "C" {
 
 /*Should be start before using, non - thread - safe*/
 DLL_API_SERIAL_MODULE int
-	spserial_module_init();
+	spsr_module_init();
 
 /*Should be closed to complete use, non - thread - safe */
 DLL_API_SERIAL_MODULE int
-	spserial_module_close();
+	spsr_module_close();
 
 DLL_API_SERIAL_MODULE int
 	spserial_inst_create(SP_SERIAL_INPUT_ST* input);

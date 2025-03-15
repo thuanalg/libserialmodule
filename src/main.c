@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
 	snprintf(obj.port_name, SPSERIAL_PORT_LEN, is_port);
 	/*obj.baudrate = 115200;*/
 	obj.baudrate = baudrate;
-	ret = spserial_module_init();
+	ret = spsr_module_init();
 	if (ret) {
 		return EXIT_FAILURE;
 	}
@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
 	if (obj1) {
 		spserial_inst_del(obj1->port_name);
 	}
-	spserial_module_close();
+	spsr_module_close();
 	spl_finish_log();
 	return 0;
 }
