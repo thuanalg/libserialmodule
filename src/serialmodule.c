@@ -1099,7 +1099,7 @@ int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
 //    return ret;
 //}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_inst_write(char* portname, char*data, int sz) {
+int spsr_inst_write(char* portname, char*data, int sz) {
     int ret = 0;
     do {
 #ifndef UNIX_LINUX

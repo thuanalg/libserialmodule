@@ -293,7 +293,7 @@ void CtestSerialPortDlg::OnBnClickedButtonmsg()
 	//		spserial_inst_write_to_port(item, data, strlen(data));
 	//	}
 	//}
-	spserial_inst_write(portport, data, strlen(data));
+	spsr_inst_write(portport, data, strlen(data));
 }
 
 

@@ -207,7 +207,7 @@ DLL_API_SERIAL_MODULE int
 	spsr_inst_del(char* portname);
 
 DLL_API_SERIAL_MODULE int
-	spserial_inst_write(char* portname, char*data, int sz);
+	spsr_inst_write(char* portname, char*data, int sz);
 
 /*Move to static */
 DLL_API_SERIAL_MODULE int
