@@ -60,11 +60,11 @@ int main(int argc, char *argv[]) {
 	snprintf(obj.port_name, SPSERIAL_PORT_LEN, is_port);
 	/*obj.baudrate = 115200;*/
 	obj.baudrate = baudrate;
-	ret = spserial_module_init();
+	ret = spsr_module_init();
 	if (ret) {
 		return EXIT_FAILURE;
 	}
-	ret = spserial_inst_create(&obj, &obj1);
+	ret = spsr_inst_create(&obj);
 	if (ret) {
 		return 1;
 	}
@@ -96,9 +96,9 @@ int main(int argc, char *argv[]) {
 		fclose(fp);
 	}
 	if (obj1) {
-		spserial_inst_del(obj1->port_name);
+		spsr_inst_del(obj1->port_name);
 	}
-	spserial_module_close();
+	spsr_module_close();
 	spl_finish_log();
 	return 0;
 }

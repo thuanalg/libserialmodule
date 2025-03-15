@@ -12,7 +12,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define  UNIX_LINUX
+//#define  UNIX_LINUX
 #ifndef  UNIX_LINUX
 	#ifndef __SIMPLE_STATIC_SERIAL_MODULE__
 		#ifdef EXPORT_DLL_API_SERIAL_MODULE
@@ -125,8 +125,8 @@ extern "C" {
 	
 	
 	typedef struct __SP_SERIAL_INFO_ST__ {
-		int
-			iidd;
+	//	int
+	//		iidd;
 		char
 			isoff;
 		char
@@ -173,7 +173,7 @@ extern "C" {
 	
 	
 	typedef struct __SPSERIAL_ROOT_TYPE__ {
-		int n;
+		//int n;
 		int count;
 		void* mutex;
 		void* sem;
@@ -194,32 +194,25 @@ extern "C" {
 
 /*Should be start before using, non - thread - safe*/
 DLL_API_SERIAL_MODULE int
-	spserial_module_init();
+	spsr_module_init();
 
 /*Should be closed to complete use, non - thread - safe */
 DLL_API_SERIAL_MODULE int
-	spserial_module_close();
+	spsr_module_close();
 
 DLL_API_SERIAL_MODULE int
-	spserial_inst_create(void*, SP_SERIAL_INFO_ST** output);
+	spsr_inst_create(SP_SERIAL_INPUT_ST* input);
 
 DLL_API_SERIAL_MODULE int
-	spserial_inst_del(char* portname);
+	spsr_inst_del(char* portname);
 
 DLL_API_SERIAL_MODULE int
-	spserial_inst_write_data(int iid, char*, int sz);
+	spsr_inst_write(char* portname, char*data, int sz);
 
+/*Move to static */
 DLL_API_SERIAL_MODULE int
-	spserial_inst_write(char* portname, char*data, int sz);
+	spsr_get_obj(char *portname, void** obj, int takeoff);
 
-DLL_API_SERIAL_MODULE int 
-	spserial_get_objbyid(char* portname, void** obj, int takeoff);
-
-DLL_API_SERIAL_MODULE int
-	spserial_get_obj_by_name(char *portname, void** obj, int takeoff);
-
-DLL_API_SERIAL_MODULE int
-	spserial_inst_write_to_port(SP_SERIAL_INFO_ST*, char*, int sz);
 
 #ifdef __cplusplus
 }
