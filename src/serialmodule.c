@@ -1770,17 +1770,7 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                     else {
                         spllog(0, "tcsetattr -------------> DONE.")
                     }
-                    /*
-					memset(&event, 0, sizeof(event));
-					event.events = EPOLLIN | EPOLLET ;
-					event.data.fd = fd;
-					rerr = epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
-					if (rerr == -1) {
-						spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-						ret = PSERIAL_UNIX_EPOLL_CTL;
-						break;
-					}
-                    */
+                #ifndef __SPSR_EPOLL__
                     for(i = 0; i < *prange; ++i) {
                         if(fds[i].fd < 0) {
                             fds[i].fd = fd;
@@ -1790,6 +1780,17 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                             break;
                         }
                     }
+                #else
+                    memset(&event, 0, sizeof(event));
+                    event.events = EPOLLIN | EPOLLET ;
+                    event.data.fd = fd;
+                    rerr = epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
+                    if (rerr == -1) {
+                        spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+                        ret = PSERIAL_UNIX_EPOLL_CTL;
+                        break;
+                    }                
+                #endif                    
 					temp->item->handle = fd;
                     //int k = write(fd, "buffer", strlen("buffer"));
                     //spllog(0, "write: %d", k);
@@ -1811,16 +1812,8 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                             int errr = 0;
                             spllog(0, ">>>>>>>>>>>>>>--handle: %d", fd);
                             /* Remove fd out of epoll*/
-                            /*
-                            errr = epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, 0);
-                            if(errr == -1) {
-                                spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
-                            } else {
-                                spllog(SPL_LOG_DEBUG, "EPOLL_CTL_DEL, fd: %d DONE", fd); 
-                            }
-                            */
-                            /* Close handle*/
-                            for(i = 0; i < *prange; ++i) {
+                        #ifndef __SPSR_EPOLL__
+                           for(i = 0; i < *prange; ++i) {
                                 if(fds[i].fd == fd) {
                                     int j = 0;
                                     for(j = i; j < *(prange -1); ++j) {
@@ -1829,7 +1822,16 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                                     (*prange)--;
                                     break;
                                 }
-                            }
+                            }                           
+                        #else
+                            errr = epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, 0);
+                            if(errr == -1) {
+                                spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
+                            } else {
+                                spllog(SPL_LOG_DEBUG, "EPOLL_CTL_DEL, fd: %d DONE", fd); 
+                            }                        
+                        #endif                           
+                            /* Close handle*/
                             errr = close(fd);
                             if(errr) {
                                 spllog(SPL_LOG_ERROR, "close error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
