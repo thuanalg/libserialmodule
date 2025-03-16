@@ -192,26 +192,25 @@ extern "C" {
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-/*Should be start before using, non - thread - safe*/
+/*Must be started before using.*/
 DLL_API_SERIAL_MODULE int
 	spsr_module_init();
 
-/*Should be closed to complete use, non - thread - safe */
+/*Should be invoked to complete use.*/
 DLL_API_SERIAL_MODULE int
-	spsr_module_close();
+	spsr_module_finish();
+
+/*Must be started before using.*/
+DLL_API_SERIAL_MODULE int
+	spsr_inst_open(SP_SERIAL_INPUT_ST* input);
 
 DLL_API_SERIAL_MODULE int
-	spsr_inst_create(SP_SERIAL_INPUT_ST* input);
-
-DLL_API_SERIAL_MODULE int
-	spsr_inst_del(char* portname);
+	spsr_inst_close(char* portname);
 
 DLL_API_SERIAL_MODULE int
 	spsr_inst_write(char* portname, char*data, int sz);
 
-/*Move to static */
-DLL_API_SERIAL_MODULE int
-	spsr_get_obj(char *portname, void** obj, int takeoff);
+
 
 
 #ifdef __cplusplus

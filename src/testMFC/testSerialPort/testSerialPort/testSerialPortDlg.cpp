@@ -214,10 +214,10 @@ void CtestSerialPortDlg::OnBnClickedOk()
 
 	while (m_listPort.size() > 0) {
 		item = (SP_SERIAL_INFO_ST*)m_listPort.front();
-		spsr_inst_del(item->port_name);
+		spsr_inst_close(item->port_name);
 		m_listPort.pop_front();
 	}
-	ret = spsr_module_close();
+	ret = spsr_module_finish();
 	ret = spl_finish_log();
 	// TODO: Add your control notification handler code here
 	CDialogEx::OnOK();
@@ -232,10 +232,10 @@ void CtestSerialPortDlg::OnBnClickedCancel()
 
 	while (m_listPort.size() > 0) {
 		item = (SP_SERIAL_INFO_ST*)m_listPort.front();
-		spsr_inst_del(item->port_name);
+		spsr_inst_close(item->port_name);
 		m_listPort.pop_front();
 	}
-	ret = spsr_module_close();
+	ret = spsr_module_finish();
 	ret = spl_finish_log();
 	// TODO: Add your control notification handler code here
 	CDialogEx::OnCancel();
@@ -358,7 +358,7 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 		exit(EXIT_FAILURE);
 	}
 
-	ret = spsr_inst_create(&obj);
+	ret = spsr_inst_open(&obj);
 	if (ret) {
 		exit(1);
 	}
@@ -377,22 +377,23 @@ void CtestSerialPortDlg::OnBnClickedButtonRemove()
 		port[i] = txt[i];
 	}
 	/*----------------------------------------------------------------------------------------*/
-	std::list<void*>::iterator it = m_listPort.begin();
-	n = m_listPort.size();
-	SPSERIAL_ARR_LIST_LINED* objId = 0;
-	SP_SERIAL_INFO_ST* item = 0;
-	void* pcomid = 0;
-	for (i = 0; i < n; ++i) {
-		std::advance(it, i);
-		pcomid = *it;
-		item = (SP_SERIAL_INFO_ST*)pcomid;
-		if (strcmp(port, item->port_name) == 0) {
-			int ret = 0;
-			ret = spsr_inst_del(item->port_name);
-			m_listPort.remove(pcomid);
-			break;
-		}
-	}
+	int ret = 0;
+	ret = spsr_inst_close(port);
+	//std::list<void*>::iterator it = m_listPort.begin();
+	//n = m_listPort.size();
+	//SPSERIAL_ARR_LIST_LINED* objId = 0;
+	//SP_SERIAL_INFO_ST* item = 0;
+	//void* pcomid = 0;
+	//for (i = 0; i < n; ++i) {
+	//	std::advance(it, i);
+	//	pcomid = *it;
+	//	item = (SP_SERIAL_INFO_ST*)pcomid;
+	//	if (strcmp(port, item->port_name) == 0) {
+	//
+	//		m_listPort.remove(pcomid);
+	//		break;
+	//	}
+	//}
 }
 
 

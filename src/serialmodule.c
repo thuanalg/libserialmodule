@@ -81,7 +81,8 @@ static int spserial_fetch_commands(int, char*, int n);
 #endif
 static int spsr_add2_list(SP_SERIAL_INFO_ST*);
 static int spsr_remv_list(char *nameport);
-
+/*Move to static */
+static int spsr_get_obj(char* portname, void** obj, int takeoff);
 
 void thuan() { }
 
@@ -136,7 +137,7 @@ static int
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spsr_inst_create(SP_SERIAL_INPUT_ST *p)
+int spsr_inst_open(SP_SERIAL_INPUT_ST *p)
 {
     int ret = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
@@ -170,7 +171,7 @@ int spsr_inst_create(SP_SERIAL_INPUT_ST *p)
 
 	return ret;
 }
-int spsr_inst_del(char* portname)
+int spsr_inst_close(char* portname)
 {    
     int ret = 0;
     spllog(0, "-------------  Delete port --------------------------------------------------------------- : %s.", portname);
@@ -660,7 +661,7 @@ int spsr_module_init() {
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spsr_module_close() {
+int spsr_module_finish() {
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
 #ifndef UNIX_LINUX
     SPSERIAL_CloseHandle(t->mutex);
