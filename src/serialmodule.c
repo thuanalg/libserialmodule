@@ -1366,6 +1366,60 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							continue;
 						}
 						if(k == 0) {
+							char *p = 0;
+							while(1) {
+								int lp = 0;
+								memset(&client_addr, 0, sizeof(client_addr));
+								client_len = sizeof(client_addr);
+								memset(buffer, 0, sizeof(buffer));
+								spllog(SPL_LOG_DEBUG, "recvfrom------------------------");
+								lenmsg = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
+									(struct sockaddr*)&client_addr, &client_len);
+								if (lenmsg < 1) {
+									spllog(SPL_LOG_ERROR, "epoll_ctl, lenmsg: %d, errno: %d, text: %s.",
+										(int)lenmsg, errno, strerror(errno));
+									break;
+								}
+								
+								buffer[lenmsg] = 0;
+								spllog(SPL_LOG_DEBUG, "buffer: %s", buffer);
+								if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
+									spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
+									isoff = 1;
+									break;
+								}
+								if(isoff) {
+									break;
+								}
+								lp = 0;
+								spserial_mutex_lock(t->mutex);
+								/*SPSERIAL_BUFFER_SIZE*/
+								spserial_malloc(SPSERIAL_BUFFER_SIZE, p, char);
+								    do {
+								    	if(t->cmd_buff){
+								    		lp = t->cmd_buff->pl;
+								    		spllog(0, "lp: ================= %d.", lp);
+								    		if(lp) {
+								    			if(lp > SPSERIAL_BUFFER_SIZE) {
+								    				p = realloc(p, lp);
+								    			}
+								    			/*
+								    			spserial_malloc(lp, p, char);
+								    			*/
+								    			if(!p) {
+								    				break;
+								    			}
+								    			memcpy(p, t->cmd_buff->data, lp);
+								    			t->cmd_buff->pl = 0;
+								    		}
+								    	}
+								    } while (0);
+                                    ret = spserial_fetch_commands(epollfd, p, lp);
+								spserial_mutex_unlock(t->mutex);	
+								spllog(0, "lppppppppppppppppppppppppppp: %d", lp);
+								
+								spserial_free(p);
+							}							
 							continue;
 						}
 					}
