@@ -74,11 +74,9 @@ static int spsr_init_trigger(void*);
 static int spserial_pull_trigger(void*);
 static int spserial_start_listen(void*);
 	#ifndef __SPSR_EPOLL__
-		//static int spserial_fetch_commands(int, char*, int n);
 		static int spserial_fetch_commands(void *, int *,char*, int n);
 	#else
 		static int spserial_fetch_commands(int, char*, int n);
-		//static int spserial_fetch_commands(void *, int *,char*, int n);
 	#endif
 #endif
 static int spsr_add2_list(SP_SERIAL_INFO_ST*);
@@ -1427,6 +1425,24 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							}							
 							continue;
 						}
+						if (fds[k].fd >= 0) {
+							int nr = 0;
+							int didread = 0;
+							int comfd = fds[k].fd;
+							memset(buffer, 0, sizeof(buffer));
+							while(1) {
+								nr = (int)read(comfd, buffer + didread, sizeof(buffer) - didread -1);
+								if(nr == -1) {
+									break;
+								}
+								didread += nr;
+							}
+							buffer[didread] = 0;
+							spllog(0, "------------>>> data read didread: %d: %s", didread, buffer);
+							//buffer[nr] = 0;
+                            //nr = write(comfd, buffer, didread);
+                            //spllog(0, "------------>>> data read didwrite: %d: %s", nr, buffer);
+						}                        
 					}
 					
 				}
