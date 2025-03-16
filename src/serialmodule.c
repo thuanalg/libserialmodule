@@ -1333,6 +1333,8 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 				spllog(SPL_LOG_DEBUG, "spserial_wait_sem------------------------");
 				spserial_wait_sem(t->sem);
 				*/
+				int mx_number = 1;
+				int k  = 0;
 				spserial_mutex_lock(t->mutex);
 				/*do {*/
 					isoff = t->spsr_off;
@@ -1344,7 +1346,31 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 				/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 				
            #ifdef __MACH__
-
+				struct pollfd fds[SPSR_SIZE_MAX_EVENTS];
+				memset(&fds, 0, sizeof(fds));
+				fds[0].fd = sockfd;  
+				fds[0].events = POLLIN;  
+				while(1) {
+					if (isoff) {
+						break;
+					}
+					ret = poll(fds, mx_number, 10 * 1000);
+					if(ret == -1) {
+						continue;
+					}
+					if(ret == 0) {
+						continue;
+					}
+					for(k = 0; k < mx_number; ++k) {
+						if (!(fds[k].revents & POLLIN)) {
+							continue;
+						}
+						if(k == 0) {
+							continue;
+						}
+					}
+					
+				}
            #else
                 /* Start epoll */
 				spllog(SPL_LOG_DEBUG, "epoll_create------------------------");
