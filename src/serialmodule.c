@@ -1275,12 +1275,10 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 		ssize_t lenmsg = 0;
         socklen_t client_len = sizeof(client_addr);
 
-#ifdef __MACH__
+#ifndef __SPSR_EPOLL__
 #else
-        struct epoll_event event, events[SPSR_SIZE_MAX_EVENTS];
-        
-#endif	
-
+	struct epoll_event event, events[SPSR_SIZE_MAX_EVENTS];
+#endif
         spllog(SPL_LOG_DEBUG, "cartridge: ");
         /* Creating socket file descriptor */
 		do {
@@ -1347,7 +1345,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 				}
 				/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 				
-           #ifdef __MACH__
+#ifndef __SPSR_EPOLL__
 				struct pollfd fds[SPSR_SIZE_MAX_EVENTS];
 				memset(&fds, 0, sizeof(fds));
 				fds[0].fd = sockfd;  
@@ -1557,7 +1555,8 @@ int spsr_inst_write(char* portname, char*data, int sz) {
                 spllog(SPL_LOG_DEBUG, "close socket done.");
             }
 		}
-#ifdef __MACH__
+#ifndef __SPSR_EPOLL__
+
 #else
         if (epollfd > -1) {
 
@@ -2212,5 +2211,9 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
+#else
+#endif
+
+#ifndef __SPSR_EPOLL__
 #else
 #endif
