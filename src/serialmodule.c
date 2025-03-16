@@ -22,15 +22,11 @@
     #include <sys/socket.h> 
     #include <arpa/inet.h> 
     #include <netinet/in.h> 
-#ifdef __MACH__
+#ifndef __SPSR_EPOLL__
+	#include <poll.h>
 #else
     #include <sys/epoll.h>
 #endif	
-    #ifdef __TRUE_LINUX__
-        #include <sys/epoll.h>
-    #else
-        #include <poll.h>
-    #endif 
     /* https://gist.github.com/reterVision/8300781 */
 #endif
 
@@ -77,7 +73,13 @@
 static int spsr_init_trigger(void*);
 static int spserial_pull_trigger(void*);
 static int spserial_start_listen(void*);
-static int spserial_fetch_commands(int, char*, int n);
+	#ifndef __SPSR_EPOLL__
+		//static int spserial_fetch_commands(int, char*, int n);
+		static int spserial_fetch_commands(void *, int *,char*, int n);
+	#else
+		static int spserial_fetch_commands(int, char*, int n);
+		//static int spserial_fetch_commands(void *, int *,char*, int n);
+	#endif
 #endif
 static int spsr_add2_list(SP_SERIAL_INFO_ST*);
 static int spsr_remv_list(char *nameport);
@@ -1678,7 +1680,12 @@ int spsr_inst_write(char* portname, char*data, int sz) {
         return 0;
     }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_fetch_commands(int epollfd, char* info,int n) {
+#ifndef __SPSR_EPOLL__
+int spserial_fetch_commands(void *mp, int *prange, char* info,int n)
+#else
+int spserial_fetch_commands(int epollfd, char* info,int n) 
+#endif
+{
 	int ret = 0;
 	SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
 	SPSERIAL_ARR_LIST_LINED * temp = 0, *prev = 0, *next = 0;
