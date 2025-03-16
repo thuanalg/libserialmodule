@@ -1414,7 +1414,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 								    		}
 								    	}
 								    } while (0);
-                                    ret = spserial_fetch_commands(epollfd, p, lp);
+                                    ret = spserial_fetch_commands(fds, &mx_number, p, lp);
 								spserial_mutex_unlock(t->mutex);	
 								spllog(0, "lppppppppppppppppppppppppppp: %d", lp);
 								
