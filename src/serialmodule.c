@@ -665,6 +665,7 @@ int spsr_module_init() {
 int spsr_module_finish() {
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
 #ifndef UNIX_LINUX
+    spsr_clear_all();
     SPSERIAL_CloseHandle(t->mutex);
     SPSERIAL_CloseHandle(t->sem);
 #else
