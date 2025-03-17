@@ -11,7 +11,7 @@ src=../simplelog/simplelog.c
 src1=../serialmodule.c 
 INC=-I../simplelog/ -I../
 #CFLAGS=-ansi
-CFLAGS=-std=gnu89 -D UNIX_LINUX -Wunused-variable
+CFLAGS=-std=gnu89 -D UNIX_LINUX -Wunused-variable -Wunused-function
 #CPPFLAGS=-std=c++98 
 #CPPFLAGS=-std=c++98 -D UNIX_LINUX -D __UNIX_LINUX_CPP11_AND_NEWERS
 CPPFLAGS=-D UNIX_LINUX -D __UNIX_LINUX_CPP11_AND_NEWERS__

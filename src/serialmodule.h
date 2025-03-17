@@ -13,11 +13,11 @@
 extern "C" {
 #endif
 
-/*
+
 #ifndef UNIX_LINUX
 	#define  UNIX_LINUX
 #endif
-*/
+
 
 #ifndef  UNIX_LINUX
 	#ifndef __SIMPLE_STATIC_SERIAL_MODULE__
