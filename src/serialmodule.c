@@ -78,13 +78,13 @@ static int spserial_start_listen(void*);
 	#else
 		static int spserial_fetch_commands(int, char*, int n);
 	#endif
-static int spsr_clear_all();
+
 #endif
 static int spsr_add2_list(SP_SERIAL_INFO_ST*);
 static int spsr_remv_list(char *nameport);
 /*Move to static */
 static int spsr_get_obj(char* portname, void** obj, int takeoff);
-
+static int spsr_clear_all();
 void thuan() { }
 
 static SPSERIAL_ROOT_TYPE
@@ -886,18 +886,6 @@ int spsr_get_obj(char* portname, void** obj, int takeoff) {
                 *obj = node;
                 if (takeoff)
                 {
-                    //if (node->item->iidd == t->init_node->item->iidd)
-                    //{
-                    //    t->init_node = t->init_node->next;
-                    //}
-                    //else {
-                    //    if (prev) {
-                    //        prev->next = node->next;
-                    //        if (!prev->next) {
-                    //            t->last_node = prev;
-                    //        }
-                    //    }
-                    //}
                     if (prev) {
                         prev->next = node->next;
                         if (!prev->next) {
@@ -1705,32 +1693,6 @@ int spsr_inst_write(char* portname, char*data, int sz) {
         return 0;
     }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spsr_clear_all() {
-    int ret = 0;
-    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-    SPSERIAL_ARR_LIST_LINED* tnode = 0, *temp = 0;
-    temp = t->init_node; 
-    while (temp) {
-        tnode = temp;
-        temp = temp->next;
-        if(tnode->item) {
-            if(tnode->item->handle >= 0) {
-                int fd = tnode->item->handle;
-                ret = close(fd);
-                if(ret) {
-                    spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-                } else {
-                    spllog(SPL_LOG_DEBUG, "close fd: %d.", fd);
-                }
-            }
-            spserial_free(tnode->item);
-        }
-        spserial_free(tnode);
-    }
-    t->init_node = t->last_node = 0;
-    spserial_free(t->cmd_buff);
-    return ret;
-}
 
 #ifndef __SPSR_EPOLL__
 int spserial_fetch_commands(void *mp, int *prange, char* info,int n)
@@ -2291,6 +2253,56 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) {
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spsr_clear_all() {
+    int ret = 0;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+#ifndef UNIX_LINUX
+    int count = 0;
+    do  {
+        char port[64];
+        memset(port, 0, 64);
+        spserial_mutex_lock(t->mutex);
+            count = t->count; 
+            if(t->init_node) {
+                memcpy(port, t->init_node->item->port_name, strlen(t->init_node->item->port_name));
+            } else {
+                count = 0;
+            }
+        spserial_mutex_unlock(t->mutex);
+        if(port[0]) {
+            ret = spsr_inst_close(port);
+            if(ret) {
+                spllog(SPL_LOG_ERROR, "spsr_inst_close: ret: %d, port: %s.", ret, port);
+            }
+        }
+    } while(count);
+#else
+
+    SPSERIAL_ARR_LIST_LINED* tnode = 0, *temp = 0;
+    temp = t->init_node; 
+    while (temp) {
+        tnode = temp;
+        temp = temp->next;
+        if(tnode->item) {
+            if(tnode->item->handle >= 0) {
+                int fd = tnode->item->handle;
+                ret = close(fd);
+                if(ret) {
+                    spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+                } else {
+                    spllog(SPL_LOG_DEBUG, "close fd: %d.", fd);
+                }
+            }
+            spserial_free(tnode->item);
+        }
+        spserial_free(tnode);
+    }
+    t->init_node = t->last_node = 0;
+    spserial_free(t->cmd_buff);
+#endif        
+    return ret;
+}
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
