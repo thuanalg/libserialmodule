@@ -1552,12 +1552,13 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                             spllog(0, ">>>>>>>>>>>>>>--handle: %d", fd);
                             /* Remove fd out of epoll*/
                         #ifndef __SPSR_EPOLL__
-                           for(i = 0; i < *prange; ++i) {
+                           for(i = 1; i < *prange; ++i) {
                                 if(fds[i].fd == fd) {
                                     int j = 0;
-                                    for(j = i; j < *(prange -1); ++j) {
+                                    for(j = i; j < (*prange -1); ++j) {
                                         fds[j].fd = fds[j+1].fd;
                                     }
+                                    fds[(*prange -1)].fd = -1;
                                     (*prange)--;
                                     break;
                                 }
