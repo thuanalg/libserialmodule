@@ -1187,12 +1187,12 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 					if (isoff) {
 						break;
 					}					
-					spllog(SPL_LOG_DEBUG, "epoll_wait------------------------");
+					//spllog(SPL_LOG_DEBUG, "epoll_wait------------------------");
                     int nfds = epoll_wait(epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
-					spllog(SPL_LOG_DEBUG, "epoll_wait------------------------, nfds: %d", nfds);
+					//spllog(SPL_LOG_DEBUG, "epoll_wait------------------------, nfds: %d", nfds);
                     for (i = 0; i < nfds; i++) 
                     {
-						spllog(SPL_LOG_DEBUG, "(data.fd, sockfd)------------------------(%d, %d)", events[i].data.fd, sockfd);
+						//spllog(SPL_LOG_DEBUG, "(data.fd, sockfd)------------------------(%d, %d)", events[i].data.fd, sockfd);
                         if (events[i].data.fd == sockfd) 
                         {
 							char *p = 0;
