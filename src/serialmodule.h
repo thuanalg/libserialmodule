@@ -12,7 +12,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-//#define  UNIX_LINUX
+
+#ifndef UNIX_LINUX
+	#define  UNIX_LINUX
+#endif
+
 #ifndef  UNIX_LINUX
 	#ifndef __SIMPLE_STATIC_SERIAL_MODULE__
 		#ifdef EXPORT_DLL_API_SERIAL_MODULE

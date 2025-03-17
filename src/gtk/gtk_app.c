@@ -7,11 +7,13 @@ int is_master = 0;
 int baudrate = 0;
 char is_port[32];
 char cfgpath[1024];
+int myusleep = 1000;
 
 #define __ISMASTER__				"--is_master="
 #define __ISPORT__					"--is_port="
 #define __ISCFG__					"--is_cfg="
 #define __ISBAUDRATE__				"--is_baudrate="
+#define __IS_USLEEP__				"--is_usleep="
 
 GtkWidget *entries[7];
 void *arr_obj[10];
@@ -38,7 +40,7 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
 	obj->baudrate = baudrate; 
     spllog(0, "baudrate:=========================++++++++++++> %d, portname: %s", 
         obj->baudrate, obj->port_name);
-    ret = spserial_inst_create(obj, &obj1);
+    ret = spsr_inst_open(obj);
     if(ret) {
         spllog(0, "spserial_inst_create:=========================> %d", ret);
     }
@@ -48,15 +50,23 @@ void on_button_clicked_01(GtkWidget *widget, gpointer data) {
     int ret = 0;
     const char *portname = gtk_entry_get_text(GTK_ENTRY(entries[1])); 
     spllog(0, "Button %s clicked!\n", (char *)data);
-    ret = spserial_inst_del((char*)portname);
+    ret = spsr_inst_close((char*)portname);
 }
 void on_button_clicked_02(GtkWidget *widget, gpointer data) {
     int ret = 0;
+    int i , n;
     char *datawrtite = (char*)gtk_entry_get_text(GTK_ENTRY(entries[3])); 
     char *portname = (char*)gtk_entry_get_text(GTK_ENTRY(entries[2])); 
     spllog(0, "Button %s clicked, portname: %s, data: %s!\n", (char *)data, portname, datawrtite);
     //ret = spserial_inst_del((char*)portname);
-    ret = spserial_inst_write(portname, datawrtite, strlen(datawrtite));
+    n = strlen(datawrtite);
+
+    for(i = 0; i < n; ++i) 
+    {
+        ret = spsr_inst_write(portname, datawrtite + i, 1);
+        usleep(myusleep);
+    }
+
     spllog(0, "ret %d!\n", ret);
 }
 int main(int argc, char *argv[]) {
@@ -91,13 +101,18 @@ int main(int argc, char *argv[]) {
 			spl_console_log("k = %d, baudrate: %d.", k, baudrate);
 			continue;
 		}
+		if (strstr(argv[i], __IS_USLEEP__)) {
+			k = sscanf(argv[i], __IS_USLEEP__"%d", &myusleep);
+			spl_console_log("k = %d, myusleep: %d.", k, myusleep);
+			continue;
+		}        
 	}    
     ret = ret = spl_init_log(cfgpath);
     if(ret) {
         exit(1);
     }
     do {
-        ret = spserial_module_init();
+        ret = spsr_module_init();
         gtk_init(&argc, &argv);
         
         GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -147,7 +162,7 @@ int main(int argc, char *argv[]) {
         gtk_main();
 
         
-        spserial_module_close();
+        spsr_module_finish();
     } while(0);
     spl_finish_log();
     return 0;
