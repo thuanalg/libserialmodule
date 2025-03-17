@@ -819,7 +819,6 @@ int spserial_rel_sem(void* sem) {
     int ret = 0;
 #ifndef UNIX_LINUX
 #else
-    int err = 0, val = 0;
 #endif
     do {
         if (!sem) {
@@ -996,11 +995,9 @@ int spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg) {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
     int ret = 0;
-    int i = 0;
-    int found = 0;
-    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-    SPSERIAL_ARR_LIST_LINED* tnode = 0, * prev = 0;;
-//    int iddd = 0;
+    //int i = 0;
+    //int found = 0;
+    //SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     do {
         if (!node) {
             ret = SPSERIAL_PARAM_NULL;
@@ -1250,20 +1247,22 @@ int spsr_inst_write(char* portname, char*data, int sz) {
     void* spsr_init_cartridge_routine(void* obj) {
         SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
         int ret = 0;
-        int epollfd = 0;;
+        
         int sockfd = 0;
-        int n = 0;
+        
         int isoff = 0; 
         int flags = 0;
-        socklen_t len = 0;
+        //socklen_t len = 0;
         char buffer[SPSR_MAXLINE + 1];
-        const char* hello = "Hello from server";
+        //const char* hello = "Hello from server";
         struct sockaddr_in cartridge_addr, client_addr;
-        int i = 0;
+        int k  = 0;
 		ssize_t lenmsg = 0;
         socklen_t client_len = sizeof(client_addr);
 
 #ifndef __SPSR_EPOLL__
+    int n = 0;
+    
     int mx_number = 0;
     struct pollfd fds[SPSR_SIZE_MAX_EVENTS];
     memset(&fds, 0, sizeof(fds));
@@ -1272,6 +1271,8 @@ int spsr_inst_write(char* portname, char*data, int sz) {
     }
     n = 0;
 #else
+    int epollfd = 0;;
+    int i = 0;
 	struct epoll_event event, events[SPSR_SIZE_MAX_EVENTS];
 #endif
         spllog(SPL_LOG_DEBUG, "cartridge: ");
@@ -1329,7 +1330,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 				spserial_wait_sem(t->sem);
 				*/
 				
-				int k  = 0;
+				k = 0;
 				spserial_mutex_lock(t->mutex);
 				/*do {*/
 					isoff = t->spsr_off;
@@ -1589,12 +1590,12 @@ int spsr_inst_write(char* portname, char*data, int sz) {
         SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
         int ret = 0;
         int sockfd = 0;
-        int n = 0;
+        //int n = 0;
         int isoff = 0;
         int flags = 0;
         socklen_t len = 0;
-        char buffer[SPSR_MAXLINE];
-        const char* hello = "Hello from server";
+        //char buffer[SPSR_MAXLINE];
+        //const char* hello = "Hello from server";
         struct sockaddr_in trigger_addr, cartridge_addr;
         spllog(SPL_LOG_DEBUG, "trigger: ");
         char had_cmd = 0;
@@ -1703,20 +1704,21 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
 {
 	int ret = 0;
 	SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-	SPSERIAL_ARR_LIST_LINED * temp = 0, *prev = 0, *next = 0;
+	SPSERIAL_ARR_LIST_LINED * temp = 0, *prev = 0;
 	SP_SERIAL_GENERIC_ST* item = 0;;
-	SP_SERIAL_GENERIC_ST* obj = (SP_SERIAL_GENERIC_ST*)info;;
+	//SP_SERIAL_GENERIC_ST* obj = (SP_SERIAL_GENERIC_ST*)info;;
 	SP_SERIAL_INFO_ST *input = 0;
     struct termios options = {0};
-	int i = 0;
+	
 	int fd = 0;
 	int rerr = 0;
 #ifndef __SPSR_EPOLL__
+    int i = 0;
     struct pollfd *fds = (struct pollfd*)mp;
 #else
 	struct epoll_event event = {0};
 #endif   
-	int count = n/sizeof(SP_SERIAL_GENERIC_ST);
+	//int count = n/sizeof(SP_SERIAL_GENERIC_ST);
     int step = 0;
 	spllog(0, "-------------------------------------------------------------------enterfetch command, n: %d", n);
 	do {
