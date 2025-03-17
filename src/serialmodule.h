@@ -207,7 +207,7 @@ DLL_API_SERIAL_MODULE int
 	spsr_module_finish();
 
 /*Open a COM port for using. Thread-safe.*/
-/*SP_SERIAL_INPUT_ST: port_name, baudrate, ...*/
+/*SP_SERIAL_INPUT_ST: port_name, baudrate, callback, ...*/
 DLL_API_SERIAL_MODULE int
 	spsr_inst_open(SP_SERIAL_INPUT_ST* input);
 
