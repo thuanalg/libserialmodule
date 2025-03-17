@@ -60,10 +60,13 @@ void on_button_clicked_02(GtkWidget *widget, gpointer data) {
     spllog(0, "Button %s clicked, portname: %s, data: %s!\n", (char *)data, portname, datawrtite);
     //ret = spserial_inst_del((char*)portname);
     n = strlen(datawrtite);
-    for(i = 0; i < n; ++i) {
+
+    for(i = 0; i < n; ++i) 
+    {
         ret = spsr_inst_write(portname, datawrtite + i, 1);
         usleep(myusleep);
     }
+
     spllog(0, "ret %d!\n", ret);
 }
 int main(int argc, char *argv[]) {
