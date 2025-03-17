@@ -196,27 +196,28 @@ extern "C" {
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-/*Must be started before using.*/
+/*Must be started before using. Thread-safe, but should be at a start of main function.*/
 DLL_API_SERIAL_MODULE int
 	spsr_module_init();
 
-/*Should be invoked to complete use.*/
+/*Should be invoked to complete using. Thread-safe, but should be at an end of main function.*/
 DLL_API_SERIAL_MODULE int
 	spsr_module_finish();
 
-/*Must be started before using.*/
+/*Open a COM port for using. Thread-safe.*/
+/*SP_SERIAL_INPUT_ST: port_name, baudrate, ...*/
 DLL_API_SERIAL_MODULE int
 	spsr_inst_open(SP_SERIAL_INPUT_ST* input);
 
+/*Close the COM port after using. Thread-safe.*/
 DLL_API_SERIAL_MODULE int
 	spsr_inst_close(char* portname);
 
+/*Close the COM port after using. Thread-safe.*/
 DLL_API_SERIAL_MODULE int
 	spsr_inst_write(char* portname, char*data, int sz);
 
-
-
-
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifdef __cplusplus
 }
 #endif
