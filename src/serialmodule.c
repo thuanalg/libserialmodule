@@ -252,7 +252,7 @@ int spserial_module_openport(void* obj) {
 
         // Enable hardware flow control (RTS/CTS)
         dcbSerialParams.fOutxCtsFlow = TRUE;    // Enable CTS output flow control
-        dcbSerialParams.fCtsHandshake = TRUE;   // Enable CTS handshake
+        //dcbSerialParams.fCtsHandshake = TRUE;   // Enable CTS handshake
         dcbSerialParams.fOutxDsrFlow = FALSE;   // Disable DSR output flow control
         dcbSerialParams.fDsrSensitivity = FALSE;// DSR sensitivity disabled
         dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE; // Enable DTR
