@@ -7,7 +7,7 @@ int is_master = 0;
 int baudrate = 0;
 char is_port[32];
 char cfgpath[1024];
-int myusleep = 1000;
+int myusleep = 0;
 
 #define __ISMASTER__				"--is_master="
 #define __ISPORT__					"--is_port="
@@ -60,13 +60,16 @@ void on_button_clicked_02(GtkWidget *widget, gpointer data) {
     spllog(0, "Button %s clicked, portname: %s, data: %s!\n", (char *)data, portname, datawrtite);
     //ret = spserial_inst_del((char*)portname);
     n = strlen(datawrtite);
-
-    //for(i = 0; i < n; ++i) 
-    //{
-    //    ret = spsr_inst_write(portname, datawrtite + i, 1);
-    //    usleep(myusleep);
-    //}
-    ret = spsr_inst_write(portname, datawrtite, n);
+    if(myusleep) {
+        for(i = 0; i < n; ++i) 
+        {
+            ret = spsr_inst_write(portname, datawrtite + i, 1);
+            usleep(myusleep);
+        }
+    } 
+    else {
+        ret = spsr_inst_write(portname, datawrtite, n);
+    }
 
     spllog(0, "ret %d!\n", ret);
 }
