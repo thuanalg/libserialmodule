@@ -61,11 +61,12 @@ void on_button_clicked_02(GtkWidget *widget, gpointer data) {
     //ret = spserial_inst_del((char*)portname);
     n = strlen(datawrtite);
 
-    for(i = 0; i < n; ++i) 
-    {
-        ret = spsr_inst_write(portname, datawrtite + i, 1);
-        usleep(myusleep);
-    }
+    //for(i = 0; i < n; ++i) 
+    //{
+    //    ret = spsr_inst_write(portname, datawrtite + i, 1);
+    //    usleep(myusleep);
+    //}
+    ret = spsr_inst_write(portname, datawrtite, n);
 
     spllog(0, "ret %d!\n", ret);
 }

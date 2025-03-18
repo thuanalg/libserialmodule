@@ -249,7 +249,7 @@ int spserial_module_openport(void* obj) {
          dcbSerialParams.StopBits = ONESTOPBIT;
          dcbSerialParams.Parity = NOPARITY;
          //dcbSerialParams.StopBits
-         
+
         // Enable hardware flow control (RTS/CTS)
         dcbSerialParams.fOutxCtsFlow = TRUE;    // Enable CTS output flow control
         dcbSerialParams.fCtsHandshake = TRUE;   // Enable CTS handshake
@@ -1823,7 +1823,7 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) {
         /* Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation */
         /* https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea */
         hSerial = CreateFile(p->port_name,
-            GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
+            GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED , 0);
 
         if (hSerial == INVALID_HANDLE_VALUE) {
             DWORD dwError = GetLastError();
