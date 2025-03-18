@@ -249,6 +249,19 @@ int spserial_module_openport(void* obj) {
          dcbSerialParams.StopBits = ONESTOPBIT;
          dcbSerialParams.Parity = NOPARITY;
          //dcbSerialParams.StopBits
+         
+        // Enable hardware flow control (RTS/CTS)
+        dcbSerialParams.fOutxCtsFlow = TRUE;    // Enable CTS output flow control
+        dcbSerialParams.fCtsHandshake = TRUE;   // Enable CTS handshake
+        dcbSerialParams.fOutxDsrFlow = FALSE;   // Disable DSR output flow control
+        dcbSerialParams.fDsrSensitivity = FALSE;// DSR sensitivity disabled
+        dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE; // Enable DTR
+        dcbSerialParams.fRtsControl = RTS_CONTROL_ENABLE; // Enable RTS
+
+        // Enable software flow control (XON/XOFF)
+        dcbSerialParams.fInX = TRUE;    // Enable XON/XOFF input flow control
+        dcbSerialParams.fOutX = TRUE;   // Enable XON/XOFF output flow control         
+
          if (!SetCommState(hSerial, &dcbSerialParams)) {
              DWORD dwError = GetLastError();
              spllog(SPL_LOG_ERROR, "SetCommState: %lu", dwError);
@@ -1111,9 +1124,9 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 									break;
 								}
 								lp = 0;
+                                spserial_malloc(SPSERIAL_BUFFER_SIZE, p, char);
 								spserial_mutex_lock(t->mutex);
 								    /*SPSERIAL_BUFFER_SIZE*/
-								    spserial_malloc(SPSERIAL_BUFFER_SIZE, p, char);
 								    do {
 								    	if(t->cmd_buff){
 								    		lp = t->cmd_buff->pl;
@@ -1482,13 +1495,13 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
 					options.c_cflag &= ~CSTOPB;    
 					options.c_cflag &= ~CSIZE;
 					options.c_cflag |= CS8;        
-					options.c_cflag &= ~CRTSCTS;   
-                    //options.c_cflag |= CRTSCTS; 
+					//options.c_cflag &= ~CRTSCTS;   
+                    options.c_cflag |= CRTSCTS; //// Enable RTS/CTS hardware flow control
                     options.c_iflag = IGNPAR;
 					options.c_cflag |= CREAD | CLOCAL; 	
 					options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); 
-					options.c_iflag &= ~(IXON | IXOFF | IXANY);  
-                    //options.c_iflag |= IXON | IXOFF  ;    
+					//options.c_iflag &= ~(IXON | IXOFF | IXANY);  
+                    options.c_iflag |= (IXON | IXOFF | IXANY);    //// Enable XON/XOFF software flow control
 					options.c_oflag &= ~OPOST;      
 					
                     /*
