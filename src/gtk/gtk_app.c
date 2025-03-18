@@ -14,7 +14,8 @@ int myusleep = 0;
 #define __ISCFG__					"--is_cfg="
 #define __ISBAUDRATE__				"--is_baudrate="
 #define __IS_USLEEP__				"--is_usleep="
-
+static int spsr_call_back_read(void *data);
+static gboolean update_ui(gpointer data);
 GtkWidget *entries[7];
 void *arr_obj[10];
 
@@ -38,6 +39,9 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
 	snprintf(obj->port_name, SPSERIAL_PORT_LEN, "%s", portname);
 	/*obj.baudrate = 115200;*/
 	obj->baudrate = baudrate; 
+    obj->cb_evt_fn = spsr_call_back_read;
+    obj->cb_obj = 0;
+    
     spllog(0, "baudrate:=========================++++++++++++> %d, portname: %s", 
         obj->baudrate, obj->port_name);
     ret = spsr_inst_open(obj);
@@ -171,4 +175,14 @@ int main(int argc, char *argv[]) {
     spl_finish_log();
     return 0;
 }
+gboolean update_ui(void* data) {
+    //gtk_label_set_text(GTK_LABEL(label), "Updated from worker thread!");
+    //Run in main thread
+    return FALSE;  
+}
 
+int spsr_call_back_read(void *data) {
+    //Access main thread
+    g_idle_add(update_ui, data);
+    return 0;
+}
