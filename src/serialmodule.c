@@ -525,6 +525,9 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                     DWORD readErr = GetLastError();
                     if (readErr == ERROR_IO_PENDING) {
                         bytesRead = 0;
+                        if(p->t_delay > 0) {
+                            Sleep(p->t_delay);
+                        }
                         WaitForSingleObject(p->hEvent, INFINITE);
                         rs1 = GetOverlappedResult(p->handle, &olReadWrite, &bytesRead, 1);
                         if (rs1) {
@@ -1870,6 +1873,9 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) {
         item->baudrate = p->baudrate;
         item->cb_evt_fn = p->cb_evt_fn;
         item->cb_obj = p->cb_obj;
+    #ifndef UNIX_LINUX        
+        item->t_delay = p->t_delay;
+    #endif
         node->item = item;
         //if (output) {
         //    *output = item;
