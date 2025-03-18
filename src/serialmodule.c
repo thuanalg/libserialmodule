@@ -107,14 +107,25 @@ static void*
     spsr_init_cartridge_routine(void*);
 static int
     spsr_send_cmd(int cmd, char *portname, void* data, int lendata);
+    
+#define SPSR_MAX_NUMBER_OF_PORT     10
+
+static void *spsr_hash_fd_arr[SPSR_MAX_NUMBER_OF_PORT];
+//static void *spsr_hash_name_arr[SPSR_MAX_NUMBER_OF_PORT];
+
+
+typedef struct __SPSR_HASH_FD_NAME__ {
+    int fd;
+    char port_name[SPSERIAL_PORT_LEN];
+    SPSERIAL_module_cb cb_evt_fn;
+    void* cb_obj;    
+    struct __SPSR_HASH_FD_NAME__ *next;
+} SPSR_HASH_FD_NAME;
+#define SPSR_HASH_FD(__fd__)    (__fd__%SPSR_MAX_NUMBER_OF_PORT)
 #endif
-
-
 
 static int
     spserial_verify_info(SP_SERIAL_INPUT_ST* obj);
-
-
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* Group of sync tool. */
@@ -1248,9 +1259,6 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 								    			if(lp > SPSERIAL_BUFFER_SIZE) {
 								    				p = realloc(p, lp);
 								    			}
-								    			/*
-								    			spserial_malloc(lp, p, char);
-								    			*/
 								    			if(!p) {
 								    				break;
 								    			}
@@ -1281,9 +1289,6 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							}
 							buffer[didread] = 0;
 							spllog(0, "------------>>> data read didread: %d: %s", didread, buffer);
-							//buffer[nr] = 0;
-                            //nr = write(comfd, buffer, didread);
-                            //spllog(0, "------------>>> data read didwrite: %d: %s", nr, buffer);
 						}
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
                     }
