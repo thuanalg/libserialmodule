@@ -1110,9 +1110,13 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 						continue;
 					}
 					for(k = 0; k < mx_number; ++k) {
+                        if(fds[k].fd < 0) {
+                            continue;
+                        }
 						if (!(fds[k].revents & POLLIN)) {
 							continue;
 						}
+
 						if(k == 0) {
 							char *p = 0;
 							while(1) {
@@ -1175,6 +1179,8 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							int didread = 0;
 							int comfd = fds[k].fd;
 							memset(buffer, 0, sizeof(buffer));
+                            nap_time.tv_nsec = 50 * SPSR_MILLION;
+                            nanosleep(&nap_time, 0);                            
 							while(1) {
 								nr = (int)read(comfd, buffer + didread, sizeof(buffer) - didread -1);
 								if(nr == -1) {
@@ -1184,6 +1190,53 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							}
 							buffer[didread] = 0;
 							spllog(0, "------------>>> data read didread: %d: %s", didread, buffer);
+                            do {
+                                SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0;
+                                int hasdid = SPSR_HASH_FD(comfd);
+                                char didsee = 0; 
+                                hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hasdid];
+                                if(!hashobj) {
+                                    spllog(SPL_LOG_ERROR, "Cannot find obj in reading.");
+                                    break;
+                                }
+                                temp = hashobj;
+                                while(temp)  {
+                                    if(temp->fd == comfd) {
+                                        int nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + didread + sizeof(void*);
+                                        SP_SERIAL_GENERIC_ST* evt = 0;
+                                                                              
+                                        if(!temp->cb_evt_fn) {
+                                            break;
+                                        }
+                                        spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);  
+                                        if(!evt) {
+                                            break;
+                                        }
+                                        evt->total = nnnn;
+                                        evt->type = SPSERIAL_EVENT_READ_BUF;
+                                        
+                                        evt->pc = sizeof(void*);
+                                        if (sizeof(void*) == 4) {
+                                            unsigned int tmp = (unsigned int)temp->cb_obj;
+                                            memcpy((char*)evt->data, (char*)&tmp, evt->pc);
+                                        }
+                                        else  if (sizeof(void*) == 8) {
+                                            unsigned long long int tmp = (unsigned long long int)temp->cb_obj;
+                                            memcpy((char*)evt->data, (char *)&tmp, evt->pc);
+                                        }
+                                        memcpy(evt->data + evt->pc, buffer, didread);
+                                        evt->pl = evt->pc + didread;
+                                        temp->cb_evt_fn(evt);
+                                        spserial_free(evt);
+                                        didsee = 1;
+                                        break;
+                                    }
+                                    temp = temp->next;
+                                }
+                                if(!didsee) {
+                                    spllog(SPL_LOG_ERROR, "Didsee Cannot find obj in reading.");
+                                }
+                            } while(0);
 							//buffer[nr] = 0;
                             //nr = write(comfd, buffer, didread);
                             //spllog(0, "------------>>> data read didwrite: %d: %s", nr, buffer);
@@ -1293,6 +1346,53 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							}
 							buffer[didread] = 0;
 							spllog(0, "------------>>> data read didread: %d: %s", didread, buffer);
+                            do {
+                                SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0;
+                                int hasdid = SPSR_HASH_FD(comfd);
+                                char didsee = 0; 
+                                hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hasdid];
+                                if(!hashobj) {
+                                    spllog(SPL_LOG_ERROR, "Cannot find obj in reading.");
+                                    break;
+                                }
+                                temp = hashobj;
+                                while(temp)  {
+                                    if(temp->fd == comfd) {
+                                        int nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + didread + sizeof(void*);
+                                        SP_SERIAL_GENERIC_ST* evt = 0;
+                                                                              
+                                        if(!temp->cb_evt_fn) {
+                                            break;
+                                        }
+                                        spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);  
+                                        if(!evt) {
+                                            break;
+                                        }
+                                        evt->total = nnnn;
+                                        evt->type = SPSERIAL_EVENT_READ_BUF;
+                                        
+                                        evt->pc = sizeof(void*);
+                                        if (sizeof(void*) == 4) {
+                                            unsigned int tmp = (unsigned int)temp->cb_obj;
+                                            memcpy((char*)evt->data, (char*)&tmp, evt->pc);
+                                        }
+                                        else  if (sizeof(void*) == 8) {
+                                            unsigned long long int tmp = (unsigned long long int)temp->cb_obj;
+                                            memcpy((char*)evt->data, (char *)&tmp, evt->pc);
+                                        }
+                                        memcpy(evt->data + evt->pc, buffer, didread);
+                                        evt->pl = evt->pc + didread;
+                                        temp->cb_evt_fn(evt);
+                                        spserial_free(evt);
+                                        didsee = 1;
+                                        break;
+                                    }
+                                    temp = temp->next;
+                                }
+                                if(!didsee) {
+                                    spllog(SPL_LOG_ERROR, "Didsee Cannot find obj in reading.");
+                                }
+                            } while(0);                            
 						}
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
                     }
