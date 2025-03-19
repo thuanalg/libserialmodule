@@ -1102,7 +1102,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 					if (isoff) {
 						break;
 					}
-					ret = poll(fds, mx_number, 10 * 1000);
+					ret = poll(fds, mx_number, 60 * 1000);
                     spllog(SPL_LOG_DEBUG, "poll,  mx_number: %d", mx_number);
 					if(ret == -1) {
 						continue;
@@ -1130,8 +1130,10 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 								lenmsg = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
 									(struct sockaddr*)&client_addr, &client_len);
 								if (lenmsg < 1) {
-									spllog(SPL_LOG_ERROR, "recvfrom, lenmsg: %d, errno: %d, text: %s.",
-										(int)lenmsg, errno, strerror(errno));
+                                    if(errno != 11) {
+									    spllog(SPL_LOG_ERROR, "mach recvfrom, lenmsg: %d, errno: %d, text: %s.",
+										    (int)lenmsg, errno, strerror(errno));
+                                    }
 									break;
 								}
 								
