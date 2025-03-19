@@ -1554,8 +1554,34 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                         ret = PSERIAL_UNIX_EPOLL_CTL;
                         break;
                     }                
-                #endif                    
-					temp->item->handle = fd;
+                #endif  
+                    do {
+                        SPSR_HASH_FD_NAME *hashobj = 0, *hashitem = 0;
+                        int hashid = 0;
+                        spserial_malloc(sizeof(SPSR_HASH_FD_NAME), hashobj, SPSR_HASH_FD_NAME);
+                        if(!hashobj) {
+                            break;
+                        }
+                        hashobj->fd = fd;
+                        memcpy(hashobj->port_name, temp->item->port_name, strlen(temp->item->port_name));
+                        hashobj->cb_evt_fn = temp->item->cb_evt_fn;
+                        hashobj->cb_obj = temp->item->cb_obj;                        
+                        hashid = SPSR_HASH_FD(fd);
+                        hashitem = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
+                        if(!hashitem) {
+                            spsr_hash_fd_arr[hashid] = (void*) hashobj;
+                        } else {
+                            SPSR_HASH_FD_NAME *temp = 0;
+                            temp = hashobj;
+                            while(!temp->next) {
+                                temp = temp->next;
+                            }
+                            temp->next = hashitem;
+                        }
+
+                    } while(0);               
+                    
+                    temp->item->handle = fd;
                     //int k = write(fd, "buffer", strlen("buffer"));
                     //spllog(0, "write: %d", k);
 					temp = temp->next;
@@ -1596,6 +1622,30 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                                 spllog(SPL_LOG_DEBUG, "EPOLL_CTL_DEL, fd: %d DONE", fd); 
                             }                        
                         #endif                           
+                            /* Close handle*/
+                            do {
+                                SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0, *prev = 0;
+                                int hashid = SPSR_HASH_FD(fd);
+                                hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hashid];
+                                if(!hashobj) {
+                                    spllog(SPL_LOG_ERROR, "Cannot find object."); 
+                                    break;
+                                }
+                                temp = hashobj;
+                                while(temp) {
+                                    if(temp->fd == fd) {
+                                        if(prev) {
+                                            prev->next = temp->next;
+                                        } else {
+                                            spsr_hash_fd_arr[hashid] = temp->next;
+                                        }
+                                        spserial_free(temp);
+                                        break;
+                                    }
+                                    prev = temp;
+                                    temp = temp->next;
+                                }
+                            } while(0);
                             /* Close handle*/
                             errr = close(fd);
                             if(errr) {
@@ -1882,9 +1932,7 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) {
         item->baudrate = p->baudrate;
         item->cb_evt_fn = p->cb_evt_fn;
         item->cb_obj = p->cb_obj;
-        
         item->t_delay = p->t_delay;
-
         node->item = item;
         //if (output) {
         //    *output = item;

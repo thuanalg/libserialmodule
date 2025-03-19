@@ -136,8 +136,8 @@ extern "C" {
 	
 	
 	typedef struct __SP_SERIAL_INFO_ST__ {
-	//	int
-	//		iidd;
+		int
+			t_delay;
 		char
 			isoff;
 		char
@@ -150,8 +150,7 @@ extern "C" {
 #ifndef UNIX_LINUX
 		void*
 			hEvent;
-		int 
-			t_delay;			
+		
 		void*
 #else
 		int
