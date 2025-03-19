@@ -1076,6 +1076,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 			}
 	
 			while (1) {
+                char chk_delay = 0;
 				/*
 				spllog(SPL_LOG_DEBUG, "spserial_wait_sem------------------------");
 				spserial_wait_sem(t->sem);
@@ -1109,6 +1110,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 					if(ret == 0) {
 						continue;
 					}
+                    chk_delay = 0;
 					for(k = 0; k < mx_number; ++k) {
                         if(fds[k].fd < 0) {
                             continue;
@@ -1179,8 +1181,11 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							int didread = 0;
 							int comfd = fds[k].fd;
 							memset(buffer, 0, sizeof(buffer));
-                            nap_time.tv_nsec = 50 * SPSR_MILLION;
-                            nanosleep(&nap_time, 0);                            
+                            if(!chk_delay) {
+                                nap_time.tv_nsec = 50 * SPSR_MILLION;
+                                nanosleep(&nap_time, 0);       
+                                chk_delay = 1;
+                            }                     
 							while(1) {
 								nr = (int)read(comfd, buffer + didread, sizeof(buffer) - didread -1);
 								if(nr == -1) {
@@ -1270,6 +1275,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 						break;
 					}					
 					//spllog(SPL_LOG_DEBUG, "epoll_wait------------------------");
+                    chk_delay = 0;
                     int nfds = epoll_wait(epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
 					//spllog(SPL_LOG_DEBUG, "epoll_wait------------------------, nfds: %d", nfds);
                     for (i = 0; i < nfds; i++) 
@@ -1287,8 +1293,10 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 								lenmsg = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
 									(struct sockaddr*)&client_addr, &client_len);
 								if (lenmsg < 1) {
-									spllog(SPL_LOG_ERROR, "epoll_ctl, lenmsg: %d, errno: %d, text: %s.",
-										(int)lenmsg, errno, strerror(errno));
+                                    if(errno != 11) {
+									    spllog(SPL_LOG_ERROR, "epoll_ctl, lenmsg: %d, errno: %d, text: %s.",
+										    (int)lenmsg, errno, strerror(errno));
+                                    }
 									break;
 								}
 								
@@ -1335,8 +1343,10 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							int didread = 0;
 							int comfd = events[i].data.fd;
 							memset(buffer, 0, sizeof(buffer));
-                            nap_time.tv_nsec = 50 * SPSR_MILLION;
-                            nanosleep(&nap_time, 0);
+                            if(!chk_delay) {
+                                nap_time.tv_nsec = 50 * SPSR_MILLION;
+                                nanosleep(&nap_time, 0);
+                            }
 							while(1) {
 								nr = (int)read(comfd, buffer + didread, sizeof(buffer) - didread -1);
 								if(nr == -1) {
@@ -1355,6 +1365,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
                                     spllog(SPL_LOG_ERROR, "Cannot find obj in reading.");
                                     break;
                                 }
+                                spllog(SPL_LOG_DEBUG, "Found obj in reading fd: %d, id: %d.", comfd, hasdid);
                                 temp = hashobj;
                                 while(temp)  {
                                     if(temp->fd == comfd) {
