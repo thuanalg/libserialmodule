@@ -1752,6 +1752,7 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                                         } else {
                                             spsr_hash_fd_arr[hashid] = temp->next;
                                         }
+                                        spllog(SPL_LOG_DEBUG, "--------------Clear from spsr_hash_fd_arr, hashid:%d, fd: %d.", hashid, fd); 
                                         spserial_free(temp);
                                         break;
                                     }
@@ -2148,3 +2149,4 @@ int spsr_clear_all() {
 #ifndef __SPSR_EPOLL__
 #else
 #endif
+//TODO: clean hash array
