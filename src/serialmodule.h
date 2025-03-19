@@ -128,10 +128,10 @@ extern "C" {
 			cb_evt_fn;
 		void* 
 			cb_obj;
-#ifndef UNIX_LINUX
+
 		int 
 			t_delay;
-#endif
+
 	} SP_SERIAL_INPUT_ST;
 	
 	

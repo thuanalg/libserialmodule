@@ -988,6 +988,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 #define SPSR_SIZE_TRIGGER           2
 #define SPSR_SIZE_MAX_EVENTS        10
 #define SPSR_MSG_OFF        		"SPSR_MSG_OFF"
+#define SPSR_MILLION        		1000000
     void* spsr_init_trigger_routine(void* obj) {
         spsr_init_trigger(obj);
         return 0;
@@ -1008,6 +1009,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
         int k  = 0;
 		ssize_t lenmsg = 0;
         socklen_t client_len = sizeof(client_addr);
+        struct timespec nap_time = {0};
 
 #ifndef __SPSR_EPOLL__
     int n = 0;
@@ -1280,6 +1282,8 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							int didread = 0;
 							int comfd = events[i].data.fd;
 							memset(buffer, 0, sizeof(buffer));
+                            nap_time.tv_nsec = 50 * SPSR_MILLION;
+                            nanosleep(&nap_time, 0);
 							while(1) {
 								nr = (int)read(comfd, buffer + didread, sizeof(buffer) - didread -1);
 								if(nr == -1) {
@@ -1878,9 +1882,9 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) {
         item->baudrate = p->baudrate;
         item->cb_evt_fn = p->cb_evt_fn;
         item->cb_obj = p->cb_obj;
-    #ifndef UNIX_LINUX        
+        
         item->t_delay = p->t_delay;
-    #endif
+
         node->item = item;
         //if (output) {
         //    *output = item;
