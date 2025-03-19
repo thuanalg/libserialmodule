@@ -107,14 +107,25 @@ static void*
     spsr_init_cartridge_routine(void*);
 static int
     spsr_send_cmd(int cmd, char *portname, void* data, int lendata);
+    
+#define SPSR_MAX_NUMBER_OF_PORT     10
+
+static void *spsr_hash_fd_arr[SPSR_MAX_NUMBER_OF_PORT];
+//static void *spsr_hash_name_arr[SPSR_MAX_NUMBER_OF_PORT];
+
+
+typedef struct __SPSR_HASH_FD_NAME__ {
+    int fd;
+    char port_name[SPSERIAL_PORT_LEN];
+    SPSERIAL_module_cb cb_evt_fn;
+    void* cb_obj;    
+    struct __SPSR_HASH_FD_NAME__ *next;
+} SPSR_HASH_FD_NAME;
+#define SPSR_HASH_FD(__fd__)    (__fd__%SPSR_MAX_NUMBER_OF_PORT)
 #endif
-
-
 
 static int
     spserial_verify_info(SP_SERIAL_INPUT_ST* obj);
-
-
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* Group of sync tool. */
@@ -252,7 +263,7 @@ int spserial_module_openport(void* obj) {
 
         // Enable hardware flow control (RTS/CTS)
         dcbSerialParams.fOutxCtsFlow = TRUE;    // Enable CTS output flow control
-        dcbSerialParams.fCtsHandshake = TRUE;   // Enable CTS handshake
+        //dcbSerialParams.fCtsHandshake = TRUE;   // Enable CTS handshake
         dcbSerialParams.fOutxDsrFlow = FALSE;   // Disable DSR output flow control
         dcbSerialParams.fDsrSensitivity = FALSE;// DSR sensitivity disabled
         dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE; // Enable DTR
@@ -525,6 +536,9 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                     DWORD readErr = GetLastError();
                     if (readErr == ERROR_IO_PENDING) {
                         bytesRead = 0;
+                        if(p->t_delay > 0) {
+                            Sleep(p->t_delay);
+                        }
                         WaitForSingleObject(p->hEvent, INFINITE);
                         rs1 = GetOverlappedResult(p->handle, &olReadWrite, &bytesRead, 1);
                         if (rs1) {
@@ -974,6 +988,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 #define SPSR_SIZE_TRIGGER           2
 #define SPSR_SIZE_MAX_EVENTS        10
 #define SPSR_MSG_OFF        		"SPSR_MSG_OFF"
+#define SPSR_MILLION        		1000000
     void* spsr_init_trigger_routine(void* obj) {
         spsr_init_trigger(obj);
         return 0;
@@ -994,6 +1009,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
         int k  = 0;
 		ssize_t lenmsg = 0;
         socklen_t client_len = sizeof(client_addr);
+        struct timespec nap_time = {0};
 
 #ifndef __SPSR_EPOLL__
     int n = 0;
@@ -1245,9 +1261,6 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 								    			if(lp > SPSERIAL_BUFFER_SIZE) {
 								    				p = realloc(p, lp);
 								    			}
-								    			/*
-								    			spserial_malloc(lp, p, char);
-								    			*/
 								    			if(!p) {
 								    				break;
 								    			}
@@ -1269,6 +1282,8 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							int didread = 0;
 							int comfd = events[i].data.fd;
 							memset(buffer, 0, sizeof(buffer));
+                            nap_time.tv_nsec = 50 * SPSR_MILLION;
+                            nanosleep(&nap_time, 0);
 							while(1) {
 								nr = (int)read(comfd, buffer + didread, sizeof(buffer) - didread -1);
 								if(nr == -1) {
@@ -1278,9 +1293,6 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							}
 							buffer[didread] = 0;
 							spllog(0, "------------>>> data read didread: %d: %s", didread, buffer);
-							//buffer[nr] = 0;
-                            //nr = write(comfd, buffer, didread);
-                            //spllog(0, "------------>>> data read didwrite: %d: %s", nr, buffer);
 						}
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
                     }
@@ -1870,6 +1882,9 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) {
         item->baudrate = p->baudrate;
         item->cb_evt_fn = p->cb_evt_fn;
         item->cb_obj = p->cb_obj;
+        
+        item->t_delay = p->t_delay;
+
         node->item = item;
         //if (output) {
         //    *output = item;

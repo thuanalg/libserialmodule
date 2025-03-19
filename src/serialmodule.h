@@ -126,7 +126,12 @@ extern "C" {
 			port_name[SPSERIAL_PORT_LEN];
 		SPSERIAL_module_cb
 			cb_evt_fn;
-		void* cb_obj;
+		void* 
+			cb_obj;
+
+		int 
+			t_delay;
+
 	} SP_SERIAL_INPUT_ST;
 	
 	
@@ -145,6 +150,8 @@ extern "C" {
 #ifndef UNIX_LINUX
 		void*
 			hEvent;
+		int 
+			t_delay;			
 		void*
 #else
 		int
@@ -164,6 +171,7 @@ extern "C" {
 		void* cb_obj;
 		SP_SERIAL_GENERIC_ST*
 			buff;
+
 	} SP_SERIAL_INFO_ST;
 
 	

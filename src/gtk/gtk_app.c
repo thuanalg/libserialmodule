@@ -7,14 +7,15 @@ int is_master = 0;
 int baudrate = 0;
 char is_port[32];
 char cfgpath[1024];
-int myusleep = 1000;
+int myusleep = 0;
 
 #define __ISMASTER__				"--is_master="
 #define __ISPORT__					"--is_port="
 #define __ISCFG__					"--is_cfg="
 #define __ISBAUDRATE__				"--is_baudrate="
 #define __IS_USLEEP__				"--is_usleep="
-
+static int spsr_call_back_read(void *data);
+static gboolean update_ui(gpointer data);
 GtkWidget *entries[7];
 void *arr_obj[10];
 
@@ -38,6 +39,9 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
 	snprintf(obj->port_name, SPSERIAL_PORT_LEN, "%s", portname);
 	/*obj.baudrate = 115200;*/
 	obj->baudrate = baudrate; 
+    obj->cb_evt_fn = spsr_call_back_read;
+    obj->cb_obj = 0;
+    
     spllog(0, "baudrate:=========================++++++++++++> %d, portname: %s", 
         obj->baudrate, obj->port_name);
     ret = spsr_inst_open(obj);
@@ -60,13 +64,16 @@ void on_button_clicked_02(GtkWidget *widget, gpointer data) {
     spllog(0, "Button %s clicked, portname: %s, data: %s!\n", (char *)data, portname, datawrtite);
     //ret = spserial_inst_del((char*)portname);
     n = strlen(datawrtite);
-
-    //for(i = 0; i < n; ++i) 
-    //{
-    //    ret = spsr_inst_write(portname, datawrtite + i, 1);
-    //    usleep(myusleep);
-    //}
-    ret = spsr_inst_write(portname, datawrtite, n);
+    if(myusleep > 0) {
+        for(i = 0; i < n; ++i) 
+        {
+            ret = spsr_inst_write(portname, datawrtite + i, 1);
+            usleep(myusleep);
+        }
+    } 
+    else {
+        ret = spsr_inst_write(portname, datawrtite, n);
+    }
 
     spllog(0, "ret %d!\n", ret);
 }
@@ -168,4 +175,14 @@ int main(int argc, char *argv[]) {
     spl_finish_log();
     return 0;
 }
+gboolean update_ui(void* data) {
+    //gtk_label_set_text(GTK_LABEL(label), "Updated from worker thread!");
+    //Run in main thread
+    return FALSE;  
+}
 
+int spsr_call_back_read(void *data) {
+    //Access main thread
+    g_idle_add(update_ui, data);
+    return 0;
+}
