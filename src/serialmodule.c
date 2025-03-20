@@ -122,6 +122,8 @@ typedef struct __SPSR_HASH_FD_NAME__ {
     struct __SPSR_HASH_FD_NAME__ *next;
 } SPSR_HASH_FD_NAME;
 #define SPSR_HASH_FD(__fd__)    (__fd__%SPSR_MAX_NUMBER_OF_PORT)
+//static int spsr_hash_port(char* port, int len);
+static int spsr_clear_hash();
 #endif
 
 static int
@@ -227,13 +229,8 @@ int spserial_module_openport(void* obj) {
         }
 
         /*Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation*/
-        hSerial = CreateFile(p->port_name,                 
-                            GENERIC_READ | GENERIC_WRITE,
-                            0,                          
-                            0,                          
-                            OPEN_EXISTING,              
-                            FILE_FLAG_OVERLAPPED,       
-                            0);                         
+        hSerial = CreateFile(p->port_name, GENERIC_READ | GENERIC_WRITE,
+                            0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);                         
 
          if (hSerial == INVALID_HANDLE_VALUE) {
              DWORD dwError = GetLastError();
@@ -1170,10 +1167,19 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 								    		}
 								    	}
 								    } while (0);
-                                    ret = spserial_fetch_commands(fds, &mx_number, p, lp);
+                                    
+                                    /*ret = spserial_fetch_commands(fds, &mx_number, p, lp);*/
+
 								spserial_mutex_unlock(t->mutex);	
+
 								spllog(0, "lppppppppppppppppppppppppppp: %d", lp);
-								
+                                
+								spserial_mutex_lock(t->mutex);
+                                    /*do {*/
+                                    ret = spserial_fetch_commands(fds, &mx_number, p, lp);
+                                    /*} while(0);*/
+                                spserial_mutex_unlock(t->mutex);	
+
 								spserial_free(p);
 							}							
 							continue;
@@ -1421,6 +1427,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
              spsr_clear_all();
         /*} while (0);*/
         spserial_mutex_unlock(t->mutex);
+        spsr_clear_hash();
 		if(sockfd > 0) {
 			ret = close(sockfd);
 			if (ret) {
@@ -2137,6 +2144,41 @@ int spsr_clear_all() {
     return ret;
 }
 
+
+#ifndef UNIX_LINUX
+#else
+//int spsr_hash_port(char *port, int len) {
+//    int ret = 0;
+//    int *p = 0;
+//    if(len >= sizeof(int)) {
+//        p = (int*) port + (len - sizeof(int));
+//    }
+//    else {
+//        p = (int*) port;
+//    }
+//    ret = (*p) % SPSR_MAX_NUMBER_OF_PORT;
+//    return ret;
+//}
+int spsr_clear_hash() {
+    int ret = 0;
+    int i = 0;
+    SPSR_HASH_FD_NAME *tmp = 0, *obj = 0;
+    for(i = 0; i < SPSR_MAX_NUMBER_OF_PORT; ++i){
+        obj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[i];
+        if(!obj) {
+            continue;
+        }
+        while(obj) {
+            tmp = obj;
+            obj = obj->next;
+            spllog(0, "fd: %d, name: %s", tmp->fd, tmp->port_name);
+            spserial_free(tmp);
+        }
+        spsr_hash_fd_arr[i] = 0;
+    }
+    return ret;
+}
+#endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
