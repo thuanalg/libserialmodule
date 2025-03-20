@@ -1168,11 +1168,10 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 								    		}
 								    	}
 								    } while (0);
-                                    
-                                    ret = spserial_fetch_commands(fds, &mx_number, p, lp);
 
 								spserial_mutex_unlock(t->mutex);	
 
+                                ret = spserial_fetch_commands(fds, &mx_number, p, lp);
 								spllog(0, "lppppppppppppppppppppppppppp: %d", lp);
                 
 								spserial_free(p);
@@ -1332,9 +1331,11 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 								    		}
 								    	}
 								    } while (0);
-                                    ret = spserial_fetch_commands(epollfd, p, lp);
+                                    
 								spserial_mutex_unlock(t->mutex);	
-								
+
+								ret = spserial_fetch_commands(epollfd, p, lp);
+                                
 								spserial_free(p);
 							}
 							continue;
@@ -1586,6 +1587,7 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
             step += item->total;
 			spllog(0, "-------------------------------------------------------------------CMD: %d", item->type);
 			if(item->type == SPSR_CMD_ADD) {
+                spserial_mutex_lock(t->mutex);
                 do {                   
 				    temp = t->init_node;
 				    spllog(0, "-------------------------------------------------------------------CMD_ADD");
@@ -1655,150 +1657,156 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
 				    	temp = temp->next;
 				    }
                 } while(0);
-
+                spserial_mutex_unlock(t->mutex);
                 continue;
 			}
             if(item->type == SPSR_CMD_REM) {
                 char *portname = 0;
                 portname = item->data;
-                temp = t->init_node;
-                spllog(0, "----------------SPSR_CMD_REM-------------------pl: %d, portname: %s, total: %d, initnode: 0x%p", 
-                    item->pl, portname, item->total, temp);                
-                while(temp) {
-                    spllog(0, "portname: %s", temp->item->port_name);
-                    if( strcmp(temp->item->port_name, portname) == 0) {
-                        if(temp->item->handle >= 0) {
-                            int fd = temp->item->handle;
-                            int errr = 0;
-                            spllog(0, ">>>>>>>>>>>>>>--handle: %d", fd);
-                            /* Remove fd out of epoll*/
-                        #ifndef __SPSR_EPOLL__
-                           for(i = 1; i < *prange; ++i) {
-                                if(fds[i].fd == fd) {
-                                    int j = 0;
-                                    for(j = i; j < (*prange -1); ++j) {
-                                        fds[j].fd = fds[j+1].fd;
-                                    }
-                                    fds[(*prange -1)].fd = -1;
-                                    (*prange)--;
-                                    break;
-                                }
-                            }                           
-                        #else
-                            errr = epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, 0);
-                            if(errr == -1) {
-                                spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
-                            } else {
-                                spllog(SPL_LOG_DEBUG, "EPOLL_CTL_DEL, fd: %d DONE", fd); 
-                            }                        
-                        #endif                           
-                            /* Close handle*/
-                            do {
-                                SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0, *prev = 0;
-                                int hashid = SPSR_HASH_FD(fd);
-                                hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hashid];
-                                if(!hashobj) {
-                                    spllog(SPL_LOG_ERROR, "Cannot find object."); 
-                                    break;
-                                }
-                                temp = hashobj;
-                                while(temp) {
-                                    if(temp->fd == fd) {
-                                        if(prev) {
-                                            prev->next = temp->next;
-                                        } else {
-                                            spsr_hash_fd_arr[hashid] = temp->next;
+                spserial_mutex_lock(t->mutex);
+                do {
+                    temp = t->init_node;
+                    spllog(0, "----------------SPSR_CMD_REM-------------------pl: %d, portname: %s, total: %d, initnode: 0x%p", 
+                        item->pl, portname, item->total, temp);                
+                    while(temp) 
+                    {
+                        spllog(0, "portname: %s", temp->item->port_name);
+                        if( strcmp(temp->item->port_name, portname) == 0) {
+                            if(temp->item->handle >= 0) {
+                                int fd = temp->item->handle;
+                                int errr = 0;
+                                spllog(0, ">>>>>>>>>>>>>>--handle: %d", fd);
+                                /* Remove fd out of epoll*/
+                            #ifndef __SPSR_EPOLL__
+                               for(i = 1; i < *prange; ++i) {
+                                    if(fds[i].fd == fd) {
+                                        int j = 0;
+                                        for(j = i; j < (*prange -1); ++j) {
+                                            fds[j].fd = fds[j+1].fd;
                                         }
-                                        spllog(SPL_LOG_DEBUG, "--------------Clear from spsr_hash_fd_arr, hashid:%d, fd: %d.", hashid, fd); 
-                                        spserial_free(temp);
+                                        fds[(*prange -1)].fd = -1;
+                                        (*prange)--;
+                                        spllog(SPL_LOG_DEBUG, "EPOLL_CTL_DEL, fd: %d DONE", fd); 
                                         break;
                                     }
-                                    prev = temp;
-                                    temp = temp->next;
-                                }
-                            } while(0);
-                            /* Close handle*/
-                            errr = close(fd);
-                            if(errr) {
-                                spllog(SPL_LOG_ERROR, "close error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
-                            } else {
-                                spllog(SPL_LOG_DEBUG, "close, fd: %d, DONE", fd); 
-                            }
-                            /* Remove out of root list*/
-                            if(t->count < 2) {
-                                t->init_node = 0;
-                                t->last_node = 0;
-                            }
-                            else {
-                                if(prev){
-                                    prev->next = temp->next;
-                                    if(!prev->next) {
-                                        t->last_node = prev;
-                                    }
+                                }                           
+                            #else
+                                errr = epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, 0);
+                                if(errr == -1) {
+                                    spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
                                 } else {
-                                    t->init_node = temp->next;
+                                    spllog(SPL_LOG_DEBUG, "EPOLL_CTL_DEL, fd: %d DONE", fd); 
+                                }                        
+                            #endif                           
+                                /* Close handle*/
+                                do {
+                                    SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0, *prev = 0;
+                                    int hashid = SPSR_HASH_FD(fd);
+                                    hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hashid];
+                                    if(!hashobj) {
+                                        spllog(SPL_LOG_ERROR, "Cannot find object."); 
+                                        break;
+                                    }
+                                    temp = hashobj;
+                                    while(temp) {
+                                        if(temp->fd == fd) {
+                                            if(prev) {
+                                                prev->next = temp->next;
+                                            } else {
+                                                spsr_hash_fd_arr[hashid] = temp->next;
+                                            }
+                                            spllog(SPL_LOG_DEBUG, "--------------Clear from spsr_hash_fd_arr, hashid:%d, fd: %d.", hashid, fd); 
+                                            spserial_free(temp);
+                                            break;
+                                        }
+                                        prev = temp;
+                                        temp = temp->next;
+                                    }
+                                } while(0);
+                                /* Close handle*/
+                                errr = close(fd);
+                                if(errr) {
+                                    spllog(SPL_LOG_ERROR, "close error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
+                                } else {
+                                    spllog(SPL_LOG_DEBUG, "close, fd: %d, DONE", fd); 
                                 }
+                                /* Remove out of root list*/
+                                if(t->count < 2) {
+                                    t->init_node = 0;
+                                    t->last_node = 0;
+                                }
+                                else {
+                                    if(prev){
+                                        prev->next = temp->next;
+                                        if(!prev->next) {
+                                            t->last_node = prev;
+                                        }
+                                    } else {
+                                        t->init_node = temp->next;
+                                    }
+                                }
+                                spserial_free(temp->item);
+                                spserial_free(temp);
+                                t->count--;
+                                spllog(SPL_LOG_DEBUG, "t->count: %d", t->count); 
                             }
-                            spserial_free(temp->item);
-                            spserial_free(temp);
-                            t->count--;
-                            spllog(SPL_LOG_DEBUG, "t->count: %d", t->count); 
+                            break;
                         }
-                        break;
-                    }
-                    prev = temp;
-                    temp = temp->next;
-                } 
+                        prev = temp;
+                        temp = temp->next;
+                    } 
+                } while(0);
+                spserial_mutex_unlock(t->mutex);
                 continue;
             }
             if(item->type == SPSR_CMD_WRITE) {
                 char *portname = 0;
+                fd = -1;
                 portname = item->data;
-                temp = t->init_node;
-                spllog(0, "----------------SPSR_CMD_WRITE-------------------pl: %d, portname: %s, total: %d, initnode: 0x%p", 
-                    item->pl, portname, item->total, temp);   
-                while(temp) {
-                    spllog(0, "portname: %s", temp->item->port_name);
-                    if( strcmp(temp->item->port_name, portname) == 0) {
-                        if(temp->item->handle >= 0) {
-                            //int j = 0;
-                            int nwrote = 0, wlen = 0;;
-                            int fd = temp->item->handle;
-                            char *p = 0;
-                            p = item->data + item->pc;
-                            wlen = item->pl - item->pc;
-                            if (tcflush(fd, TCIOFLUSH) == -1) {
-                                spllog(SPL_LOG_ERROR, "Error flushing the serial port buffer");
-                                //close(fd);
-                                //return 1;
-                            } else {
-                                spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
-                            }                               
-                            //for(j = 0; j < wlen; ++j) {
-                                nwrote = write(fd, p, wlen);
-                                if(nwrote < 0) {
-                                    spllog(SPL_LOG_ERROR, "write error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
-                                } else {
-                                    spllog(SPL_LOG_DEBUG, "write DONE, fd: %d, nwrote: %d, p: %s, wlen: %d.", 
-                                        fd, nwrote, p, wlen); 
-                                }
-                                //usleep(100000);
-                                //sleep(1);
-                                if (tcdrain(fd) == -1) {
-                                    spllog(SPL_LOG_ERROR, "Error flushing the serial port buffer");
-                                    //close(fd);
-                                    //return 1;
-                                } else {
-                                    spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
-                                }
-                            //}
-
-                         
+                spserial_mutex_lock(t->mutex);
+                do {
+                    temp = t->init_node;                
+                    spllog(0, "----------------SPSR_CMD_WRITE-------------------pl: %d, portname: %s, total: %d, initnode: 0x%p", 
+                        item->pl, portname, item->total, temp);   
+                    while(temp) {
+                        spllog(0, "portname: %s", temp->item->port_name);
+                        if( strcmp(temp->item->port_name, portname) == 0) {
+                            if(temp->item->handle >= 0) {
+                                fd = temp->item->handle;                    
+                            }
+                            break;
                         }
-                        break;
+                        temp = temp->next;
+                    }  
+                } while(0);
+                spserial_mutex_unlock(t->mutex);
+
+                if(fd >= 0) {
+                    int nwrote = 0, wlen = 0;;         
+                    char *p = 0;
+                    p = item->data + item->pc;
+                    wlen = item->pl - item->pc;
+                    if (tcflush(fd, TCIOFLUSH) == -1) {
+                        spllog(SPL_LOG_ERROR, "Error flushing the serial port buffer");
+                    } else {
+                        spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
+                    }                               
+
+                    nwrote = write(fd, p, wlen);
+                    if(nwrote < 0) {
+                        spllog(SPL_LOG_ERROR, "write error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
+                    } else {
+                        spllog(SPL_LOG_DEBUG, "write DONE, fd: %d, nwrote: %d, p: %s, wlen: %d.", 
+                            fd, nwrote, p, wlen); 
                     }
-                    temp = temp->next;
-                }                
+
+                    if (tcdrain(fd) == -1) {
+                        spllog(SPL_LOG_ERROR, "Error flushing the serial port buffer");
+
+                    } else {
+                        spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
+                    }
+                }
                 continue;
             }
 			if(ret) {
