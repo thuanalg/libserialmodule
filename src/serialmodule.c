@@ -146,7 +146,8 @@ static int
     spserial_rel_sem(void* sem);
 static int
     spserial_wait_sem(void* sem);
-
+static int 
+	spsr_invoke_cb(SPSERIAL_module_cb fn_cb, void *obj, char *data, int len);
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int spsr_inst_open(SP_SERIAL_INPUT_ST *p)
@@ -572,6 +573,7 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                     readBuffer, cbInQue, bytesRead);
                 if (p->cb_evt_fn) 
                 {
+                    //ret = spsr_invoke_cb(p->cb_evt_fn, p->cb_obj, readBuffer, bytesRead);
                     int nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + bytesRead + sizeof(void*);
                     SP_SERIAL_GENERIC_ST* evt = 0;
                     spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);
@@ -2120,6 +2122,8 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
                 break;
             }
 
+            //ret = spsr_invoke_cb(temp->cb_evt_fn, temp->cb_obj, buffer, didread);
+
             nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + didread + sizeof(void*);
 
             spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);  
@@ -2151,6 +2155,37 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
     return ret;
 }
 #endif
+int spsr_invoke_cb(SPSERIAL_module_cb fn_cb, void *obj, char *data, int len) {
+	int ret = 0;
+    SP_SERIAL_GENERIC_ST* evt = 0;
+    int n = 0;
+	do {
+		n = 1 + sizeof(SP_SERIAL_GENERIC_ST) + len + sizeof(void*);
+        spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
+        if (!evt) {
+            spllog(SPL_LOG_ERROR, "spserial_malloc, SPSERIAL_MEM_NULL.");
+            ret = SPSERIAL_MEM_NULL;
+            break;
+        }
+        evt->total = n;
+        evt->type = SPSERIAL_EVENT_READ_BUF;
+
+        evt->pc = sizeof(void*);
+        if (sizeof(void*) == 4) {
+            unsigned int tmp = (unsigned int)obj;
+            memcpy((char*)evt->data, (char*)&tmp, evt->pc);
+        }
+        else  if (sizeof(void*) == 8) {
+            unsigned long long int tmp = (unsigned long long int)obj;
+            memcpy((char*)evt->data, (char*)&tmp, evt->pc);
+        }
+        memcpy(evt->data + evt->pc, data, len);
+        evt->pl = evt->pc + len;
+        fn_cb(evt);
+        spserial_free(evt);
+	} while(0);
+	return ret;
+}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
