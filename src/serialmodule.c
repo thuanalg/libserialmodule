@@ -1301,7 +1301,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 				ret = PSERIAL_CLOSE_SOCK;
             }
             else {
-                spllog(SPL_LOG_DEBUG, "close socket done.");
+                spllog(SPL_LOG_DEBUG, "close socket done: %d", sockfd);
             }
 		}
 #ifndef __SPSR_EPOLL__
@@ -1419,7 +1419,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
                 ret = PSERIAL_CLOSE_SOCK;
             }
             else {
-                spllog(SPL_LOG_DEBUG, "close socket done.");
+                spllog(SPL_LOG_DEBUG, "----------close socket done: %d.", sockfd);
             }
 			/* Clean linked list. TODO 2.*/
             spserial_rel_sem(t->sem_spsr);
@@ -1791,11 +1791,6 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) {
     int fd = 0;
 #endif
     do {
-        //spllog(SPL_LOG_DEBUG, "spserial_verify_info:");
-        //if (!output) {
-        //    ret = SPSERIAL_OUTPUT_NULL;
-        //    break;
-        //}
         spllog(SPL_LOG_DEBUG, "spserial_verify_info:");
         if (!p) {
             ret = SPSERIAL_PORT_INPUT_NULL;
@@ -2151,9 +2146,7 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
             spserial_free(evt);            
 
         } while(0);
-        //buffer[nr] = 0;
-        //nr = write(comfd, buffer, didread);
-        //spllog(0, "------------>>> data read didwrite: %d: %s", nr, buffer);
+
     } while(0); 
     return ret;
 }
