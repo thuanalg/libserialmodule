@@ -2171,11 +2171,19 @@ int spsr_invoke_cb(SPSERIAL_module_cb fn_cb, void *obj, char *data, int len) {
         evt->type = SPSERIAL_EVENT_READ_BUF;
 
         evt->pc = sizeof(void*);
-        if (sizeof(void*) == 4) {
+        if (sizeof(void*) == sizeof(unsigned int)) {
+            //unsigned int* pt = (unsigned int*) evt->data;
+            //unsigned int tmp = (unsigned int)obj;
+            //*pt = tmp;
+
             unsigned int tmp = (unsigned int)obj;
             memcpy((char*)evt->data, (char*)&tmp, evt->pc);
         }
-        else  if (sizeof(void*) == 8) {
+        else  if (sizeof(void*) == sizeof(unsigned long long int)) {
+            //unsigned long long int* pt = (unsigned long long int*) evt->data;
+            //unsigned long long int tmp = (unsigned long long int)obj;
+            //*pt = tmp;
+
             unsigned long long int tmp = (unsigned long long int)obj;
             memcpy((char*)evt->data, (char*)&tmp, evt->pc);
         }
