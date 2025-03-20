@@ -120,6 +120,7 @@ typedef struct __SPSR_HASH_FD_NAME__ {
     SPSERIAL_module_cb cb_evt_fn;
     void* cb_obj;    
     struct __SPSR_HASH_FD_NAME__ *next;
+    int t_delay;
 } SPSR_HASH_FD_NAME;
 #define SPSR_HASH_FD(__fd__)    (__fd__%SPSR_MAX_NUMBER_OF_PORT)
 //static int spsr_hash_port(char* port, int len);
@@ -1508,7 +1509,8 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                             hashobj->fd = fd;
                             memcpy(hashobj->port_name, temp->item->port_name, strlen(temp->item->port_name));
                             hashobj->cb_evt_fn = temp->item->cb_evt_fn;
-                            hashobj->cb_obj = temp->item->cb_obj;                        
+                            hashobj->cb_obj = temp->item->cb_obj; 
+                            hashobj->t_delay = temp->item-> t_delay;                      
                             hashid = SPSR_HASH_FD(fd);
                             hashitem = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
                             if(!hashitem) {
@@ -2071,26 +2073,13 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
     int comfd = fd;   
     struct timespec nap_time = {0};
     spllog(0, "------------>>> fd: %d", fd);
+    SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0;
+    SP_SERIAL_GENERIC_ST* evt = 0;
     do {
-        memset(buffer, 0, n);
-        if(!chk_delay[0]) {
-            nap_time.tv_nsec = 50 * SPSR_MILLION;
-            nanosleep(&nap_time, 0);       
-            chk_delay[0] = 1;
-        }                     
-        //while(1) {
-            didread = (int)read(comfd, buffer, n -1);
-            if(didread < 1) {
-                spllog(SPL_LOG_ERROR, "read error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-                break;
-            }
-        //}
-        buffer[didread] = 0;
-        spllog(0, "------------>>> data read didread: %d: %s, fd: %d", didread, buffer, fd);
         do {
-            SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0;
+            int nnnn = 0;
             int hasdid = SPSR_HASH_FD(comfd);
-            char didsee = 0; 
+            
             hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hasdid];
             if(!hashobj) {
                 spllog(SPL_LOG_ERROR, "Cannot find obj in reading.");
@@ -2100,45 +2089,63 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
             temp = hashobj;
             while(temp)  {
                 if(temp->fd == comfd) {
-                    int nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + didread + sizeof(void*);
-                    SP_SERIAL_GENERIC_ST* evt = 0;
-                                                          
-                    if(!temp->cb_evt_fn) {
-                        spllog(SPL_LOG_DEBUG, "cb_evt_fn, SPSERIAL_MEM_NULL.");
-                        break;
-                    }
-                    spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);  
-                    if(!evt) {
-                        spllog(SPL_LOG_ERROR, "spserial_malloc, SPSERIAL_MEM_NULL.");
-                        ret = SPSERIAL_MEM_NULL;
-                        break;
-                    }
-                    evt->total = nnnn;
-                    evt->type = SPSERIAL_EVENT_READ_BUF;
-                    
-                    evt->pc = sizeof(void*);
-                    if (sizeof(void*) == 4) {
-                        unsigned int tmp = (unsigned int)temp->cb_obj;
-                        memcpy((char*)evt->data, (char*)&tmp, evt->pc);
-                    }
-                    else  if (sizeof(void*) == 8) {
-                        unsigned long long int tmp = (unsigned long long int)temp->cb_obj;
-                        memcpy((char*)evt->data, (char *)&tmp, evt->pc);
-                    }
-                    memcpy(evt->data + evt->pc, buffer, didread);
-                    evt->pl = evt->pc + didread;
-                    temp->cb_evt_fn(evt);
-                    spserial_free(evt);
-                    didsee = 1;
                     break;
                 }
                 temp = temp->next;
             }
-            if(!didsee) {
+
+            /*-+-+ -+-+ -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+            memset(buffer, 0, n);
+            if(!chk_delay[0]) {
+                nap_time.tv_nsec = temp->t_delay * SPSR_MILLION;
+                nanosleep(&nap_time, 0);       
+                chk_delay[0] = 1;
+            }                     
+            //while(1) {
+                didread = (int)read(comfd, buffer, n -1);
+                if(didread < 1) {
+                    spllog(SPL_LOG_ERROR, "read error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+                    break;
+                }
+            //}
+            buffer[didread] = 0;
+            spllog(0, "------------>>> data read didread: %d: %s, fd: %d", didread, buffer, fd);        
+  
+            if(!temp) {
                 ret = PSERIAL_HASH_NOTFOUND;
-                spllog(SPL_LOG_ERROR, "Didsee Cannot find obj in reading.");
+                spllog(SPL_LOG_ERROR, "Didsee Cannot find obj in reading.");                
+                break;
+            }  
+            if(!temp->cb_evt_fn) {
+                spllog(SPL_LOG_DEBUG, "cb_evt_fn, SPSERIAL_MEM_NULL.");
                 break;
             }
+
+            nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + didread + sizeof(void*);
+
+            spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);  
+            if(!evt) {
+                spllog(SPL_LOG_ERROR, "spserial_malloc, SPSERIAL_MEM_NULL.");
+                ret = SPSERIAL_MEM_NULL;
+                break;
+            }
+            evt->total = nnnn;
+            evt->type = SPSERIAL_EVENT_READ_BUF;
+            
+            evt->pc = sizeof(void*);
+            if (sizeof(void*) == 4) {
+                unsigned int tmp = (unsigned int)temp->cb_obj;
+                memcpy((char*)evt->data, (char*)&tmp, evt->pc);
+            }
+            else  if (sizeof(void*) == 8) {
+                unsigned long long int tmp = (unsigned long long int)temp->cb_obj;
+                memcpy((char*)evt->data, (char *)&tmp, evt->pc);
+            }
+            memcpy(evt->data + evt->pc, buffer, didread);
+            evt->pl = evt->pc + didread;
+            temp->cb_evt_fn(evt);
+            spserial_free(evt);            
+
         } while(0);
         //buffer[nr] = 0;
         //nr = write(comfd, buffer, didread);
