@@ -2075,6 +2075,7 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
     spllog(0, "------------>>> fd: %d", fd);
     SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0;
     SP_SERIAL_GENERIC_ST* evt = 0;
+    int t_wait = 0;
     do {
         do {
             int nnnn = 0;
@@ -2089,6 +2090,7 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
             temp = hashobj;
             while(temp)  {
                 if(temp->fd == comfd) {
+                    t_wait = temp->t_delay;
                     break;
                 }
                 temp = temp->next;
@@ -2097,7 +2099,7 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
             /*-+-+ -+-+ -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
             memset(buffer, 0, n);
             if(!chk_delay[0]) {
-                nap_time.tv_nsec = temp->t_delay * SPSR_MILLION;
+                nap_time.tv_nsec = t_wait * SPSR_MILLION;
                 nanosleep(&nap_time, 0);       
                 chk_delay[0] = 1;
             }                     
@@ -2109,7 +2111,9 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
                 }
             //}
             buffer[didread] = 0;
-            spllog(0, "------------>>> data read didread: %d: %s, fd: %d", didread, buffer, fd);        
+
+            spllog(0, "------------>>> data read didread: %d: %s, fd: %d, temp->t_delay: %d", 
+                didread, buffer, fd, t_wait);        
   
             if(!temp) {
                 ret = PSERIAL_HASH_NOTFOUND;
