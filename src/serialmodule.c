@@ -124,6 +124,7 @@ typedef struct __SPSR_HASH_FD_NAME__ {
 #define SPSR_HASH_FD(__fd__)    (__fd__%SPSR_MAX_NUMBER_OF_PORT)
 //static int spsr_hash_port(char* port, int len);
 static int spsr_clear_hash();
+static int spsr_open_fd(char *port_name, int brate, int*);
 #endif
 
 static int
@@ -1168,18 +1169,12 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 								    	}
 								    } while (0);
                                     
-                                    /*ret = spserial_fetch_commands(fds, &mx_number, p, lp);*/
+                                    ret = spserial_fetch_commands(fds, &mx_number, p, lp);
 
 								spserial_mutex_unlock(t->mutex);	
 
 								spllog(0, "lppppppppppppppppppppppppppp: %d", lp);
-                                
-								spserial_mutex_lock(t->mutex);
-                                    /*do {*/
-                                    ret = spserial_fetch_commands(fds, &mx_number, p, lp);
-                                    /*} while(0);*/
-                                spserial_mutex_unlock(t->mutex);	
-
+                
 								spserial_free(p);
 							}							
 							continue;
@@ -1325,7 +1320,6 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 								    do {
 								    	if(t->cmd_buff){
 								    		lp = t->cmd_buff->pl;
-								    		spllog(0, "lp: ================= %d.", lp);
 								    		if(lp) {
 								    			if(lp > SPSERIAL_BUFFER_SIZE) {
 								    				p = realloc(p, lp);
@@ -1340,7 +1334,6 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 								    } while (0);
                                     ret = spserial_fetch_commands(epollfd, p, lp);
 								spserial_mutex_unlock(t->mutex);	
-								spllog(0, "lppppppppppppppppppppppppppp: %d", lp);
 								
 								spserial_free(p);
 							}
@@ -1573,139 +1566,96 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
 	SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
 	SPSERIAL_ARR_LIST_LINED * temp = 0, *prev = 0;
 	SP_SERIAL_GENERIC_ST* item = 0;;
-	//SP_SERIAL_GENERIC_ST* obj = (SP_SERIAL_GENERIC_ST*)info;;
 	SP_SERIAL_INFO_ST *input = 0;
-    struct termios options = {0};
-	
 	int fd = 0;
-	int rerr = 0;
+
 #ifndef __SPSR_EPOLL__
     int i = 0;
     struct pollfd *fds = (struct pollfd*)mp;
 #else
 	struct epoll_event event = {0};
+    int rerr = 0;
 #endif   
-	//int count = n/sizeof(SP_SERIAL_GENERIC_ST);
     int step = 0;
 	spllog(0, "-------------------------------------------------------------------enterfetch command, n: %d", n);
-	do {
-		for(step = 0; step < n;) {
+	do 
+    {
+		for(step = 0; step < n;) 
+        {
 			item = (SP_SERIAL_GENERIC_ST*) (info + step);
             step += item->total;
 			spllog(0, "-------------------------------------------------------------------CMD: %d", item->type);
 			if(item->type == SPSR_CMD_ADD) {
-				temp = t->init_node;
-				spllog(0, "-------------------------------------------------------------------CMD_ADD");
-				while(temp) {
-					if(temp->item->handle > -1) {
-						temp = temp->next;
-						continue;
-					}
-					input = temp->item;
-					//fd = open(input->port_name, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY | O_SYNC);
-                    fd = open(input->port_name, O_RDWR | O_NOCTTY | O_NONBLOCK  | O_SYNC);
-                    //fd = open(input->port_name, O_RDWR | O_NOCTTY  | O_SYNC);
-					if (fd == -1) {
-						spllog(SPL_LOG_ERROR, "open port error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-						ret = PSERIAL_UNIX_OPEN_PORT;
-						break;
-					}		
-					spllog(0, "fd: %d, portname: %s", fd, input->port_name);
-					memset(&options, 0, sizeof(options));
-					rerr = tcgetattr(fd, &options);
-					if ( rerr < 0) {
-						spllog(SPL_LOG_ERROR, "tcgetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-						ret = PSERIAL_UNIX_GET_ATTR;
-						break;
-					}
-			
-					spllog(0, "fd: %d, portname: %s, rate: %d", fd, input->port_name, input->baudrate);
-					cfsetispeed(&options, input->baudrate);
-					cfsetospeed(&options, input->baudrate);			
-					
-					options.c_cflag &= ~PARENB;    
-					options.c_cflag &= ~CSTOPB;    
-					options.c_cflag &= ~CSIZE;
-					options.c_cflag |= CS8;        
-					//options.c_cflag &= ~CRTSCTS;   
-                    options.c_cflag |= CRTSCTS; //// Enable RTS/CTS hardware flow control
-                    options.c_iflag = IGNPAR;
-					options.c_cflag |= CREAD | CLOCAL; 	
-					options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); 
-					//options.c_iflag &= ~(IXON | IXOFF | IXANY);  
-                    options.c_iflag |= (IXON | IXOFF | IXANY);    //// Enable XON/XOFF software flow control
-					options.c_oflag &= ~OPOST;      
-					
-                    /*
-					options.c_cc[VMIN]= 1;      
-					options.c_cc[VTIME]= 0;      
-					*/
-
-					rerr = tcsetattr(fd, TCSANOW, &options);
-					if (rerr < 0) {
-						spllog(SPL_LOG_ERROR, "tcsetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-						ret = PSERIAL_UNIX_SET_ATTR;
-						break;
-					}
-                    else {
-                        spllog(0, "tcsetattr -------------> DONE.")
-                    }
-                #ifndef __SPSR_EPOLL__
-                    spllog(0, "*prange: %d -------------> DONE.", *prange);
-                    for(i = 0; i < (*prange + 1); ++i) {
-                        spllog(0, "*prange: %d -------------> fds[%d].fd: %d .", *prange, i, fds[i].fd);
-                        if(fds[i].fd < 0) {
-                            fds[i].fd = fd;
-                            fds[i].events = POLLIN;  
-                            (*prange)++;
-                            spllog(0, "Add to poll list, index: %d, fd: %d, range: %d", 
-                                i, fd, (*prange));
+                do {                   
+				    temp = t->init_node;
+				    spllog(0, "-------------------------------------------------------------------CMD_ADD");
+				    while(temp) {
+				    	if(temp->item->handle > -1) {
+				    		temp = temp->next;
+				    		continue;
+				    	}
+				    	input = temp->item;
+                        fd = -1;
+                        ret = spsr_open_fd(input->port_name, input->baudrate, &fd);
+                        if(ret) {
                             break;
                         }
-                    }
-                    spllog(0, "*prange: %d -------------> DONE.", *prange);
-                #else
-                    memset(&event, 0, sizeof(event));
-                    event.events = EPOLLIN | EPOLLET ;
-                    event.data.fd = fd;
-                    rerr = epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
-                    if (rerr == -1) {
-                        spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-                        ret = PSERIAL_UNIX_EPOLL_CTL;
-                        break;
-                    }                
-                #endif  
-                    do {
-                        SPSR_HASH_FD_NAME *hashobj = 0, *hashitem = 0;
-                        int hashid = 0;
-                        spserial_malloc(sizeof(SPSR_HASH_FD_NAME), hashobj, SPSR_HASH_FD_NAME);
-                        if(!hashobj) {
-                            break;
-                        }
-                        hashobj->fd = fd;
-                        memcpy(hashobj->port_name, temp->item->port_name, strlen(temp->item->port_name));
-                        hashobj->cb_evt_fn = temp->item->cb_evt_fn;
-                        hashobj->cb_obj = temp->item->cb_obj;                        
-                        hashid = SPSR_HASH_FD(fd);
-                        hashitem = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
-                        if(!hashitem) {
-                            spsr_hash_fd_arr[hashid] = (void*) hashobj;
-                        } else {
-                            SPSR_HASH_FD_NAME *temp = 0;
-                            temp = hashobj;
-                            while(!temp->next) {
-                                temp = temp->next;
+                    #ifndef __SPSR_EPOLL__
+                        spllog(0, "*prange: %d -------------> DONE.", *prange);
+                        for(i = 0; i < (*prange + 1); ++i) {
+                            spllog(0, "*prange: %d -------------> fds[%d].fd: %d .", *prange, i, fds[i].fd);
+                            if(fds[i].fd < 0) {
+                                fds[i].fd = fd;
+                                fds[i].events = POLLIN;  
+                                (*prange)++;
+                                spllog(0, "Add to poll list, index: %d, fd: %d, range: %d", 
+                                    i, fd, (*prange));
+                                break;
                             }
-                            temp->next = hashitem;
                         }
+                        spllog(0, "*prange: %d -------------> DONE.", *prange);
+                    #else
+                        memset(&event, 0, sizeof(event));
+                        event.events = EPOLLIN | EPOLLET ;
+                        event.data.fd = fd;
+                        rerr = epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
+                        if (rerr == -1) {
+                            spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+                            ret = PSERIAL_UNIX_EPOLL_CTL;
+                            break;
+                        }                
+                    #endif  
+                        do {
+                            SPSR_HASH_FD_NAME *hashobj = 0, *hashitem = 0;
+                            int hashid = 0;
+                            spserial_malloc(sizeof(SPSR_HASH_FD_NAME), hashobj, SPSR_HASH_FD_NAME);
+                            if(!hashobj) {
+                                break;
+                            }
+                            hashobj->fd = fd;
+                            memcpy(hashobj->port_name, temp->item->port_name, strlen(temp->item->port_name));
+                            hashobj->cb_evt_fn = temp->item->cb_evt_fn;
+                            hashobj->cb_obj = temp->item->cb_obj;                        
+                            hashid = SPSR_HASH_FD(fd);
+                            hashitem = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
+                            if(!hashitem) {
+                                spsr_hash_fd_arr[hashid] = (void*) hashobj;
+                            } else {
+                                SPSR_HASH_FD_NAME *temp = 0;
+                                temp = hashobj;
+                                while(!temp->next) {
+                                    temp = temp->next;
+                                }
+                                temp->next = hashitem;
+                            }
 
-                    } while(0);               
-                    
-                    temp->item->handle = fd;
-                    //int k = write(fd, "buffer", strlen("buffer"));
-                    //spllog(0, "write: %d", k);
-					temp = temp->next;
-				}
+                        } while(0);               
+
+                        temp->item->handle = fd;
+				    	temp = temp->next;
+				    }
+                } while(0);
+
                 continue;
 			}
             if(item->type == SPSR_CMD_REM) {
@@ -2176,6 +2126,64 @@ int spsr_clear_hash() {
         }
         spsr_hash_fd_arr[i] = 0;
     }
+    return ret;
+}
+int spsr_open_fd(char *port_name, int baudrate, int *outfd) {
+    int ret = 0;
+    int fd = -1;
+    struct termios options = {0};
+    int rerr = 0;
+    do {
+ 	    //fd = open(input->port_name, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY | O_SYNC);
+        fd = open(port_name, O_RDWR | O_NOCTTY | O_NONBLOCK  | O_SYNC);
+        //fd = open(input->port_name, O_RDWR | O_NOCTTY  | O_SYNC);
+        if (fd == -1) {
+            spllog(SPL_LOG_ERROR, "open port error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+            ret = PSERIAL_UNIX_OPEN_PORT;
+            break;
+        }		
+        spllog(0, "fd: %d, portname: %s", fd, port_name);
+        memset(&options, 0, sizeof(options));
+        rerr = tcgetattr(fd, &options);
+        if ( rerr < 0) {
+            spllog(SPL_LOG_ERROR, "tcgetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+            ret = PSERIAL_UNIX_GET_ATTR;
+            break;
+        }
+
+        spllog(0, "fd: %d, portname: %s, rate: %d", fd, port_name, baudrate);
+        cfsetispeed(&options, baudrate);
+        cfsetospeed(&options, baudrate);			
+
+        options.c_cflag &= ~PARENB;    
+        options.c_cflag &= ~CSTOPB;    
+        options.c_cflag &= ~CSIZE;
+        options.c_cflag |= CS8;        
+        //options.c_cflag &= ~CRTSCTS;   
+        options.c_cflag |= CRTSCTS; //// Enable RTS/CTS hardware flow control
+        options.c_iflag = IGNPAR;
+        options.c_cflag |= CREAD | CLOCAL; 	
+        options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); 
+        //options.c_iflag &= ~(IXON | IXOFF | IXANY);  
+        options.c_iflag |= (IXON | IXOFF | IXANY);    //// Enable XON/XOFF software flow control
+        options.c_oflag &= ~OPOST;      
+
+        /*
+        options.c_cc[VMIN]= 1;      
+        options.c_cc[VTIME]= 0;      
+        */
+    
+        rerr = tcsetattr(fd, TCSANOW, &options);
+        if (rerr < 0) {
+            spllog(SPL_LOG_ERROR, "tcsetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+            ret = PSERIAL_UNIX_SET_ATTR;
+            break;
+        }
+        else {
+            spllog(0, "tcsetattr -------------> DONE.")
+        }   
+        *outfd = fd;
+    } while(0);
     return ret;
 }
 #endif
