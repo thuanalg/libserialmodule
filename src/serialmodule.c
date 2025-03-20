@@ -573,30 +573,30 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                     readBuffer, cbInQue, bytesRead);
                 if (p->cb_evt_fn) 
                 {
-                    //ret = spsr_invoke_cb(p->cb_evt_fn, p->cb_obj, readBuffer, bytesRead);
-                    int nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + bytesRead + sizeof(void*);
-                    SP_SERIAL_GENERIC_ST* evt = 0;
-                    spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);
-                    
-                    if (evt) 
-                    {
-                        evt->total = nnnn;
-                        evt->type = SPSERIAL_EVENT_READ_BUF;
-                        
-                        evt->pc = sizeof(void*);
-                        if (sizeof(void*) == 4) {
-                            unsigned int tmp = (unsigned int)p->cb_obj;
-                            memcpy((char*)evt->data, (char*)&tmp, evt->pc);
-                        }
-                        else  if (sizeof(void*) == 8) {
-                            unsigned long long int tmp = (unsigned long long int)p->cb_obj;
-                            memcpy((char*)evt->data, (char *)&tmp, evt->pc);
-                        }
-                        memcpy(evt->data + evt->pc, readBuffer, bytesRead);
-                        evt->pl = evt->pc + bytesRead;
-                        p->cb_evt_fn(evt);
-                        spserial_free(evt);
-                    }
+                    ret = spsr_invoke_cb(p->cb_evt_fn, p->cb_obj, readBuffer, bytesRead);
+                    //int nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + bytesRead + sizeof(void*);
+                    //SP_SERIAL_GENERIC_ST* evt = 0;
+                    //spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);
+                    //
+                    //if (evt) 
+                    //{
+                    //    evt->total = nnnn;
+                    //    evt->type = SPSERIAL_EVENT_READ_BUF;
+                    //    
+                    //    evt->pc = sizeof(void*);
+                    //    if (sizeof(void*) == 4) {
+                    //        unsigned int tmp = (unsigned int)p->cb_obj;
+                    //        memcpy((char*)evt->data, (char*)&tmp, evt->pc);
+                    //    }
+                    //    else  if (sizeof(void*) == 8) {
+                    //        unsigned long long int tmp = (unsigned long long int)p->cb_obj;
+                    //        memcpy((char*)evt->data, (char *)&tmp, evt->pc);
+                    //    }
+                    //    memcpy(evt->data + evt->pc, readBuffer, bytesRead);
+                    //    evt->pl = evt->pc + bytesRead;
+                    //    p->cb_evt_fn(evt);
+                    //    spserial_free(evt);
+                    //}
                 }
                 /*p->cb end*/
             }
@@ -2075,7 +2075,7 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
     int t_wait = 0;
     do {
         do {
-            int nnnn = 0;
+            //int nnnn = 0;
             int hasdid = SPSR_HASH_FD(comfd);
             
             hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hasdid];
@@ -2122,32 +2122,32 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
                 break;
             }
 
-            //ret = spsr_invoke_cb(temp->cb_evt_fn, temp->cb_obj, buffer, didread);
+            ret = spsr_invoke_cb(temp->cb_evt_fn, temp->cb_obj, buffer, didread);
 
-            nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + didread + sizeof(void*);
-
-            spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);  
-            if(!evt) {
-                spllog(SPL_LOG_ERROR, "spserial_malloc, SPSERIAL_MEM_NULL.");
-                ret = SPSERIAL_MEM_NULL;
-                break;
-            }
-            evt->total = nnnn;
-            evt->type = SPSERIAL_EVENT_READ_BUF;
-            
-            evt->pc = sizeof(void*);
-            if (sizeof(void*) == 4) {
-                unsigned int tmp = (unsigned int)temp->cb_obj;
-                memcpy((char*)evt->data, (char*)&tmp, evt->pc);
-            }
-            else  if (sizeof(void*) == 8) {
-                unsigned long long int tmp = (unsigned long long int)temp->cb_obj;
-                memcpy((char*)evt->data, (char *)&tmp, evt->pc);
-            }
-            memcpy(evt->data + evt->pc, buffer, didread);
-            evt->pl = evt->pc + didread;
-            temp->cb_evt_fn(evt);
-            spserial_free(evt);            
+            //nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + didread + sizeof(void*);
+            //
+            //spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);  
+            //if(!evt) {
+            //    spllog(SPL_LOG_ERROR, "spserial_malloc, SPSERIAL_MEM_NULL.");
+            //    ret = SPSERIAL_MEM_NULL;
+            //    break;
+            //}
+            //evt->total = nnnn;
+            //evt->type = SPSERIAL_EVENT_READ_BUF;
+            //
+            //evt->pc = sizeof(void*);
+            //if (sizeof(void*) == 4) {
+            //    unsigned int tmp = (unsigned int)temp->cb_obj;
+            //    memcpy((char*)evt->data, (char*)&tmp, evt->pc);
+            //}
+            //else  if (sizeof(void*) == 8) {
+            //    unsigned long long int tmp = (unsigned long long int)temp->cb_obj;
+            //    memcpy((char*)evt->data, (char *)&tmp, evt->pc);
+            //}
+            //memcpy(evt->data + evt->pc, buffer, didread);
+            //evt->pl = evt->pc + didread;
+            //temp->cb_evt_fn(evt);
+            //spserial_free(evt);            
 
         } while(0);
 
