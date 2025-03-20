@@ -41,6 +41,7 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
 	obj->baudrate = baudrate; 
     obj->cb_evt_fn = spsr_call_back_read;
     obj->cb_obj = 0;
+    obj->t_delay = 50;
     
     spllog(0, "baudrate:=========================++++++++++++> %d, portname: %s", 
         obj->baudrate, obj->port_name);
@@ -178,11 +179,22 @@ int main(int argc, char *argv[]) {
 gboolean update_ui(void* data) {
     //gtk_label_set_text(GTK_LABEL(label), "Updated from worker thread!");
     //Run in main thread
+    SP_SERIAL_GENERIC_ST* evt = 0;
+    evt = (SP_SERIAL_GENERIC_ST *) data;
+    spllog(SPL_LOG_DEBUG, "evt->data: %s", evt->data + evt->pc);
+    spl_free(evt);
     return FALSE;  
 }
 
 int spsr_call_back_read(void *data) {
     //Access main thread
-    g_idle_add(update_ui, data);
+    int n = 0;
+    SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST *)data;
+    n = evt->total;
+    spllog(SPL_LOG_DEBUG, "evt->total: %d, evt->pc: %d, evt->pl: %d, data: %s", 
+        evt->total,  evt->pc, evt->pl, evt->data + evt->pc);
+    spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
+    memcpy(evt, data, n);
+    g_idle_add(update_ui, (void*)evt);
     return 0;
 }

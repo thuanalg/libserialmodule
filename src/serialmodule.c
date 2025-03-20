@@ -1076,6 +1076,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 			}
 	
 			while (1) {
+                char chk_delay = 0;
 				/*
 				spllog(SPL_LOG_DEBUG, "spserial_wait_sem------------------------");
 				spserial_wait_sem(t->sem);
@@ -1101,7 +1102,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 					if (isoff) {
 						break;
 					}
-					ret = poll(fds, mx_number, 10 * 1000);
+					ret = poll(fds, mx_number, 60 * 1000);
                     spllog(SPL_LOG_DEBUG, "poll,  mx_number: %d", mx_number);
 					if(ret == -1) {
 						continue;
@@ -1109,10 +1110,15 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 					if(ret == 0) {
 						continue;
 					}
+                    chk_delay = 0;
 					for(k = 0; k < mx_number; ++k) {
+                        if(fds[k].fd < 0) {
+                            continue;
+                        }
 						if (!(fds[k].revents & POLLIN)) {
 							continue;
 						}
+
 						if(k == 0) {
 							char *p = 0;
 							while(1) {
@@ -1124,8 +1130,10 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 								lenmsg = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
 									(struct sockaddr*)&client_addr, &client_len);
 								if (lenmsg < 1) {
-									spllog(SPL_LOG_ERROR, "recvfrom, lenmsg: %d, errno: %d, text: %s.",
-										(int)lenmsg, errno, strerror(errno));
+                                    if(errno != 11) {
+									    spllog(SPL_LOG_ERROR, "mach recvfrom, lenmsg: %d, errno: %d, text: %s.",
+										    (int)lenmsg, errno, strerror(errno));
+                                    }
 									break;
 								}
 								
@@ -1175,6 +1183,11 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							int didread = 0;
 							int comfd = fds[k].fd;
 							memset(buffer, 0, sizeof(buffer));
+                            if(!chk_delay) {
+                                nap_time.tv_nsec = 50 * SPSR_MILLION;
+                                nanosleep(&nap_time, 0);       
+                                chk_delay = 1;
+                            }                     
 							while(1) {
 								nr = (int)read(comfd, buffer + didread, sizeof(buffer) - didread -1);
 								if(nr == -1) {
@@ -1184,6 +1197,53 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							}
 							buffer[didread] = 0;
 							spllog(0, "------------>>> data read didread: %d: %s", didread, buffer);
+                            do {
+                                SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0;
+                                int hasdid = SPSR_HASH_FD(comfd);
+                                char didsee = 0; 
+                                hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hasdid];
+                                if(!hashobj) {
+                                    spllog(SPL_LOG_ERROR, "Cannot find obj in reading.");
+                                    break;
+                                }
+                                temp = hashobj;
+                                while(temp)  {
+                                    if(temp->fd == comfd) {
+                                        int nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + didread + sizeof(void*);
+                                        SP_SERIAL_GENERIC_ST* evt = 0;
+                                                                              
+                                        if(!temp->cb_evt_fn) {
+                                            break;
+                                        }
+                                        spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);  
+                                        if(!evt) {
+                                            break;
+                                        }
+                                        evt->total = nnnn;
+                                        evt->type = SPSERIAL_EVENT_READ_BUF;
+                                        
+                                        evt->pc = sizeof(void*);
+                                        if (sizeof(void*) == 4) {
+                                            unsigned int tmp = (unsigned int)temp->cb_obj;
+                                            memcpy((char*)evt->data, (char*)&tmp, evt->pc);
+                                        }
+                                        else  if (sizeof(void*) == 8) {
+                                            unsigned long long int tmp = (unsigned long long int)temp->cb_obj;
+                                            memcpy((char*)evt->data, (char *)&tmp, evt->pc);
+                                        }
+                                        memcpy(evt->data + evt->pc, buffer, didread);
+                                        evt->pl = evt->pc + didread;
+                                        temp->cb_evt_fn(evt);
+                                        spserial_free(evt);
+                                        didsee = 1;
+                                        break;
+                                    }
+                                    temp = temp->next;
+                                }
+                                if(!didsee) {
+                                    spllog(SPL_LOG_ERROR, "Didsee Cannot find obj in reading.");
+                                }
+                            } while(0);
 							//buffer[nr] = 0;
                             //nr = write(comfd, buffer, didread);
                             //spllog(0, "------------>>> data read didwrite: %d: %s", nr, buffer);
@@ -1217,6 +1277,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 						break;
 					}					
 					//spllog(SPL_LOG_DEBUG, "epoll_wait------------------------");
+                    chk_delay = 0;
                     int nfds = epoll_wait(epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
 					//spllog(SPL_LOG_DEBUG, "epoll_wait------------------------, nfds: %d", nfds);
                     for (i = 0; i < nfds; i++) 
@@ -1234,8 +1295,10 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 								lenmsg = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
 									(struct sockaddr*)&client_addr, &client_len);
 								if (lenmsg < 1) {
-									spllog(SPL_LOG_ERROR, "epoll_ctl, lenmsg: %d, errno: %d, text: %s.",
-										(int)lenmsg, errno, strerror(errno));
+                                    if(errno != 11) {
+									    spllog(SPL_LOG_ERROR, "epoll_ctl, lenmsg: %d, errno: %d, text: %s.",
+										    (int)lenmsg, errno, strerror(errno));
+                                    }
 									break;
 								}
 								
@@ -1282,8 +1345,10 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							int didread = 0;
 							int comfd = events[i].data.fd;
 							memset(buffer, 0, sizeof(buffer));
-                            nap_time.tv_nsec = 50 * SPSR_MILLION;
-                            nanosleep(&nap_time, 0);
+                            if(!chk_delay) {
+                                nap_time.tv_nsec = 50 * SPSR_MILLION;
+                                nanosleep(&nap_time, 0);
+                            }
 							while(1) {
 								nr = (int)read(comfd, buffer + didread, sizeof(buffer) - didread -1);
 								if(nr == -1) {
@@ -1293,6 +1358,54 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 							}
 							buffer[didread] = 0;
 							spllog(0, "------------>>> data read didread: %d: %s", didread, buffer);
+                            do {
+                                SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0;
+                                int hasdid = SPSR_HASH_FD(comfd);
+                                char didsee = 0; 
+                                hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hasdid];
+                                if(!hashobj) {
+                                    spllog(SPL_LOG_ERROR, "Cannot find obj in reading.");
+                                    break;
+                                }
+                                spllog(SPL_LOG_DEBUG, "Found obj in reading fd: %d, id: %d.", comfd, hasdid);
+                                temp = hashobj;
+                                while(temp)  {
+                                    if(temp->fd == comfd) {
+                                        int nnnn = 1 + sizeof(SP_SERIAL_GENERIC_ST) + didread + sizeof(void*);
+                                        SP_SERIAL_GENERIC_ST* evt = 0;
+                                                                              
+                                        if(!temp->cb_evt_fn) {
+                                            break;
+                                        }
+                                        spserial_malloc(nnnn, evt, SP_SERIAL_GENERIC_ST);  
+                                        if(!evt) {
+                                            break;
+                                        }
+                                        evt->total = nnnn;
+                                        evt->type = SPSERIAL_EVENT_READ_BUF;
+                                        
+                                        evt->pc = sizeof(void*);
+                                        if (sizeof(void*) == 4) {
+                                            unsigned int tmp = (unsigned int)temp->cb_obj;
+                                            memcpy((char*)evt->data, (char*)&tmp, evt->pc);
+                                        }
+                                        else  if (sizeof(void*) == 8) {
+                                            unsigned long long int tmp = (unsigned long long int)temp->cb_obj;
+                                            memcpy((char*)evt->data, (char *)&tmp, evt->pc);
+                                        }
+                                        memcpy(evt->data + evt->pc, buffer, didread);
+                                        evt->pl = evt->pc + didread;
+                                        temp->cb_evt_fn(evt);
+                                        spserial_free(evt);
+                                        didsee = 1;
+                                        break;
+                                    }
+                                    temp = temp->next;
+                                }
+                                if(!didsee) {
+                                    spllog(SPL_LOG_ERROR, "Didsee Cannot find obj in reading.");
+                                }
+                            } while(0);                            
 						}
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
                     }
@@ -1554,8 +1667,34 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                         ret = PSERIAL_UNIX_EPOLL_CTL;
                         break;
                     }                
-                #endif                    
-					temp->item->handle = fd;
+                #endif  
+                    do {
+                        SPSR_HASH_FD_NAME *hashobj = 0, *hashitem = 0;
+                        int hashid = 0;
+                        spserial_malloc(sizeof(SPSR_HASH_FD_NAME), hashobj, SPSR_HASH_FD_NAME);
+                        if(!hashobj) {
+                            break;
+                        }
+                        hashobj->fd = fd;
+                        memcpy(hashobj->port_name, temp->item->port_name, strlen(temp->item->port_name));
+                        hashobj->cb_evt_fn = temp->item->cb_evt_fn;
+                        hashobj->cb_obj = temp->item->cb_obj;                        
+                        hashid = SPSR_HASH_FD(fd);
+                        hashitem = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
+                        if(!hashitem) {
+                            spsr_hash_fd_arr[hashid] = (void*) hashobj;
+                        } else {
+                            SPSR_HASH_FD_NAME *temp = 0;
+                            temp = hashobj;
+                            while(!temp->next) {
+                                temp = temp->next;
+                            }
+                            temp->next = hashitem;
+                        }
+
+                    } while(0);               
+                    
+                    temp->item->handle = fd;
                     //int k = write(fd, "buffer", strlen("buffer"));
                     //spllog(0, "write: %d", k);
 					temp = temp->next;
@@ -1596,6 +1735,31 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                                 spllog(SPL_LOG_DEBUG, "EPOLL_CTL_DEL, fd: %d DONE", fd); 
                             }                        
                         #endif                           
+                            /* Close handle*/
+                            do {
+                                SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0, *prev = 0;
+                                int hashid = SPSR_HASH_FD(fd);
+                                hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hashid];
+                                if(!hashobj) {
+                                    spllog(SPL_LOG_ERROR, "Cannot find object."); 
+                                    break;
+                                }
+                                temp = hashobj;
+                                while(temp) {
+                                    if(temp->fd == fd) {
+                                        if(prev) {
+                                            prev->next = temp->next;
+                                        } else {
+                                            spsr_hash_fd_arr[hashid] = temp->next;
+                                        }
+                                        spllog(SPL_LOG_DEBUG, "--------------Clear from spsr_hash_fd_arr, hashid:%d, fd: %d.", hashid, fd); 
+                                        spserial_free(temp);
+                                        break;
+                                    }
+                                    prev = temp;
+                                    temp = temp->next;
+                                }
+                            } while(0);
                             /* Close handle*/
                             errr = close(fd);
                             if(errr) {
@@ -1882,9 +2046,7 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) {
         item->baudrate = p->baudrate;
         item->cb_evt_fn = p->cb_evt_fn;
         item->cb_obj = p->cb_obj;
-        
         item->t_delay = p->t_delay;
-
         node->item = item;
         //if (output) {
         //    *output = item;
@@ -1987,3 +2149,4 @@ int spsr_clear_all() {
 #ifndef __SPSR_EPOLL__
 #else
 #endif
+//TODO: clean hash array
