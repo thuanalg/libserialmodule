@@ -85,6 +85,7 @@ static int spsr_init_trigger(void*);
 
 	static int spserial_fetch_commands(void *, int *,char*, int n);
     static int spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer, int *chk_off) ;
+    static int spsr_fmt_name(char *input, char *output);
 #else
 	static int spserial_fetch_commands(int, char*, int n);
     static int spsr_ctrl_sock(int epollfd, int sockfd, char *buffer, int lenbuffer, int *chk_off) ;
@@ -344,13 +345,14 @@ void* spserial_sem_create(char *name_key) {
 #else
     #ifndef __SPSR_EPOLL__
         int retry = 0; 
-        SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+        //SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
         char name[SPSERIAL_KEY_LEN];
-        if(name_key) {
-            snprintf(name, SPSERIAL_KEY_LEN,"%s_%s", t->sem_key, name_key );
-        } else {
-            snprintf(name, SPSERIAL_KEY_LEN, "%s_%s", t->sem_key, "");
-        }
+        //if(name_key) {
+        //    snprintf(name, SPSERIAL_KEY_LEN,"%s_%s", t->sem_key, name_key );
+        //} else {
+        //    snprintf(name, SPSERIAL_KEY_LEN, "%s_%s", t->sem_key, "");
+        //}
+        spsr_fmt_name(name_key, name);
         do {
             ret = sem_open(name, SPSERIAL_LOG_UNIX_CREATE_MODE, SPSERIAL_LOG_UNIX__SHARED_MODE, 1);
             spllog(0, "sem_open ret: ==================0x%p", ret);
@@ -1949,6 +1951,19 @@ int spsr_clear_all() {
 //}
 */
 
+#ifndef __SPSR_EPOLL__
+    int spsr_fmt_name(char *input, char *output) {
+        SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+        int ret = 0;
+        if(input) {
+            snprintf(output, SPSERIAL_KEY_LEN,"%s_%s", t->sem_key, input );
+        } else {
+            snprintf(output, SPSERIAL_KEY_LEN, "%s_%s", t->sem_key, "");
+        }        
+        return ret;
+    }
+#else
+#endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int spsr_clear_hash() 
@@ -2249,13 +2264,13 @@ int spserial_sem_delete(void *sem, char *sem_name) {
         #ifndef __SPSR_EPOLL__
             char name[SPSERIAL_KEY_LEN];
             int err = 0;
-            SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-            if(sem_name) {
-                snprintf(name, SPSERIAL_KEY_LEN, "%s_%s", t->sem_key, sem_name);
-            } else {
-                snprintf(name, SPSERIAL_KEY_LEN, "%s_%s", t->sem_key, "");
-            }
-
+            //SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+            //if(sem_name) {
+            //    snprintf(name, SPSERIAL_KEY_LEN, "%s_%s", t->sem_key, sem_name);
+            //} else {
+            //    snprintf(name, SPSERIAL_KEY_LEN, "%s_%s", t->sem_key, "");
+            //}
+            spsr_fmt_name(sem_name, name);
             err = sem_close((sem_t *) sem);
             if(err == -1) {
                 ret = PSERIAL_SEM_CLOSE;
