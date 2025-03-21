@@ -78,6 +78,11 @@ typedef void* (*SP_SERIAL_THREAD_ROUTINE)(void*);
 static int spsr_init_trigger(void*);
 
 #ifndef __SPSR_EPOLL__
+    #define SPSERIAL_LOG_UNIX__SHARED_MODE					(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)	
+    #define SPSERIAL_LOG_UNIX_CREATE_MODE					(O_CREAT | O_RDWR | O_EXCL)	
+    #define SPSERIAL_LOG_UNIX_OPEN_MODE						(O_RDWR | O_EXCL)	
+    #define SPSERIAL_LOG_UNIX_PROT_FLAGS					(PROT_READ | PROT_WRITE | PROT_EXEC)
+
 	static int spserial_fetch_commands(void *, int *,char*, int n);
     static int spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer, int *chk_off) ;
 #else
@@ -135,7 +140,7 @@ static void*
 static int
     spserial_mutex_delete(void *);
 static void*
-    spserial_sem_create();
+    spserial_sem_create(char*);
 static int
     spserial_sem_delete(void *);
 static  int 
@@ -308,7 +313,7 @@ int spserial_module_openport(void* obj) {
              ret = SPSERIAL_PORT_SPSERIAL_MUTEX_CREATE;
              break;
          }
-         p->sem_off = spserial_sem_create();
+         p->sem_off = spserial_sem_create(0);
          if (!p->sem_off) {
              DWORD dwError = GetLastError();
              spllog(SPL_LOG_ERROR, "spserial_sem_create: %lu", dwError);
@@ -331,12 +336,39 @@ int spserial_module_openport(void* obj) {
 	return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-void* spserial_sem_create() {
+void* spserial_sem_create(char *name_key) {
     void* ret = 0;
     do {
 #ifndef UNIX_LINUX
         ret = CreateSemaphoreA(0, 0, 1, 0);
 #else
+    #ifndef __SPSR_EPOLL__
+        int retry = 0; 
+        SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+        char name[SPSERIAL_KEY_LEN];
+        if(name) {
+            snprint(name, "%s_%s", t->sem_key, name_key);
+        } else {
+            snprint(name, "%s_%s", t->sem_key, "");
+        }
+        do {
+            ret = sem_open(name, SPSERIAL_LOG_UNIX_CREATE_MODE, SPSERIAL_LOG_UNIX__SHARED_MODE, 1);
+            if (ret == SEM_FAILED) {
+                int err = 0;
+                ret = 0;
+                if(retry) {
+                    break;
+                }
+                err = sem_unlink(name);
+                if(err) {
+                    break;
+                }
+                retry++;
+                continue;
+            }
+        } while(1);
+    #else
+    
         /*https://linux.die.net/man/3/sem_init*/
         spserial_malloc(sizeof(sem_t), ret, void);
         if (!ret) {
@@ -344,6 +376,7 @@ void* spserial_sem_create() {
         }
         memset(ret, 0, sizeof(sem_t));
         sem_init((sem_t*)ret, 0, 1);
+    #endif
 #endif 
     } while (0);
     spllog(0, "Create: 0x%p.", ret);
@@ -615,14 +648,17 @@ int spsr_module_init() {
             ret = SPSERIAL_MTX_CREATE;
             break;
         }
-        t->sem = spserial_sem_create();
+        t->sem = spserial_sem_create(0);
         if (!t->sem) {
             ret = SPSERIAL_SEM_CREATE;
             break;
         }
 #ifndef UNIX_LINUX
 #else
-        t->sem_spsr = spserial_sem_create();
+    #ifndef __SPSR_EPOLL__
+        snprintf(t->sem_key, SPSERIAL_KEY_LEN, "/_%llu",  (unsigned long long int) getpid());
+    #endif
+        t->sem_spsr = spserial_sem_create(0);
         if (!t->sem_spsr) {
             ret = SPSERIAL_SEM_CREATE;
             break;

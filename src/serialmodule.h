@@ -36,6 +36,7 @@ extern "C" {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #define SPSERIAL_PORT_LEN						32
+#define SPSERIAL_KEY_LEN						SPSERIAL_PORT_LEN
 #ifndef LLU
 	#define LLU				unsigned long long
 #endif
@@ -163,8 +164,7 @@ extern "C" {
 		void*
 			sem_off;    /*It need to wait for completing.*/
 #ifdef UNIX_LINUX
-		void*
-			sem_trigger;    /*It need to wait for UNIX_LINUX.*/
+		//void* sem_trigger;    /*It need to wait for UNIX_LINUX.*/
 #endif 
 		SPSERIAL_module_cb
 			cb_evt_fn;
@@ -199,6 +199,9 @@ extern "C" {
 			sem_spsr;			/* Check off.*/
 		SP_SERIAL_GENERIC_ST*
 			cmd_buff;			/* Command list .*/
+	#ifndef __SPSR_EPOLL__
+		char sem_key[SPSERIAL_KEY_LEN]; /*It need to wait for UNIX_LINUX --->>> Mach.*/
+	#endif			
 #endif 
 		SPSERIAL_ARR_LIST_LINED* init_node;
 		SPSERIAL_ARR_LIST_LINED* last_node;
