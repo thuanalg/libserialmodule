@@ -122,6 +122,9 @@ int main(int argc, char *argv[]) {
     }
     do {
         ret = spsr_module_init();
+        if(ret) {
+            exit(1);
+        }
         gtk_init(&argc, &argv);
         
         GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);

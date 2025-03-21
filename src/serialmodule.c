@@ -142,7 +142,7 @@ static int
 static void*
     spserial_sem_create(char*);
 static int
-    spserial_sem_delete(void *);
+    spserial_sem_delete(void *, char *);
 static  int 
     spserial_mutex_lock(void* obj);
 static int
@@ -346,26 +346,36 @@ void* spserial_sem_create(char *name_key) {
         int retry = 0; 
         SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
         char name[SPSERIAL_KEY_LEN];
-        if(name) {
-            snprint(name, "%s_%s", t->sem_key, name_key);
+        if(name_key) {
+            snprintf(name, SPSERIAL_KEY_LEN,"%s_%s", t->sem_key, name_key );
         } else {
-            snprint(name, "%s_%s", t->sem_key, "");
+            snprintf(name, SPSERIAL_KEY_LEN, "%s_%s", t->sem_key, "");
         }
         do {
             ret = sem_open(name, SPSERIAL_LOG_UNIX_CREATE_MODE, SPSERIAL_LOG_UNIX__SHARED_MODE, 1);
-            if (ret == SEM_FAILED) {
+            spllog(0, "sem_open ret: ==================0x%p", ret);
+            if (ret == SEM_FAILED) 
+            {
                 int err = 0;
                 ret = 0;
                 if(retry) {
+                    spllog(SPL_LOG_ERROR, "mach sem_open, errno: %d, text: %s, name: %s.", 
+                        errno, strerror(errno), name);                    
                     break;
+                } else {
+                    spllog(SPL_LOG_ERROR, "mach sem_open, errno: %d, text: %s, name: %s.", 
+                        errno, strerror(errno), name);                       
                 }
                 err = sem_unlink(name);
                 if(err) {
+                    spllog(SPL_LOG_ERROR, "mach sem_unlink, errno: %d, text: %s, name: %s.", 
+                        errno, strerror(errno), name);   
                     break;
                 }
                 retry++;
                 continue;
             }
+            break;
         } while(1);
     #else
     
@@ -640,15 +650,25 @@ int spsr_module_init() {
     pthread_t idd = 0;
     int err = 0;
     int nsize = 0;
+    #ifndef __SPSR_EPOLL__
+        snprintf(t->sem_key, SPSERIAL_KEY_LEN, "/spsr_%llu", (LLU)getpid());
+    #endif
 #endif
     do {
-
         t->mutex = spserial_mutex_create();
         if (!t->mutex) {
             ret = SPSERIAL_MTX_CREATE;
             break;
         }
+    #ifndef UNIX_LINUX
         t->sem = spserial_sem_create(0);
+    #else
+        #ifndef __SPSR_EPOLL__
+            t->sem = spserial_sem_create(SPSR_MAINKEY);
+        #else
+            t->sem = spserial_sem_create(0);
+        #endif            
+    #endif                
         if (!t->sem) {
             ret = SPSERIAL_SEM_CREATE;
             break;
@@ -656,9 +676,11 @@ int spsr_module_init() {
 #ifndef UNIX_LINUX
 #else
     #ifndef __SPSR_EPOLL__
-        snprintf(t->sem_key, SPSERIAL_KEY_LEN, "/_%llu",  (unsigned long long int) getpid());
-    #endif
-        t->sem_spsr = spserial_sem_create(0);
+        
+        t->sem_spsr = spserial_sem_create(SPSR_MAINKEY_MACH); /*Mach*/
+    #else
+        t->sem_spsr = spserial_sem_create(0); /*Linux*/
+    #endif        
         if (!t->sem_spsr) {
             ret = SPSERIAL_SEM_CREATE;
             break;
@@ -699,6 +721,7 @@ int spsr_module_finish()
     spsr_clear_all();
     //SPSERIAL_CloseHandle(t->mutex);
     //SPSERIAL_CloseHandle(t->sem);
+    spserial_sem_delete(t->sem, 0);
 #else
     spserial_mutex_lock(t->mutex);
     /*do {*/
@@ -717,14 +740,24 @@ int spsr_module_finish()
             is_off = t->spsr_off;
         /*} while (0);*/
         spserial_mutex_unlock(t->mutex);
-        if (is_off > 2) {
-            spserial_sem_delete(t->sem_spsr);
+        if (is_off > 2) {            
+        #ifndef __SPSR_EPOLL__
+            spserial_sem_delete(t->sem_spsr, SPSR_MAINKEY_MACH);
+        #else
+            spserial_sem_delete(t->sem_spsr, 0);
+        #endif            
             break;
         }
     } 
+    
+    #ifndef __SPSR_EPOLL__
+        spserial_sem_delete(t->sem, SPSR_MAINKEY);
+    #else
+        spserial_sem_delete(t->sem, "");
+    #endif    
 #endif
     spserial_mutex_delete(t->mutex);
-    spserial_sem_delete(t->sem);
+    
     return 0;
 }
 
@@ -2207,16 +2240,37 @@ int spserial_mutex_delete(void *mtx) {
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_sem_delete(void *sem) {
+int spserial_sem_delete(void *sem, char *sem_name) {
     int ret = 0;
     do {
     #ifndef UNIX_LINUX
         SPSERIAL_CloseHandle( sem);
     #else
         #ifndef __SPSR_EPOLL__
-            ret = sem_destroy((sem_t *) sem);
+            char name[SPSERIAL_KEY_LEN];
+            int err = 0;
+            SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+            if(sem_name) {
+                snprintf(name, SPSERIAL_KEY_LEN, "%s_%s", t->sem_key, sem_name);
+            } else {
+                snprintf(name, SPSERIAL_KEY_LEN, "%s_%s", t->sem_key, "");
+            }
+
+            err = sem_close((sem_t *) sem);
+            if(err == -1) {
+                ret = PSERIAL_SEM_CLOSE;
+                spllog(SPL_LOG_ERROR, "mach sem_close, err: %d, errno: %d, text: %s.",
+                    (int)err, errno, strerror(errno));                
+            }
+
             spllog(0, "Delete 0x%p", sem);
-            spserial_free(sem);       
+            err = sem_unlink(name);
+            if(err) {
+                ret = PSERIAL_SEM_UNLINK;
+                spllog(SPL_LOG_ERROR, "mach sem_unlink, err: %d, errno: %d, text: %s.",
+                    (int)err, errno, strerror(errno));
+            }
+            //spserial_free(sem);       
         #else
             ret = sem_destroy((sem_t *) sem);
             spllog(0, "Delete 0x%p", sem);
