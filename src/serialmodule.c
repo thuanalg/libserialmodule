@@ -2071,7 +2071,7 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
     struct timespec nap_time = {0};
     spllog(0, "------------>>> fd: %d", fd);
     SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0;
-    SP_SERIAL_GENERIC_ST* evt = 0;
+    //SP_SERIAL_GENERIC_ST* evt = 0;
     int t_wait = 0;
     do {
         do {
@@ -2172,20 +2172,14 @@ int spsr_invoke_cb(SPSERIAL_module_cb fn_cb, void *obj, char *data, int len) {
 
         evt->pc = sizeof(void*);
         if (sizeof(void*) == sizeof(unsigned int)) {
-            //unsigned int* pt = (unsigned int*) evt->data;
-            //unsigned int tmp = (unsigned int)obj;
-            //*pt = tmp;
-
-            unsigned int tmp = (unsigned int)obj;
-            memcpy((char*)evt->data, (char*)&tmp, evt->pc);
+            unsigned int* pt = (unsigned int*) evt->data;
+            *pt = (unsigned int)obj;
+            spllog(SPL_LOG_DEBUG, "Try this case-------------------.");
         }
         else  if (sizeof(void*) == sizeof(unsigned long long int)) {
-            //unsigned long long int* pt = (unsigned long long int*) evt->data;
-            //unsigned long long int tmp = (unsigned long long int)obj;
-            //*pt = tmp;
-
-            unsigned long long int tmp = (unsigned long long int)obj;
-            memcpy((char*)evt->data, (char*)&tmp, evt->pc);
+            unsigned long long int* pt = (unsigned long long int*) evt->data;
+            spllog(SPL_LOG_DEBUG, "Try this case-------------------.");
+            *pt = (unsigned long long int)obj;
         }
         memcpy(evt->data + evt->pc, data, len);
         evt->pl = evt->pc + len;
