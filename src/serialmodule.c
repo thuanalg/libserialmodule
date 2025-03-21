@@ -132,8 +132,12 @@ static int
 /* Group of sync tool. */
 static void*
     spserial_mutex_create();
+static int
+    spserial_mutex_delete(void *);
 static void*
     spserial_sem_create();
+static int
+    spserial_sem_delete(void *);
 static  int 
     spserial_mutex_lock(void* obj);
 static int
@@ -657,8 +661,8 @@ int spsr_module_finish()
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
 #ifndef UNIX_LINUX
     spsr_clear_all();
-    SPSERIAL_CloseHandle(t->mutex);
-    SPSERIAL_CloseHandle(t->sem);
+    //SPSERIAL_CloseHandle(t->mutex);
+    //SPSERIAL_CloseHandle(t->sem);
 #else
     spserial_mutex_lock(t->mutex);
     /*do {*/
@@ -678,10 +682,13 @@ int spsr_module_finish()
         /*} while (0);*/
         spserial_mutex_unlock(t->mutex);
         if (is_off > 2) {
+            spserial_sem_delete(t->sem_spsr);
             break;
         }
-    }
+    } 
 #endif
+    spserial_mutex_delete(t->mutex);
+    spserial_sem_delete(t->sem);
     return 0;
 }
 
@@ -2149,7 +2156,40 @@ int spsr_invoke_cb(SPSERIAL_module_cb fn_cb, void *obj, char *data, int len) {
 	} while(0);
 	return ret;
 }
-
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spserial_mutex_delete(void *mtx) {
+    int ret = 0;
+    do {
+    #ifndef UNIX_LINUX
+        SPSERIAL_CloseHandle( mtx);
+    #else
+        ret = pthread_mutex_destroy((pthread_mutex_t *) mtx);
+        spllog(0, "Delete 0x%p", mtx);
+        spserial_free(mtx);
+    #endif
+    } while(0); 
+    return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spserial_sem_delete(void *sem) {
+    int ret = 0;
+    do {
+    #ifndef UNIX_LINUX
+        SPSERIAL_CloseHandle( sem);
+    #else
+        #ifndef __SPSR_EPOLL__
+            ret = sem_destroy((sem_t *) sem);
+            spllog(0, "Delete 0x%p", sem);
+            spserial_free(sem);       
+        #else
+            ret = sem_destroy((sem_t *) sem);
+            spllog(0, "Delete 0x%p", sem);
+            spserial_free(sem);            
+        #endif        
+    #endif
+    } while(0); 
+    return ret;
+}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef UNIX_LINUX
