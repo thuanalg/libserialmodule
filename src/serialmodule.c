@@ -76,7 +76,6 @@ static int spsr_init_trigger(void*);
 	#else
 		static int spserial_fetch_commands(int, char*, int n);
 	#endif
-
 #endif
 
 static int spsr_clear_all();
@@ -108,7 +107,15 @@ static void*
 static int
     spsr_send_cmd(int cmd, char *portname, void* data, int lendata);
     
-#define SPSR_MAX_NUMBER_OF_PORT     10
+    #ifndef __SPSR_EPOLL__
+        static int 
+            spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer) ;
+    #else   
+        static int 
+            spsr_ctrl_sock(int epollfd, int sockfd, char *buffer, int lenbuffer) ;
+    #endif
+
+    #define SPSR_MAX_NUMBER_OF_PORT     10
 
 static void *spsr_hash_fd_arr[SPSR_MAX_NUMBER_OF_PORT];
 //static void *spsr_hash_name_arr[SPSR_MAX_NUMBER_OF_PORT];
@@ -993,10 +1000,10 @@ int spsr_inst_write(char* portname, char*data, int sz) {
         //socklen_t len = 0;
         char buffer[SPSR_MAXLINE + 1];
         //const char* hello = "Hello from server";
-        struct sockaddr_in cartridge_addr, client_addr;
+        struct sockaddr_in cartridge_addr;
         int k  = 0;
-		ssize_t lenmsg = 0;
-        socklen_t client_len = sizeof(client_addr);
+		//ssize_t lenmsg = 0;
+        //socklen_t client_len = sizeof(client_addr);
         
 
 #ifndef __SPSR_EPOLL__
@@ -1196,75 +1203,20 @@ int spsr_inst_write(char* portname, char*data, int sz) {
                     break;
                 }
                 while (1) {
+                    int nfds = 0;
 					if (isoff) {
 						break;
 					}					
-					//spllog(SPL_LOG_DEBUG, "epoll_wait------------------------");
                     chk_delay = 0;
-                    int nfds = epoll_wait(epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
-					//spllog(SPL_LOG_DEBUG, "epoll_wait------------------------, nfds: %d", nfds);
+                    nfds = epoll_wait(epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
                     for (i = 0; i < nfds; i++) 
                     {
-						//spllog(SPL_LOG_DEBUG, "(data.fd, sockfd)------------------------(%d, %d)", events[i].data.fd, sockfd);
                         if (events[i].data.fd == sockfd) 
                         {
-							char *p = 0;
-							while(1) {
-								int lp = 0;
-								memset(&client_addr, 0, sizeof(client_addr));
-								client_len = sizeof(client_addr);
-								memset(buffer, 0, sizeof(buffer));
-								spllog(SPL_LOG_DEBUG, "recvfrom------------------------");
-								lenmsg = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
-									(struct sockaddr*)&client_addr, &client_len);
-								if (lenmsg < 1) {
-                                    if(errno != 11) {
-									    spllog(SPL_LOG_ERROR, "epoll_ctl, lenmsg: %d, errno: %d, text: %s.",
-										    (int)lenmsg, errno, strerror(errno));
-                                    }
-									break;
-								}
-								
-								buffer[lenmsg] = 0;
-								spllog(SPL_LOG_DEBUG, "buffer: %s", buffer);
-								if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
-									spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
-									isoff = 1;
-									break;
-								}
-								if(isoff) {
-									break;
-								}
-								lp = 0;
-								spserial_mutex_lock(t->mutex);
-								/*SPSERIAL_BUFFER_SIZE*/
-								spserial_malloc(SPSERIAL_BUFFER_SIZE, p, char);
-								    do {
-								    	if(t->cmd_buff){
-								    		lp = t->cmd_buff->pl;
-								    		if(lp) {
-								    			if(lp > SPSERIAL_BUFFER_SIZE) {
-								    				p = realloc(p, lp);
-								    			}
-								    			if(!p) {
-								    				break;
-								    			}
-								    			memcpy(p, t->cmd_buff->data, lp);
-								    			t->cmd_buff->pl = 0;
-								    		}
-								    	}
-								    } while (0);
-                                    
-								spserial_mutex_unlock(t->mutex);	
-
-								ret = spserial_fetch_commands(epollfd, p, lp);
-
-								spserial_free(p);
-							}
+                            spsr_ctrl_sock(epollfd, sockfd, buffer, SPSR_MAXLINE);
 							continue;
                         } 
 						if (events[i].data.fd >= 0) {
-                            spllog(0, "======================================================before read");
                             ret = spsr_read_fd(events[i].data.fd, buffer, SPSR_MAXLINE + 1, &chk_delay);
 						}
                         /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -2113,6 +2065,83 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
         } while(0);
 
     } while(0); 
+    return ret;
+}
+
+#ifndef __SPSR_EPOLL__
+    int spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer) 
+#else   
+    int spsr_ctrl_sock(int epollfd, int sockfd, char *buffer, int lenbuffer) 
+#endif
+{
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+    int ret = 0;
+    char *p = 0;
+    int lp = 0;
+    struct sockaddr_in client_addr;
+    ssize_t lenmsg = 0;
+    socklen_t client_len = 0;    
+    int isoff = 0;
+    do 
+    {     
+        while(1) 
+        {        
+            memset(&client_addr, 0, sizeof(client_addr));
+            client_len = sizeof(client_addr);
+            memset(buffer, 0, lenbuffer);
+            spllog(SPL_LOG_DEBUG, "recvfrom------------------------");
+            lenmsg = (int) recvfrom(sockfd, buffer, lenbuffer, 0,
+                (struct sockaddr*)&client_addr, &client_len);
+            if (lenmsg < 1) {
+                if(errno != 11) {
+                    spllog(SPL_LOG_ERROR, "mach recvfrom, lenmsg: %d, errno: %d, text: %s.",
+                        (int)lenmsg, errno, strerror(errno));
+                }
+                break;
+            }
+            
+            buffer[lenmsg] = 0;
+            spllog(SPL_LOG_DEBUG, "buffer: %s", buffer);
+            if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
+                spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
+                isoff = 1;
+                break;
+            }
+            if(isoff) {
+                break;
+            }
+            lp = 0;
+            spserial_malloc(SPSERIAL_BUFFER_SIZE, p, char);
+            spserial_mutex_lock(t->mutex);
+                /*SPSERIAL_BUFFER_SIZE*/
+                do {
+                    if(t->cmd_buff){
+                        lp = t->cmd_buff->pl;
+                        spllog(0, "lp: ================= %d.", lp);
+                        if(lp) {
+                            if(lp > SPSERIAL_BUFFER_SIZE) {
+                                p = realloc(p, lp);
+                            }
+                            if(!p) {
+                                break;
+                            }
+                            memcpy(p, t->cmd_buff->data, lp);
+                            t->cmd_buff->pl = 0;
+                        }
+                    }
+                } while (0);
+
+            spserial_mutex_unlock(t->mutex);	
+        #ifndef __SPSR_EPOLL__
+            ret = spserial_fetch_commands(fds, mx_number, p, lp);
+        #else
+            ret = spserial_fetch_commands(epollfd, p, lp);
+        #endif
+            spllog(0, "lppppppppppppppppppppppppppp: %d", lp);
+
+            spserial_free(p);
+        }		
+    } while(0);
     return ret;
 }
 #endif
