@@ -2094,11 +2094,12 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
             spserial_mutex_unlock(t->mutex);	
         #ifndef __SPSR_EPOLL__
             ret = spserial_fetch_commands(fds, mx_number, p, lp);
+            spllog(0, "MACH POLL --->>> lppppppppppppppppppppppppppp: %d", lp);
         #else
             ret = spserial_fetch_commands(epollfd, p, lp);
+            spllog(0, "LINUX EPOLL --->>> lppppppppppppppppppppppppppp: %d", lp);
         #endif
-            spllog(0, "lppppppppppppppppppppppppppp: %d", lp);
-
+           
             spserial_free(p);
         }		
     } while(0);
