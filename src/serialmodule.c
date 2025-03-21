@@ -50,43 +50,16 @@
 #endif
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
 #define SPSERIAL_MAX_AB(__a__, __b__)               ((__a__) > (__b__)) ? (__a__) : (__b__)
 #define SPSERIAL_STEP_MEM                           1024
 #define SPSERIAL_BUFFER_SIZE                        2048
 #define SPSR_DATA_RANGE								1024
 
 #ifndef UNIX_LINUX
-    #define SP_SERIAL_THREAD_ROUTINE LPTHREAD_START_ROUTINE
-#else
-    typedef void* (*SP_SERIAL_THREAD_ROUTINE)(void*);
-#endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+#define SP_SERIAL_THREAD_ROUTINE LPTHREAD_START_ROUTINE
 
-#ifndef UNIX_LINUX
-#else
-#endif
-
-
-#ifndef UNIX_LINUX
-#else
-static int spsr_init_trigger(void*);
-	#ifndef __SPSR_EPOLL__
-		static int spserial_fetch_commands(void *, int *,char*, int n);
-	#else
-		static int spserial_fetch_commands(int, char*, int n);
-	#endif
-#endif
-
-static int spsr_clear_all();
-void thuan() { }
-
-static SPSERIAL_ROOT_TYPE
-    spserial_root_node;
-
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-
-#ifndef UNIX_LINUX
 static int 
     spserial_clear_node(SPSERIAL_ARR_LIST_LINED *);
 static int 
@@ -98,24 +71,28 @@ static DWORD WINAPI
 static int
     spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg);
 static int 
-    spsr_get_obj(char* portname, void** obj, int takeoff);
+    spsr_get_obj(char* portname, void** obj, int takeoff);    
 #else
+
+typedef void* (*SP_SERIAL_THREAD_ROUTINE)(void*);
+static int spsr_init_trigger(void*);
+
+#ifndef __SPSR_EPOLL__
+	static int spserial_fetch_commands(void *, int *,char*, int n);
+    static int spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer, int *chk_off) ;
+#else
+	static int spserial_fetch_commands(int, char*, int n);
+    static int spsr_ctrl_sock(int epollfd, int sockfd, char *buffer, int lenbuffer, int *chk_off) ;
+#endif    
+
 static void* 
     spsr_init_trigger_routine(void*);
 static void*
     spsr_init_cartridge_routine(void*);
 static int
     spsr_send_cmd(int cmd, char *portname, void* data, int lendata);
-    
-    #ifndef __SPSR_EPOLL__
-        static int 
-            spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer, int *chk_off) ;
-    #else   
-        static int 
-            spsr_ctrl_sock(int epollfd, int sockfd, char *buffer, int lenbuffer, int *chk_off) ;
-    #endif
 
-    #define SPSR_MAX_NUMBER_OF_PORT     10
+#define SPSR_MAX_NUMBER_OF_PORT     10
 
 static void *spsr_hash_fd_arr[SPSR_MAX_NUMBER_OF_PORT];
 //static void *spsr_hash_name_arr[SPSR_MAX_NUMBER_OF_PORT];
@@ -129,13 +106,25 @@ typedef struct __SPSR_HASH_FD_NAME__ {
     struct __SPSR_HASH_FD_NAME__ *next;
     int t_delay;
 } SPSR_HASH_FD_NAME;
+
 #define SPSR_HASH_FD(__fd__)    (__fd__%SPSR_MAX_NUMBER_OF_PORT)
+
 //static int spsr_hash_port(char* port, int len);
+
 static int spsr_clear_hash();
 static int spsr_open_fd(char *port_name, int brate, int*);
 static int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay);
+
 #endif
 
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+static SPSERIAL_ROOT_TYPE
+    spserial_root_node;
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+static int 
+    spsr_clear_all();
 static int
     spserial_verify_info(SP_SERIAL_INPUT_ST* obj);
 
@@ -2159,11 +2148,9 @@ int spsr_invoke_cb(SPSERIAL_module_cb fn_cb, void *obj, char *data, int len) {
 	} while(0);
 	return ret;
 }
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
 #ifndef UNIX_LINUX
 #else
 #endif
@@ -2171,4 +2158,3 @@ int spsr_invoke_cb(SPSERIAL_module_cb fn_cb, void *obj, char *data, int len) {
 #ifndef __SPSR_EPOLL__
 #else
 #endif
-//TODO: clean hash array
