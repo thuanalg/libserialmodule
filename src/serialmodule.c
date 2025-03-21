@@ -639,9 +639,7 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
     return 0;
 }
 #else 
-    void* spserial_thread_operating_routine(void* obj) {
-        return 0;
-    }
+
 #endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spsr_module_init() {
