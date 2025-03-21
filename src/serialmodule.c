@@ -154,12 +154,7 @@ int spsr_inst_open(SP_SERIAL_INPUT_ST *p)
 {
     int ret = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-    //SP_SERIAL_INPUT_ST* input_looper = 0;
     do {
-        //if (!output) {
-        //    ret = SPSERIAL_OUTPUT_NULL;
-        //    break;
-        //}
         /*-------------------------------------------------------------------*/
         spserial_mutex_lock(t->mutex);
         /*do {*/
@@ -458,11 +453,14 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                 if (!wrs) {
                     DWORD wErr = GetLastError();
                     spllog(SPL_LOG_DEBUG, "WriteFile: %d", (int)wErr);
-                    if (wErr == ERROR_IO_PENDING) {
+                    if (wErr == ERROR_IO_PENDING) 
+                    {
                         DWORD dwWaitResult = WaitForSingleObject(p->hEvent, INFINITE);
-                        if (dwWaitResult == WAIT_OBJECT_0) {
+                        if (dwWaitResult == WAIT_OBJECT_0) 
+                        {
                             bytesWrite = 0;
-                            if (GetOverlappedResult(p->handle, &olReadWrite, &bytesWrite, TRUE)) {
+                            if (GetOverlappedResult(p->handle, &olReadWrite, &bytesWrite, TRUE)) 
+                            {
                                 if (buf->pl == (int)bytesWrite) {
                                     spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
                                 }
@@ -474,7 +472,8 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                                 spllog(SPL_LOG_ERROR, "Write Error code, %d.", buf->pl);
                             }
                         }
-                        else {
+                        else 
+                        {
                             if (bytesRead == buf->pl) {
                                 spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
                             }
@@ -484,7 +483,8 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                         }
                     }
                 }
-                else {
+                else 
+                {
                     if (buf->pl == (int)bytesWrite) {
                         spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
                     }
@@ -535,7 +535,8 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                 if (!rs) {
                     BOOL rs1 = FALSE;
                     DWORD readErr = GetLastError();
-                    if (readErr == ERROR_IO_PENDING) {
+                    if (readErr == ERROR_IO_PENDING) 
+                    {
                         bytesRead = 0;
                         if(p->t_delay > 0) {
                             Sleep(p->t_delay);
@@ -655,7 +656,8 @@ int spsr_module_init() {
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spsr_module_finish() {
+int spsr_module_finish() 
+{
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
 #ifndef UNIX_LINUX
     spsr_clear_all();
@@ -769,7 +771,8 @@ int spserial_rel_sem(void* sem) {
     return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_wait_sem(void* sem) {
+int spserial_wait_sem(void* sem) 
+{
     int ret = 0;
     do {
         if (!sem) {
@@ -791,20 +794,24 @@ int spserial_wait_sem(void* sem) {
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
-int spsr_get_obj(char* portname, void** obj, int takeoff) {
+int spsr_get_obj(char* portname, void** obj, int takeoff) 
+{
     int ret = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     SPSERIAL_ARR_LIST_LINED* node = 0, * prev = 0;;
     int found = 0;
-    do {
+    do 
+    {
         if (!obj) {
 
             break;
         }
         spserial_mutex_lock(t->mutex);
         node = t->init_node;
-        while (node) {
-            if ( strcmp(portname, node->item->port_name) == 0) {
+        while (node) 
+        {
+            if ( strcmp(portname, node->item->port_name) == 0) 
+            {
                 *obj = node;
                 if (takeoff)
                 {
@@ -845,7 +852,8 @@ int spsr_get_obj(char* portname, void** obj, int takeoff) {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef UNIX_LINUX
-int spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg) {
+int spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg) 
+{
     int ret = 0;
     DWORD dwThreadId = 0;
     HANDLE hThread = 0;
@@ -860,7 +868,8 @@ int spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg) {
 #endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
-int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) {
+int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) 
+{
     int ret = 0;
     do {
         if (!node) {
@@ -1021,8 +1030,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 	
 			cartridge_addr.sin_family = AF_INET;
 			/*
-			cartridge_addr.sin_addr.s_addr = INADDR_ANY;
-			
+			    cartridge_addr.sin_addr.s_addr = INADDR_ANY
 			*/
 			cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
 			cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
@@ -1100,7 +1108,8 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 
 						if(k == 0) {
 							char *p = 0;
-							while(1) {
+							while(1) 
+                            {
 								int lp = 0;
 								memset(&client_addr, 0, sizeof(client_addr));
 								client_len = sizeof(client_addr);
