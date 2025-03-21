@@ -984,11 +984,12 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 #define SPSR_SIZE_MAX_EVENTS        10
 #define SPSR_MSG_OFF        		"SPSR_MSG_OFF"
 #define SPSR_MILLION        		1000000
-    void* spsr_init_trigger_routine(void* obj) {
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+void* spsr_init_trigger_routine(void* obj) {
         spsr_init_trigger(obj);
         return 0;
     }
-
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
     void* spsr_init_cartridge_routine(void* obj) {
         SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
         int ret = 0;
@@ -1289,7 +1290,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
                 }
                 had_cmd = 0;
                 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-                /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+                
             }
 
 
@@ -1357,7 +1358,8 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                         }
                     #ifndef __SPSR_EPOLL__
                         spllog(0, "*prange: %d -------------> DONE.", *prange);
-                        for(i = 0; i < (*prange + 1); ++i) {
+                        for(i = 0; i < (*prange + 1); ++i) 
+                        {
                             spllog(0, "*prange: %d -------------> fds[%d].fd: %d .", *prange, i, fds[i].fd);
                             if(fds[i].fd < 0) {
                                 fds[i].fd = fd;
@@ -1380,7 +1382,8 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                             break;
                         }                
                     #endif  
-                        do {
+                        do 
+                        {
                             SPSR_HASH_FD_NAME *hashobj = 0, *hashitem = 0;
                             int hashid = 0;
                             spserial_malloc(sizeof(SPSR_HASH_FD_NAME), hashobj, SPSR_HASH_FD_NAME);
@@ -1414,7 +1417,9 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                 spserial_mutex_unlock(t->mutex);
                 continue;
 			}
-            if(item->type == SPSR_CMD_REM) {
+            /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+            if(item->type == SPSR_CMD_REM) 
+            {
                 char *portname = 0;
                 portname = item->data;
                 spserial_mutex_lock(t->mutex);
@@ -1513,6 +1518,7 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                 spserial_mutex_unlock(t->mutex);
                 continue;
             }
+            /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
             if(item->type == SPSR_CMD_WRITE) {
                 char *portname = 0;
                 fd = -1;
@@ -1568,16 +1574,20 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
 			}
 		}
 	} while(0);
+
 	if(ret) {
 		if(fd >= 0) {
 			close(fd);
 		}
 	}
+
 	return ret;
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spsr_send_cmd(int cmd, char *portname, void* data, int datasz) {
+
+int spsr_send_cmd(int cmd, char *portname, void* data, int datasz) 
+{
     int ret = 0;
     int nsize = 0;
     int* pend = 0;
@@ -1660,7 +1670,9 @@ int spsr_send_cmd(int cmd, char *portname, void* data, int datasz) {
 #endif
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) {
+
+int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) 
+{
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     int ret = 0;
     SP_SERIAL_INFO_ST* item = 0;
@@ -1798,9 +1810,12 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) {
             spserial_free(node);
         }
     }
+
     return ret;
 }
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
 int spsr_clear_all() {
     int ret = 0;
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
@@ -1854,6 +1869,7 @@ int spsr_clear_all() {
 
 #ifndef UNIX_LINUX
 #else
+/*
 //int spsr_hash_port(char *port, int len) {
 //    int ret = 0;
 //    int *p = 0;
@@ -1866,7 +1882,12 @@ int spsr_clear_all() {
 //    ret = (*p) % SPSR_MAX_NUMBER_OF_PORT;
 //    return ret;
 //}
-int spsr_clear_hash() {
+*/
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+int spsr_clear_hash() 
+{
     int ret = 0;
     int i = 0;
     SPSR_HASH_FD_NAME *tmp = 0, *obj = 0;
@@ -1885,6 +1906,9 @@ int spsr_clear_hash() {
     }
     return ret;
 }
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
 int spsr_open_fd(char *port_name, int baudrate, int *outfd) {
     int ret = 0;
     int fd = -1;
@@ -1941,8 +1965,12 @@ int spsr_open_fd(char *port_name, int baudrate, int *outfd) {
         }   
         *outfd = fd;
     } while(0);
+
     return ret;
 }
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
 int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
     int ret = 0;
     int didread = 0;
@@ -2008,6 +2036,8 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
     } while(0); 
     return ret;
 }
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef __SPSR_EPOLL__
     int spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer, int *chk_off) 
@@ -2093,6 +2123,9 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
     return ret;
 }
 #endif
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
 int spsr_invoke_cb(SPSERIAL_module_cb fn_cb, void *obj, char *data, int len) {
 	int ret = 0;
     SP_SERIAL_GENERIC_ST* evt = 0;
