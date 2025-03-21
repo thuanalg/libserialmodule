@@ -1,6 +1,6 @@
 INCL=-I../ -I../simplelog
-LIBS+=-lpthread -L../linux -lsimplelog -lspserial
-#LIBS+=-lpthread -L../mach -lsimplelog -lspserial
+#LIBS+=-lpthread -L../linux -lsimplelog -lspserial
+LIBS+=-lpthread -L../mach -lsimplelog -lspserial
 
 all:
 	gcc -g `pkg-config --cflags --libs gtk+-3.0` -o gtk_app gtk_app.c ${INCL} ${LIBS}  -DUNIX_LINUX

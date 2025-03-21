@@ -109,10 +109,10 @@ static int
     
     #ifndef __SPSR_EPOLL__
         static int 
-            spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer) ;
+            spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer, int *chk_off) ;
     #else   
         static int 
-            spsr_ctrl_sock(int epollfd, int sockfd, char *buffer, int lenbuffer) ;
+            spsr_ctrl_sock(int epollfd, int sockfd, char *buffer, int lenbuffer, int *chk_off) ;
     #endif
 
     #define SPSR_MAX_NUMBER_OF_PORT     10
@@ -1114,65 +1114,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
 						}
 
 						if(k == 0) {
-							char *p = 0;
-							while(1) 
-                            {
-								int lp = 0;
-								memset(&client_addr, 0, sizeof(client_addr));
-								client_len = sizeof(client_addr);
-								memset(buffer, 0, sizeof(buffer));
-								spllog(SPL_LOG_DEBUG, "recvfrom------------------------");
-								lenmsg = recvfrom(sockfd, buffer, SPSR_MAXLINE, 0,
-									(struct sockaddr*)&client_addr, &client_len);
-								if (lenmsg < 1) {
-                                    if(errno != 11) {
-									    spllog(SPL_LOG_ERROR, "mach recvfrom, lenmsg: %d, errno: %d, text: %s.",
-										    (int)lenmsg, errno, strerror(errno));
-                                    }
-									break;
-								}
-								
-								buffer[lenmsg] = 0;
-								spllog(SPL_LOG_DEBUG, "buffer: %s", buffer);
-								if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
-									spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
-									isoff = 1;
-									break;
-								}
-								if(isoff) {
-									break;
-								}
-								lp = 0;
-                                spserial_malloc(SPSERIAL_BUFFER_SIZE, p, char);
-								spserial_mutex_lock(t->mutex);
-								    /*SPSERIAL_BUFFER_SIZE*/
-								    do {
-								    	if(t->cmd_buff){
-								    		lp = t->cmd_buff->pl;
-								    		spllog(0, "lp: ================= %d.", lp);
-								    		if(lp) {
-								    			if(lp > SPSERIAL_BUFFER_SIZE) {
-								    				p = realloc(p, lp);
-								    			}
-								    			/*
-								    			spserial_malloc(lp, p, char);
-								    			*/
-								    			if(!p) {
-								    				break;
-								    			}
-								    			memcpy(p, t->cmd_buff->data, lp);
-								    			t->cmd_buff->pl = 0;
-								    		}
-								    	}
-								    } while (0);
-
-								spserial_mutex_unlock(t->mutex);	
-
-                                ret = spserial_fetch_commands(fds, &mx_number, p, lp);
-								spllog(0, "lppppppppppppppppppppppppppp: %d", lp);
-                
-								spserial_free(p);
-							}							
+                            spsr_ctrl_sock( fds, &mx_number, sockfd, buffer, SPSR_MAXLINE, &isoff) ;   
 							continue;
 						}
 						if (fds[k].fd >= 0) {      
@@ -1194,7 +1136,6 @@ int spsr_inst_write(char* portname, char*data, int sz) {
                 event.events = EPOLLIN | EPOLLET;
 				event.data.fd = sockfd;
 				
-				spllog(SPL_LOG_DEBUG, "epollfd------------------------");
                 ret = epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &event);
                 if (ret < 0) {
                     spllog(SPL_LOG_ERROR, "epoll_ctl, ret: %d, errno: %d, text: %s.",
@@ -1213,7 +1154,7 @@ int spsr_inst_write(char* portname, char*data, int sz) {
                     {
                         if (events[i].data.fd == sockfd) 
                         {
-                            spsr_ctrl_sock(epollfd, sockfd, buffer, SPSR_MAXLINE);
+                            spsr_ctrl_sock(epollfd, sockfd, buffer, SPSR_MAXLINE, &isoff);
 							continue;
                         } 
 						if (events[i].data.fd >= 0) {
@@ -2069,9 +2010,9 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
 }
 
 #ifndef __SPSR_EPOLL__
-    int spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer) 
+    int spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer, int *chk_off) 
 #else   
-    int spsr_ctrl_sock(int epollfd, int sockfd, char *buffer, int lenbuffer) 
+    int spsr_ctrl_sock(int epollfd, int sockfd, char *buffer, int lenbuffer, int *chk_off) 
 #endif
 {
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
@@ -2142,6 +2083,13 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
             spserial_free(p);
         }		
     } while(0);
+
+    if(isoff) {
+        if(chk_off) {
+            *chk_off = isoff;
+        }
+    }
+
     return ret;
 }
 #endif
