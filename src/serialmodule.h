@@ -31,11 +31,16 @@ extern "C" {
 	#endif
 #else
 	#define DLL_API_SERIAL_MODULE
+	#ifndef __SPSR_EPOLL__
+		#define SPSR_MAINKEY				"main"
+		#define SPSR_MAINKEY_MACH			"main_mach"
+	#endif
 #endif /*! UNIX_LINUX */ 
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #define SPSERIAL_PORT_LEN						32
+#define SPSERIAL_KEY_LEN						(SPSERIAL_PORT_LEN * 2)
 #ifndef LLU
 	#define LLU				unsigned long long
 #endif
@@ -77,6 +82,8 @@ extern "C" {
 		SPSERIAL_MUTEX_NULL_ERROR,
 		SPSERIAL_SEM_NULL_ERROR,
 		SPSERIAL_SEM_POST_ERROR,
+		PSERIAL_SEM_UNLINK,
+		PSERIAL_SEM_CLOSE,
 		SPSERIAL_INPUT_NULL_ERROR,
 		SPSERIAL_THREAD_W32_CREATE,
 		SPSERIAL_NOT_FOUND_IDD,
@@ -100,6 +107,7 @@ extern "C" {
 		PSERIAL_UNIX_EPOLL_CTL,
 		PSERIAL_PORTNAME_EXISTED,
 		PSERIAL_HASH_NOTFOUND,
+		
 
 
 
@@ -163,8 +171,7 @@ extern "C" {
 		void*
 			sem_off;    /*It need to wait for completing.*/
 #ifdef UNIX_LINUX
-		void*
-			sem_trigger;    /*It need to wait for UNIX_LINUX.*/
+		//void* sem_trigger;    /*It need to wait for UNIX_LINUX.*/
 #endif 
 		SPSERIAL_module_cb
 			cb_evt_fn;
@@ -199,6 +206,9 @@ extern "C" {
 			sem_spsr;			/* Check off.*/
 		SP_SERIAL_GENERIC_ST*
 			cmd_buff;			/* Command list .*/
+	#ifndef __SPSR_EPOLL__
+		char sem_key[SPSERIAL_KEY_LEN]; /*It need to wait for UNIX_LINUX --->>> Mach.*/
+	#endif			
 #endif 
 		SPSERIAL_ARR_LIST_LINED* init_node;
 		SPSERIAL_ARR_LIST_LINED* last_node;
