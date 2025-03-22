@@ -419,6 +419,16 @@
 				CODE_SIGN_ENTITLEMENTS = test_libserialmodule/test_libserialmodule.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+					UNIX_LINUX,
+					__MACH__,
+				);
+				HEADER_SEARCH_PATHS = (
+					/Users/ntthuan/Documents/libserialmodule/src/simplelog,
+					/Users/ntthuan/Documents/libserialmodule/src/,
+				);
 				INFOPLIST_FILE = test_libserialmodule/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -436,6 +446,14 @@
 				CODE_SIGN_ENTITLEMENTS = test_libserialmodule/test_libserialmodule.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					UNIX_LINUX,
+					__MACH__,
+				);
+				HEADER_SEARCH_PATHS = (
+					/Users/ntthuan/Documents/libserialmodule/src/simplelog,
+					/Users/ntthuan/Documents/libserialmodule/src/,
+				);
 				INFOPLIST_FILE = test_libserialmodule/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
