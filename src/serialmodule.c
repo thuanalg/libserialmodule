@@ -83,10 +83,13 @@ static int spsr_init_trigger(void*);
     #define SPSERIAL_LOG_UNIX_OPEN_MODE						(O_RDWR | O_EXCL)	
     #define SPSERIAL_LOG_UNIX_PROT_FLAGS					(PROT_READ | PROT_WRITE | PROT_EXEC)
 
+    #define SPSERIAL_SENDSK_FLAG                            0
+
 	static int spserial_fetch_commands(void *, int *,char*, int n);
     static int spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer, int *chk_off) ;
     static int spsr_fmt_name(char *input, char *output);
 #else
+    #define SPSERIAL_SENDSK_FLAG                            MSG_CONFIRM
 	static int spserial_fetch_commands(int, char*, int n);
     static int spsr_ctrl_sock(int epollfd, int sockfd, char *buffer, int lenbuffer, int *chk_off) ;
 #endif    
@@ -1345,13 +1348,13 @@ void* spsr_init_trigger_routine(void* obj) {
 
                 if (isoff) {
                     int kkk = sendto(sockfd, (const char*)SPSR_MSG_OFF, strlen(SPSR_MSG_OFF),
-                        MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr, len);
+                        SPSERIAL_SENDSK_FLAG, (const struct sockaddr*)&cartridge_addr, len);
 					spllog(SPL_LOG_DEBUG, "sendto kkk: %d", kkk);
                     break;
                 }
                 if (had_cmd) {
                     sendto(sockfd, (const char*)"CMD", strlen("CMD"),
-                        MSG_CONFIRM, (const struct sockaddr*)&cartridge_addr, len);
+                        SPSERIAL_SENDSK_FLAG, (const struct sockaddr*)&cartridge_addr, len);
                 }
                 had_cmd = 0;
                 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
