@@ -47,6 +47,8 @@
 		A28EBDD52D8EC6100008653B /* test_libserialmoduleUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = test_libserialmoduleUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A28EBDD92D8EC6100008653B /* test_libserialmoduleUITests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = test_libserialmoduleUITests.m; sourceTree = "<group>"; };
 		A28EBDDB2D8EC6100008653B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A292240C2D8F134F00355A99 /* serialmodule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = serialmodule.h; path = ../../../serialmodule.h; sourceTree = "<group>"; };
+		A292240D2D8F135C00355A99 /* simplelog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = simplelog.h; path = ../../../simplelog/simplelog.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,6 +99,8 @@
 		A28EBDB92D8EC60D0008653B /* test_libserialmodule */ = {
 			isa = PBXGroup;
 			children = (
+				A292240D2D8F135C00355A99 /* simplelog.h */,
+				A292240C2D8F134F00355A99 /* serialmodule.h */,
 				A28EBDBA2D8EC60D0008653B /* AppDelegate.h */,
 				A28EBDBB2D8EC60D0008653B /* AppDelegate.m */,
 				A28EBDBD2D8EC6100008653B /* Assets.xcassets */,
@@ -419,10 +423,26 @@
 				CODE_SIGN_ENTITLEMENTS = test_libserialmodule/test_libserialmodule.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+					UNIX_LINUX,
+					__MACH__,
+				);
+				HEADER_SEARCH_PATHS = (
+					/Users/ntthuan/Documents/libserialmodule/src/simplelog,
+					/Users/ntthuan/Documents/libserialmodule/src/,
+				);
 				INFOPLIST_FILE = test_libserialmodule/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+					/Users/ntthuan/Documents/libserialmodule/src/mach,
+				);
+				LIBRARY_SEARCH_PATHS = /Users/ntthuan/Documents/libserialmodule/src/mach;
+				OTHER_LDFLAGS = (
+					"-lsimplelog",
+					"-lspserial",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "vn.com.tma.test-libserialmodule";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -436,10 +456,24 @@
 				CODE_SIGN_ENTITLEMENTS = test_libserialmodule/test_libserialmodule.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					UNIX_LINUX,
+					__MACH__,
+				);
+				HEADER_SEARCH_PATHS = (
+					/Users/ntthuan/Documents/libserialmodule/src/simplelog,
+					/Users/ntthuan/Documents/libserialmodule/src/,
+				);
 				INFOPLIST_FILE = test_libserialmodule/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+					/Users/ntthuan/Documents/libserialmodule/src/mach,
+				);
+				LIBRARY_SEARCH_PATHS = /Users/ntthuan/Documents/libserialmodule/src/mach;
+				OTHER_LDFLAGS = (
+					"-lsimplelog",
+					"-lspserial",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "vn.com.tma.test-libserialmodule";
 				PRODUCT_NAME = "$(TARGET_NAME)";

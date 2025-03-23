@@ -1,5 +1,5 @@
-target_1=libsimplelog.so
-target_2=libspserial.so
+target_1=libsimplelog.dylib
+target_2=libspserial.dylib
 #debugFlag=-g -fPIC -Wall -shared 
 debugFlag=-g -fPIC -shared 
 #releaseFlag=-fPIC -Wall -shared
@@ -27,4 +27,4 @@ release:
 #	gcc -g -o test_main ../main.c ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2} ${INC}
 
 clean:
-	rm -rf ${target_1} ${target_2}
+	rm -rf ${target_1} ${target_2} *.dylib.*
