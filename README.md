@@ -1,7 +1,8 @@
 # Serial Port Management Library
 
 ## Principle: Unix Philosophy
-	KISS: Keep it simple, stupid!
+KISS: Keep it simple, stupid!
+
 ## Overview 
 This library provides a multi-threaded, cross-platform solution for managing multiple COM/Serial ports. It supports Windows, Linux, and macOS while maintaining compatibility with all C/C++ versions from ANSI C89 to C++20. No external libraries are required; it solely relies on Win32/POSIX API and termios.
 
