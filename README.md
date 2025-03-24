@@ -1,7 +1,9 @@
 # Serial Port Management Library
 
-## Overview
-This library provides a multi-threaded, cross-platform solution for managing multiple COM/Serial ports. It supports Windows, Linux, and macOS while maintaining compatibility with all C/C++ versions from ANSI C89 to C++20. No external libraries are required; it solely relies on Win32 API and termios.
+## Principle: Unix Philosophy
+	KISS: Keep it simple, stupid!
+## Overview 
+This library provides a multi-threaded, cross-platform solution for managing multiple COM/Serial ports. It supports Windows, Linux, and macOS while maintaining compatibility with all C/C++ versions from ANSI C89 to C++20. No external libraries are required; it solely relies on Win32/POSIX API and termios.
 
 ## Features
 - **Multi-threaded (Thread-safe)**: Designed for concurrent access to multiple serial ports.
@@ -16,27 +18,27 @@ This library provides a multi-threaded, cross-platform solution for managing mul
 #### `int spsr_module_init();`
 - **Description**: Initializes the serial module.
 - **Thread-safety**: Yes, but should be called at the start of the `main` function.
-- **Return Value**: `0` on success, negative value on failure.
+- **Return Value**: `0` on success, positive value on failure.
 
 #### `int spsr_module_finish();`
 - **Description**: Cleans up resources before exiting.
 - **Thread-safety**: Yes, but should be called at the end of the `main` function.
-- **Return Value**: `0` on success, negative value on failure.
+- **Return Value**: `0` on success, positive value on failure.
 
 ### 2. Open and Close Serial Ports
 #### `int spsr_inst_open(SP_SERIAL_INPUT_ST* input);`
 - **Description**: Opens a COM/serial port.
 - **Parameters**:
-  - `SP_SERIAL_INPUT_ST* input`: Structure containing port name, baud rate, callback function, and other settings.
+  - `SP_SERIAL_INPUT_ST* input`: Structure containing port name, baud rate, callback function, callback object, delayed time, and other settings.
 - **Thread-safety**: Yes.
-- **Return Value**: `0` on success, negative value on failure.
+- **Return Value**: `0` on success, positive value on failure.
 
 #### `int spsr_inst_close(const char* portname);`
 - **Description**: Closes an open serial port.
 - **Parameters**:
   - `portname`: The name of the COM port to close.
 - **Thread-safety**: Yes.
-- **Return Value**: `0` on success, negative value on failure.
+- **Return Value**: `0` on success, positive value on failure.
 
 ### 3. Data Transmission
 #### `int spsr_inst_write(const char* portname, const char* data, int size);`
@@ -46,7 +48,7 @@ This library provides a multi-threaded, cross-platform solution for managing mul
   - `data`: Pointer to the data buffer.
   - `size`: Number of bytes to write.
 - **Thread-safety**: Yes.
-- **Return Value**: `Number of bytes written` on success, negative value on failure.
+- **Return Value**: `0` on success, positive value on failure.
 
 ### 4. Additional Features (Planned)
 - **Reading Data**: API to read data from the serial port.
