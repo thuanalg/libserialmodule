@@ -756,7 +756,7 @@ int spsr_module_finish()
     #ifndef __SPSR_EPOLL__
         spserial_sem_delete(t->sem, SPSR_MAINKEY);
     #else
-        spserial_sem_delete(t->sem, "");
+        spserial_sem_delete(t->sem, 0);
     #endif    
 #endif
     spserial_mutex_delete(t->mutex);
@@ -785,8 +785,8 @@ int spserial_mutex_lock(void* obj) {
 #else
         ret = pthread_mutex_lock((pthread_mutex_t*)obj);
         if (ret) {
-            spllog(SPL_LOG_ERROR, "pthread_mutex_lock: ret: %d, errno: %d, text: %s.",
-                ret, errno, strerror(errno));
+            spllog(SPL_LOG_ERROR, "pthread_mutex_lock: ret: %d, errno: %d, text: %s, obj: 0x%p.",
+                ret, errno, strerror(errno), obj);
         }
 #endif
     } while (0);
@@ -839,7 +839,8 @@ int spserial_rel_sem(void* sem) {
 
         ret = sem_post((sem_t*)sem);
         if (ret) {
-            spllog(SPL_LOG_DEBUG, "sem_post: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+            spllog(SPL_LOG_DEBUG, "sem_post: ret: %d, errno: %d, text: %s, sem: 0x%p.",
+                   ret, errno, strerror(errno), sem);
         }
 #endif 
     } while (0);
@@ -2280,7 +2281,7 @@ int spserial_sem_delete(void *sem, char *sem_name) {
                     (int)err, errno, strerror(errno));                
             }
 
-            spllog(0, "Delete 0x%p", sem);
+            spllog(0, "Delete 0x%p --------->>>>>>>>>>>	 name: %s", sem, sem_name);
             err = sem_unlink(name);
             if(err) {
                 ret = PSERIAL_SEM_UNLINK;

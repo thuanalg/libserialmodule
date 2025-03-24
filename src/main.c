@@ -6,11 +6,24 @@ int is_master = 0;
 int baudrate = 0;
 char is_port[1024];
 char cfgpath[1024];
+int number_of_ports = 0;
 
 #define __ISMASTER__				"--is_master="
 #define __ISPORT__					"--is_port="
 #define __ISCFG__					"--is_cfg="
 #define __ISBAUDRATE__				"--is_baudrate="
+
+char *test_spsr_list_ports[100];
+int spsr_test_callback(void *dta) {
+    return 0;
+}
+
+#ifndef UNIX_LINUX
+#include <windows.h>
+#else
+#include <pthread.h>
+void * test_try_to_write(void *);
+#endif
 
 #define TESTTEST "1234567"
 /* --is_port=COM2  --is_cfg=C:/z/serialmodule/win32/Debug/simplelog.cfg --is_baudrate=115200*/
@@ -18,17 +31,18 @@ int main(int argc, char *argv[]) {
 	int i = 0;
     char *p = 0;
 	SP_SERIAL_INPUT_ST obj;
-	SP_SERIAL_INFO_ST *obj1 = 0;
+
 	FILE* fp = 0;
 	int k = 0;
-	int myid = 0;
 	int ret = 0;
 	
-	SPSERIAL_ARR_LIST_LINED* objId = 0;
+
 #ifndef UNIX_LINUX
 	snprintf(cfgpath, 1024, "C:/z/serialmodule/win32/Debug/simplelog.cfg");
 #else
 	snprintf(cfgpath, 1024, "simplelog.cfg");
+    pthread_t pthreadid = 0;
+    
 #endif
 	snprintf(is_port, 32,"%s", "COM2");
 	baudrate = 115200;
@@ -68,7 +82,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
     spl_console_log("spsr_module_init. OK"    );
-
+    i = 0;
     p = strtok(is_port, ",");
     while(p) {
         memset(&obj, 0, sizeof(obj));
@@ -78,7 +92,7 @@ int main(int argc, char *argv[]) {
         /*obj.baudrate = 115200;*/
         obj.baudrate = baudrate;
         obj.t_delay = 100;
-        
+        obj.cb_evt_fn = spsr_test_callback;
         if (ret) {
             spl_console_log("Cannot open port."	);
             return EXIT_FAILURE;
@@ -86,24 +100,20 @@ int main(int argc, char *argv[]) {
         ret = spsr_inst_open(&obj);
 
         p = strtok(NULL, ",");
-        
+        test_spsr_list_ports[i] = p;
         spl_sleep(5);
+        ++i;
     }
+    number_of_ports = i;
     
-	/*	
-	ret = spserial_get_objbyid(myid, &objId, 0);
-	if (ret) {
-		return 1;
-	}
-	*/
+#ifndef UNIX_LINUX
+
+#else
+    ret = pthread_create(&pthreadid, 0, test_try_to_write, 0);
+#endif
 	while (1) {
-		spl_sleep(5);
+		spl_sleep(2);
 		spl_console_log("-----------");
-		/*
-		if (!is_master) {
-			spserial_inst_write_to_port(objId->item, TESTTEST, sizeof(TESTTEST));
-		}
-		*/
 #ifndef UNIX_LINUX
 		fp = fopen("C:/z/serialmodule/win32/Debug/trigger_serial.txt", "r");
 #else
@@ -112,18 +122,37 @@ int main(int argc, char *argv[]) {
 		if (fp) {
 			break;
 		}
-		
 	}
 	if (fp) {
 		fclose(fp);
 	}
-	if (obj1) {
-		spsr_inst_close(obj1->port_name);
-	}
+#ifndef UNIX_LINUX
+
+#else
+    pthread_cancel(pthreadid);
+#endif
+    spl_sleep(2);
 	spsr_module_finish();
 	spl_finish_log();
 	return 0;
 }
+#ifndef UNIX_LINUX
+#include <windows.h>
+#else
+#include <pthread.h>
+void * test_try_to_write(void *arg)
+{
+#define SPSR_TEST_TEXT       "hello"
+    int i = 0;
+    while(1) {
+        for(i = 0; i < number_of_ports; ++i) {
+            spsr_inst_write(test_spsr_list_ports[i], SPSR_TEST_TEXT, strlen(SPSR_TEST_TEXT));
+        }
+        spl_sleep(1);
+    }
+    return 0;
+}
+#endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*
 #include <assert.h>
