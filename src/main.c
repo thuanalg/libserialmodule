@@ -147,6 +147,7 @@ int main(int argc, char *argv[]) {
 #else
 #include <pthread.h>
 void * test_try_to_write(void *arg)
+#endif
 {
     char text_data[1024];
 #define SPSR_TEST_TEXT       "hello"
@@ -170,7 +171,7 @@ void * test_try_to_write(void *arg)
     }
     return 0;
 }
-#endif
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*
 #include <assert.h>
