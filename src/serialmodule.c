@@ -45,7 +45,7 @@
         }
 #else
     #define SPSR_MAXLINE                            1024
-    #define SPSR_PORT_TRIGGER                       10024
+    #define SPSR_PORT_TRIGGER                       (10024 + 1)
     #define SPSR_PORT_CARTRIDGE                     (SPSR_PORT_TRIGGER + 10)
 #endif
 
@@ -2106,7 +2106,8 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
                 break;
             }  
             if(!temp->cb_evt_fn) {
-                spllog(SPL_LOG_DEBUG, "cb_evt_fn, SPSERIAL_MEM_NULL.");
+                spllog(SPL_LOG_DEBUG, "cb_evt_fn, cb_evt_fn null.");
+                //write(comfd, buffer, didread);
                 break;
             }
 

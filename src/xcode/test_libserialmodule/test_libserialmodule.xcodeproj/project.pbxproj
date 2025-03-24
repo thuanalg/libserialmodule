@@ -13,6 +13,10 @@
 		A28EBDC42D8EC6100008653B /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = A28EBDC32D8EC6100008653B /* main.m */; };
 		A28EBDCF2D8EC6100008653B /* test_libserialmoduleTests.m in Sources */ = {isa = PBXBuildFile; fileRef = A28EBDCE2D8EC6100008653B /* test_libserialmoduleTests.m */; };
 		A28EBDDA2D8EC6100008653B /* test_libserialmoduleUITests.m in Sources */ = {isa = PBXBuildFile; fileRef = A28EBDD92D8EC6100008653B /* test_libserialmoduleUITests.m */; };
+		A294F2292D91095700756954 /* simplelog.c in Sources */ = {isa = PBXBuildFile; fileRef = A294F2282D91095700756954 /* simplelog.c */; };
+		A294F22B2D91096400756954 /* serialmodule.c in Sources */ = {isa = PBXBuildFile; fileRef = A294F22A2D91096400756954 /* serialmodule.c */; };
+		A2B5845B2D911E6700B72C13 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = A2B5845A2D911E6700B72C13 /* main.c */; };
+		A2FCD51D2D906CB500FEE19A /* simplelog.cfg in Resources */ = {isa = PBXBuildFile; fileRef = A2FCD51C2D906CB500FEE19A /* simplelog.cfg */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,6 +53,10 @@
 		A28EBDDB2D8EC6100008653B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A292240C2D8F134F00355A99 /* serialmodule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = serialmodule.h; path = ../../../serialmodule.h; sourceTree = "<group>"; };
 		A292240D2D8F135C00355A99 /* simplelog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = simplelog.h; path = ../../../simplelog/simplelog.h; sourceTree = "<group>"; };
+		A294F2282D91095700756954 /* simplelog.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = simplelog.c; path = ../../../simplelog/simplelog.c; sourceTree = "<group>"; };
+		A294F22A2D91096400756954 /* serialmodule.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = serialmodule.c; path = ../../../serialmodule.c; sourceTree = "<group>"; };
+		A2B5845A2D911E6700B72C13 /* main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = main.c; path = ../../../main.c; sourceTree = "<group>"; };
+		A2FCD51C2D906CB500FEE19A /* simplelog.cfg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = simplelog.cfg; path = ../../../mach/simplelog.cfg; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +107,10 @@
 		A28EBDB92D8EC60D0008653B /* test_libserialmodule */ = {
 			isa = PBXGroup;
 			children = (
+				A2B5845A2D911E6700B72C13 /* main.c */,
+				A294F22A2D91096400756954 /* serialmodule.c */,
+				A294F2282D91095700756954 /* simplelog.c */,
+				A2FCD51C2D906CB500FEE19A /* simplelog.cfg */,
 				A292240D2D8F135C00355A99 /* simplelog.h */,
 				A292240C2D8F134F00355A99 /* serialmodule.h */,
 				A28EBDBA2D8EC60D0008653B /* AppDelegate.h */,
@@ -234,6 +246,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A28EBDBE2D8EC6100008653B /* Assets.xcassets in Resources */,
+				A2FCD51D2D906CB500FEE19A /* simplelog.cfg in Resources */,
 				A28EBDC12D8EC6100008653B /* MainMenu.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -259,8 +272,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A2B5845B2D911E6700B72C13 /* main.c in Sources */,
 				A28EBDC42D8EC6100008653B /* main.m in Sources */,
+				A294F22B2D91096400756954 /* serialmodule.c in Sources */,
 				A28EBDBC2D8EC60D0008653B /* AppDelegate.m in Sources */,
+				A294F2292D91095700756954 /* simplelog.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -362,6 +378,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				STRINGS_FILE_OUTPUT_ENCODING = "UTF-8";
 			};
 			name = Debug;
 		};
@@ -413,6 +430,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
+				STRINGS_FILE_OUTPUT_ENCODING = "UTF-8";
 			};
 			name = Release;
 		};
@@ -440,10 +458,7 @@
 					/Users/ntthuan/Documents/libserialmodule/src/mach,
 				);
 				LIBRARY_SEARCH_PATHS = /Users/ntthuan/Documents/libserialmodule/src/mach;
-				OTHER_LDFLAGS = (
-					"-lsimplelog",
-					"-lspserial",
-				);
+				OTHER_LDFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = "vn.com.tma.test-libserialmodule";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -471,10 +486,7 @@
 					/Users/ntthuan/Documents/libserialmodule/src/mach,
 				);
 				LIBRARY_SEARCH_PATHS = /Users/ntthuan/Documents/libserialmodule/src/mach;
-				OTHER_LDFLAGS = (
-					"-lsimplelog",
-					"-lspserial",
-				);
+				OTHER_LDFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = "vn.com.tma.test-libserialmodule";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

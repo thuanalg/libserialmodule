@@ -4,7 +4,7 @@
 
 int is_master = 0;
 int baudrate = 0;
-char is_port[32];
+char is_port[1024];
 char cfgpath[1024];
 
 #define __ISMASTER__				"--is_master="
@@ -16,6 +16,7 @@ char cfgpath[1024];
 /* --is_port=COM2  --is_cfg=C:/z/serialmodule/win32/Debug/simplelog.cfg --is_baudrate=115200*/
 int main(int argc, char *argv[]) {
 	int i = 0;
+    char *p = 0;
 	SP_SERIAL_INPUT_ST obj;
 	SP_SERIAL_INFO_ST *obj1 = 0;
 	FILE* fp = 0;
@@ -40,6 +41,7 @@ int main(int argc, char *argv[]) {
 		if (strstr(argv[i], __ISPORT__)) {
 			k = sscanf(argv[i], __ISPORT__"%s", is_port);
 			spl_console_log("k = %d.", k);
+            spl_console_log("%s", is_port);
 			continue;
 		}
 		if (strstr(argv[i], __ISCFG__)) {
@@ -56,18 +58,38 @@ int main(int argc, char *argv[]) {
 
 
 	ret = spl_init_log(cfgpath);
-	memset(&obj, 0, sizeof(obj));
-	snprintf(obj.port_name, SPSERIAL_PORT_LEN, is_port);
-	/*obj.baudrate = 115200;*/
-	obj.baudrate = baudrate;
-	ret = spsr_module_init();
-	if (ret) {
-		return EXIT_FAILURE;
-	}
-	ret = spsr_inst_open(&obj);
-	if (ret) {
-		return 1;
-	}
+    if(ret) {
+        spl_console_log("spl_init_log."    );
+        exit(1);
+    }
+    
+    ret = spsr_module_init();
+    if(ret) {
+        exit(1);
+    }
+    spl_console_log("spsr_module_init. OK"    );
+
+    p = strtok(is_port, ",");
+    while(p) {
+        memset(&obj, 0, sizeof(obj));
+        spl_console_log("port: %s.", p );
+        snprintf(obj.port_name, SPSERIAL_PORT_LEN, "%s", p);
+        //snprintf(obj.port_name, SPSERIAL_PORT_LEN, "/dev/cu.Plser");
+        /*obj.baudrate = 115200;*/
+        obj.baudrate = baudrate;
+        obj.t_delay = 100;
+        
+        if (ret) {
+            spl_console_log("Cannot open port."	);
+            return EXIT_FAILURE;
+        }
+        ret = spsr_inst_open(&obj);
+
+        p = strtok(NULL, ",");
+        
+        spl_sleep(5);
+    }
+    
 	/*	
 	ret = spserial_get_objbyid(myid, &objId, 0);
 	if (ret) {
