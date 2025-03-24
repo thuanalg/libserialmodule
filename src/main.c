@@ -1,6 +1,7 @@
 #include "serialmodule.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int is_master = 0;
 int baudrate = 0;
@@ -15,6 +16,7 @@ int number_of_ports = 0;
 
 char *test_spsr_list_ports[100];
 int spsr_test_callback(void *dta) {
+    spllog(0, "callback--------");
     return 0;
 }
 
@@ -84,7 +86,10 @@ int main(int argc, char *argv[]) {
     spl_console_log("spsr_module_init. OK"    );
     i = 0;
     p = strtok(is_port, ",");
+    //test_spsr_list_ports[i] = p;
+    //test_spsr_list_ports = 1;
     while(p) {
+        test_spsr_list_ports[number_of_ports++] = p;
         memset(&obj, 0, sizeof(obj));
         spl_console_log("port: %s.", p );
         snprintf(obj.port_name, SPSERIAL_PORT_LEN, "%s", p);
@@ -100,11 +105,12 @@ int main(int argc, char *argv[]) {
         ret = spsr_inst_open(&obj);
 
         p = strtok(NULL, ",");
-        test_spsr_list_ports[i] = p;
+        //test_spsr_list_ports[i] = p;
         spl_sleep(5);
         ++i;
+        //number_of_ports++;
     }
-    number_of_ports = i;
+    //number_of_ports = i+1;
     
 #ifndef UNIX_LINUX
 
@@ -142,13 +148,25 @@ int main(int argc, char *argv[]) {
 #include <pthread.h>
 void * test_try_to_write(void *arg)
 {
+    char text_data[1024];
 #define SPSR_TEST_TEXT       "hello"
     int i = 0;
     while(1) {
+        spllog(0, "===================");
         for(i = 0; i < number_of_ports; ++i) {
-            spsr_inst_write(test_spsr_list_ports[i], SPSR_TEST_TEXT, strlen(SPSR_TEST_TEXT));
+            
+            spllog(0, "port: %s", test_spsr_list_ports[i]);
+            
+            if(!test_spsr_list_ports[i]) {
+                continue;
+            }
+            
+            memset(text_data, 0, sizeof(text_data));
+            snprintf(text_data, 1024, "%s-%d, port: %s", SPSR_TEST_TEXT, i, test_spsr_list_ports[i]);
+            spllog(0, "text_data: %s", text_data);
+            spsr_inst_write(test_spsr_list_ports[i], text_data, (int)strlen(text_data));
         }
-        spl_sleep(1);
+        spl_sleep(10);
     }
     return 0;
 }
