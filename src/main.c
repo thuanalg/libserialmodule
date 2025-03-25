@@ -22,6 +22,9 @@ int spsr_test_callback(void *dta) {
 
 #ifndef UNIX_LINUX
 #include <windows.h>
+DWORD dwThreadId_test = 0;
+HANDLE hThread_test = 0;
+DWORD WINAPI test_try_to_write(LPVOID arg);
 #else
 #include <pthread.h>
 void * test_try_to_write(void *);
@@ -114,6 +117,11 @@ int main(int argc, char *argv[]) {
     
 #ifndef UNIX_LINUX
 
+    hThread_test = CreateThread(NULL, 0, test_try_to_write, 0, 0, &dwThreadId_test);
+    if (!hThread_test) {
+        ret = SPSERIAL_THREAD_W32_CREATE;
+        spllog(SPL_LOG_DEBUG, "CreateThread error: %d", (int)GetLastError());
+    }
 #else
     ret = pthread_create(&pthreadid, 0, test_try_to_write, 0);
 #endif
@@ -133,7 +141,7 @@ int main(int argc, char *argv[]) {
 		fclose(fp);
 	}
 #ifndef UNIX_LINUX
-
+    TerminateThread(hThread_test, 0);
 #else
     pthread_cancel(pthreadid);
 #endif
@@ -144,6 +152,7 @@ int main(int argc, char *argv[]) {
 }
 #ifndef UNIX_LINUX
 #include <windows.h>
+DWORD WINAPI test_try_to_write(void* arg)
 #else
 #include <pthread.h>
 void * test_try_to_write(void *arg)
@@ -173,191 +182,3 @@ void * test_try_to_write(void *arg)
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-/*
-#include <assert.h>
-#include <ctype.h>
-#include <limits.h>
-#include <math.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-char* readline();
-char* ltrim(char*);
-char* rtrim(char*);
-
-int parse_int(char*);
-
-
-
-
-#define MAX_GRASSHOPPER		(2 * 100000) 
-const char* GRASSHOPPER[] = {"FizzBuzz", "Fizz", "Buzz", 0};
-void fizzBuzz(int n) {
-	int i = 1;
-	int index = -1;
-	if (n < 1) {
-		return;
-	}
-	if (n > MAX_GRASSHOPPER) {
-		return;
-	}
-	while (i <= n) {
-		index = -1;
-		do {
-			if (i % 3 == 0) {
-				if (i % 5 == 0) {
-					index = 0;
-					break;
-				}
-				index = 1;
-				break;
-			}
-			if (i % 5 == 0) {
-				index = 2;
-				break;
-			}
-		} while (0);
-		if (index > -1) {
-			fprintf(stdout, "%s\n", GRASSHOPPER[index]);
-		}
-		else {
-			fprintf(stdout, "%d\n", i);
-		}
-		++i;
-	}
-}
-
-int __main__()
-{
-	int n = parse_int(ltrim(rtrim(readline())));
-
-	fizzBuzz(n);
-
-	return 0;
-}
-
-char* readline() {
-	size_t alloc_length = 1024;
-	size_t data_length = 0;
-
-	char* data = malloc(alloc_length);
-
-	while (true) {
-		char* cursor = data + data_length;
-		char* line = fgets(cursor, alloc_length - data_length, stdin);
-
-		if (!line) {
-			break;
-		}
-
-		data_length += strlen(cursor);
-
-		if (data_length < alloc_length - 1 || data[data_length - 1] == '\n') {
-			break;
-		}
-
-		alloc_length <<= 1;
-
-		data = realloc(data, alloc_length);
-
-		if (!data) {
-			data = '\0';
-
-			break;
-		}
-	}
-
-	if (data[data_length - 1] == '\n') {
-		data[data_length - 1] = '\0';
-
-		data = realloc(data, data_length);
-
-		if (!data) {
-			data = '\0';
-		}
-	}
-	else {
-		data = realloc(data, data_length + 1);
-
-		if (!data) {
-			data = '\0';
-		}
-		else {
-			data[data_length] = '\0';
-		}
-	}
-
-	return data;
-}
-
-char* ltrim(char* str) {
-	if (!str) {
-		return '\0';
-	}
-
-	if (!*str) {
-		return str;
-	}
-
-	while (*str != '\0' && isspace(*str)) {
-		str++;
-	}
-
-	return str;
-}
-
-char* rtrim(char* str) {
-	if (!str) {
-		return '\0';
-	}
-
-	if (!*str) {
-		return str;
-	}
-
-	char* end = str + strlen(str) - 1;
-
-	while (end >= str && isspace(*end)) {
-		end--;
-	}
-
-	*(end + 1) = '\0';
-
-	return str;
-}
-
-int parse_int(char* str) {
-	char* endptr;
-	int value = strtol(str, &endptr, 10);
-
-	if (endptr == str || *endptr != '\0') {
-		exit(EXIT_FAILURE);
-	}
-
-	return value;
-}
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
