@@ -353,6 +353,7 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 	spllog(SPL_LOG_INFO, "this->m_hWnd: 0x%p.", this->m_hWnd);
 	/*obj.baudrate = 115200;*/
 	//obj.baudrate = 115200;
+	obj.t_delay = 100;
 	obj.baudrate = 115200;
 	if (ret) {
 		exit(EXIT_FAILURE);
