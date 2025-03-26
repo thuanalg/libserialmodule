@@ -356,7 +356,7 @@ void* spserial_sem_create(char *name_key) {
         spsr_fmt_name(name_key, name);
         do {
             ret = sem_open(name, SPSERIAL_LOG_UNIX_CREATE_MODE, SPSERIAL_LOG_UNIX__SHARED_MODE, 1);
-            spllog(0, "sem_open ret: ==================0x%p", ret);
+            spllog(0, "sem_open ret: 0x%p", ret);
             if (ret == SEM_FAILED) 
             {
                 int err = 0;
