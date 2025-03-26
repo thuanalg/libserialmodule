@@ -50,7 +50,7 @@ int spsr_test_callback(void *data) {
     }
     spllog(0, "obj: 0x%p, value: %d", obj, *((int*)obj));
     do {
-        datalen = evt->pl - evt->pc;
+        datalen = evt->pl - evt->pc; /*char *realdata: from evt->pc to evt->pl.*/
         realdata = evt->data + evt->pc;
         if (evt->type == SPSERIAL_EVENT_READ_BUF) {
             /* Read data.*/
