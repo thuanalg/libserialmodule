@@ -56,6 +56,11 @@ This library provides a multi-threaded, cross-platform solution for managing mul
 - **Status Check**: API to check if a port is open.
 - **Error Handling Improvements**: Define specific error codes for better debugging.
 
+## Build and Use
+	1. Windows: Come to "src" and call "cmake ..."
+	2. Linux: Come to "src/linux" and call "make debug" or "make release". I don't use "cmake" in this case.
+	3. Mac OSX : Come to "src/mach" and call "make debug" or "make release". I don't use "cmake" in this case.
+
 ## Example Usage
 Link: https://github.com/thuanalg/libserialmodule/blob/main/src/main.c
 
