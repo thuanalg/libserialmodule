@@ -60,8 +60,12 @@ This library provides a multi-threaded, cross-platform solution for managing mul
 Link: https://github.com/thuanalg/libserialmodule/blob/main/src/main.c
 
 ## License
-This library is open-source and distributed under the MIT License.
+Link: https://github.com/thuanalg/libserialmodule/blob/main/LICENSE.txt
 
 ## Contributions
 Contributions are welcome! Feel free to submit issues or pull requests to enhance functionality.
 
+## Reference & Dedication
+
+   - "UNIX Network Programming, Volume 2: Interprocess Communications, Second Edition": https://www.amazon.com/UNIX-Network-Programming-Interprocess-Communications/dp/0130810819
+   - "Unix Network Programming: The Sockets Networking API": https://www.amazon.com/Unix-Network-Programming-Sockets-Networking/dp/0131411551
