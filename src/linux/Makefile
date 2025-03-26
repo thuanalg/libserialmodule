@@ -19,16 +19,17 @@ CPPFLAGS=-D UNIX_LINUX -D __UNIX_LINUX_CPP11_AND_NEWERS__
 debug:
 	gcc ${debugFlag} -o ${target_1} ${src} ${LIBS} ${CFLAGS} ${INC}
 	gcc ${debugFlag} -o ${target_2} ${src1} ${LIBS} ${CFLAGS} ${LIBS_1} ${INC}
-#	gcc -g -o test_main ../main.c ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2} ${INC}
+	gcc -g -o test_main ../main.c ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2} ${INC}
 
 release:
 	gcc ${releaseFlag} -o ${target_1} ${src} ${LIBS} ${CFLAGS} ${INC}
 	gcc ${releaseFlag} -o ${target_2} ${src1} ${LIBS} ${CFLAGS} ${LIBS_1} ${INC}
-#	gcc -g -o test_main ../main.c ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2} ${INC}
+	gcc -g -o test_main ../main.c ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2} ${INC}
 
 clean:
-	rm -rf ${target_1} ${target_2}
+	rm -rf *.so test_main
 #Set baudrate from BASH
 #stty -F /dev/ttyUSB0 speed 115200
 #get current baudrate from BASH
 #stty -F /dev/ttyUSB0 speed
+#stty -F /dev/ttyUSB0 -a
