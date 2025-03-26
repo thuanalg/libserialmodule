@@ -15,8 +15,58 @@ int number_of_ports = 0;
 #define __ISBAUDRATE__				"--is_baudrate="
 
 char *test_spsr_list_ports[100];
-int spsr_test_callback(void *dta) {
-    spllog(0, "callback--------");
+int spsr_test_callback(void *data) {
+    /* Data is borrowed from background thread, you should make a copy to use and delete. */
+    /* Here, please note data type. */
+    if (!data) {
+        spllog(SPL_LOG_DEBUG, "Data is empty");
+        return 0;
+    }
+    void* obj = 0;
+    int total = 0;
+    char* realdata = 0;
+    int datalen = 0;
+    /* Data is borrowed from background thread, you should make a copy to use and delete. */
+    SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*)data;
+    /*char *realdata: from evt->pc to evt->pl.*/
+    /* SPSERIAL_MODULE_EVENT evt->type */
+    total = evt->total;
+    spserial_malloc(total, evt, SP_SERIAL_GENERIC_ST); /* Clone evt memory. */
+    if (!evt) {
+        exit(1);
+    }
+    memcpy(evt, data, total);
+    spllog(SPL_LOG_DEBUG, "total: %d, type: %d", evt->total, evt->type);
+    if (sizeof(void*) == sizeof(unsigned int)) {
+        /* 32 bit */
+        unsigned int* temp = (unsigned int*)evt->data;
+        obj = (void*)(*temp);
+    } 
+    else if (sizeof(void*) == sizeof(unsigned long long int)) {
+        /* 64 bit */
+        unsigned long long int* temp = (unsigned long long int*)evt->data;
+        obj = (void*)(*temp);
+    }
+    do {
+        datalen = evt->pl - evt->pc;
+        realdata = evt->data + evt->pc;
+        if (evt->type == SPSERIAL_EVENT_READ_BUF) {
+            /* Read data.*/
+            spllog(0, "%s", realdata);
+            break;
+        }
+        if (evt->type == SPSERIAL_EVENT_WRITE_OK) {
+            /* Port name .*/
+            spllog(0, "%s", realdata);
+            break;
+        }
+        if (evt->type == SPSERIAL_EVENT_WRITE_ERROR) {
+            /* Port name .*/
+            spllog(0, "%s", realdata);
+            break;
+        }
+    } while (0);
+    spserial_free(evt);
     return 0;
 }
 

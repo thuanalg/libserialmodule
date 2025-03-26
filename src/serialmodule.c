@@ -157,7 +157,7 @@ static int
 static int
     spserial_wait_sem(void* sem);
 static int 
-	spsr_invoke_cb(SPSERIAL_module_cb fn_cb, void *obj, char *data, int len);
+	spsr_invoke_cb(int evttype, SPSERIAL_module_cb fn_cb, void *obj, char *data, int len);
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int spsr_inst_open(SP_SERIAL_INPUT_ST *p)
@@ -525,9 +525,13 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                         {
                             if (bytesRead == buf->pl) {
                                 spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
+                                spsr_invoke_cb(SPSERIAL_EVENT_WRITE_OK, p->cb_evt_fn, p->cb_obj, p->port_name, strlen(p->port_name));
                             }
                             else {
                                 spllog(SPL_LOG_ERROR, "Write Error, %d.", (int)GetLastError());
+                                if (p->cb_evt_fn) {
+                                    spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, p->cb_evt_fn, p->cb_obj, p->port_name, strlen(p->port_name));
+                                }
                             }
                         }
                     }
@@ -622,7 +626,7 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                     readBuffer, cbInQue, bytesRead);
                 if (p->cb_evt_fn) 
                 {
-                    ret = spsr_invoke_cb(p->cb_evt_fn, p->cb_obj, readBuffer, bytesRead);
+                    ret = spsr_invoke_cb(SPSERIAL_EVENT_READ_BUF, p->cb_evt_fn, p->cb_obj, readBuffer, bytesRead);
                 }
                 /*p->cb end*/
             }
@@ -2085,7 +2089,7 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
                 break;
             }
 
-            ret = spsr_invoke_cb(temp->cb_evt_fn, temp->cb_obj, buffer, didread);
+            ret = spsr_invoke_cb(SPSERIAL_EVENT_READ_BUF, temp->cb_evt_fn, temp->cb_obj, buffer, didread);
 
         } while(0);
 
@@ -2184,7 +2188,7 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spsr_invoke_cb(SPSERIAL_module_cb fn_cb, void *obj, char *data, int len) {
+int spsr_invoke_cb(int evttype, SPSERIAL_module_cb fn_cb, void *obj, char *data, int len) {
 	int ret = 0;
     SP_SERIAL_GENERIC_ST* evt = 0;
     int n = 0;
@@ -2197,7 +2201,7 @@ int spsr_invoke_cb(SPSERIAL_module_cb fn_cb, void *obj, char *data, int len) {
             break;
         }
         evt->total = n;
-        evt->type = SPSERIAL_EVENT_READ_BUF;
+        evt->type = evttype;
 
         evt->pc = sizeof(void*);
         if (sizeof(void*) == sizeof(unsigned int)) {
@@ -2210,8 +2214,10 @@ int spsr_invoke_cb(SPSERIAL_module_cb fn_cb, void *obj, char *data, int len) {
             spllog(SPL_LOG_DEBUG, "With 64 bit.");
             *pt = (unsigned long long int)obj;
         }
-        memcpy(evt->data + evt->pc, data, len);
-        evt->pl = evt->pc + len;
+        if (data) {
+            memcpy(evt->data + evt->pc, data, len);
+            evt->pl = evt->pc + len;
+        }
         fn_cb(evt);
         spserial_free(evt);
 	} while(0);
