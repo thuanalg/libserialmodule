@@ -1,4 +1,4 @@
-# Serial Port Management Library
+# Async C/C++ I/O with COM/Serial Port Library
 
 ## Principle: Unix Philosophy
 KISS: Keep it simple, stupid!
@@ -57,30 +57,7 @@ This library provides a multi-threaded, cross-platform solution for managing mul
 - **Error Handling Improvements**: Define specific error codes for better debugging.
 
 ## Example Usage
-```c
-#include "spsr.h"
-
-int main() {
-    if (spsr_module_init() < 0) {
-        printf("Failed to initialize serial module\n");
-        return -1;
-    }
-    
-    SP_SERIAL_INPUT_ST input = {"COM3", 115200, my_callback};
-    if (spsr_inst_open(&input) < 0) {
-        printf("Failed to open serial port\n");
-        return -1;
-    }
-    
-    const char* message = "Hello, Serial Port!";
-    spsr_inst_write("COM3", message, strlen(message));
-    
-    spsr_inst_close("COM3");
-    spsr_module_finish();
-    
-    return 0;
-}
-```
+Link: https://github.com/thuanalg/libserialmodule/blob/main/src/main.c
 
 ## License
 This library is open-source and distributed under the MIT License.

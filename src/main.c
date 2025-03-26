@@ -15,6 +15,7 @@ int number_of_ports = 0;
 #define __ISBAUDRATE__				"--is_baudrate="
 
 char *test_spsr_list_ports[100];
+int TEST_CALLBACK_OBJ = 179;
 int spsr_test_callback(void *data) {
     /* Data is borrowed from background thread, you should make a copy to use and delete. */
     /* Here, please note data type. */
@@ -47,22 +48,23 @@ int spsr_test_callback(void *data) {
         unsigned long long int* temp = (unsigned long long int*)evt->data;
         obj = (void*)(*temp);
     }
+    spllog(0, "obj: 0x%p, value: %d", obj, *((int*)obj));
     do {
         datalen = evt->pl - evt->pc;
         realdata = evt->data + evt->pc;
         if (evt->type == SPSERIAL_EVENT_READ_BUF) {
             /* Read data.*/
-            spllog(0, "%s", realdata);
+            spllog(0, "%s, datalen: %d", realdata, datalen);
             break;
         }
         if (evt->type == SPSERIAL_EVENT_WRITE_OK) {
             /* Port name .*/
-            spllog(0, "%s", realdata);
+            spllog(0, "%s, datalen: %d", realdata, datalen);
             break;
         }
         if (evt->type == SPSERIAL_EVENT_WRITE_ERROR) {
             /* Port name .*/
-            spllog(0, "%s", realdata);
+            spllog(0, "%s, datalen: %d", realdata, datalen);
             break;
         }
     } while (0);
@@ -152,6 +154,8 @@ int main(int argc, char *argv[]) {
         obj.t_delay = 100;
         /* The callback will receive data from reading a port. */
         obj.cb_evt_fn = spsr_test_callback;
+        obj.cb_obj = &TEST_CALLBACK_OBJ;
+        
         if (ret) {
             spl_console_log("Cannot open port."	);
             return EXIT_FAILURE;

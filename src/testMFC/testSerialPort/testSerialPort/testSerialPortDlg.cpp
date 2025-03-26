@@ -23,10 +23,14 @@ static int callback_to_GUI(void* obj) {
 	void* hwm = 0;
 	SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*) obj;
 	int n = evt->total;
+	if (evt->type != SPSERIAL_EVENT_READ_BUF) {
+		return 0;
+	}
 	spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
 	if (!evt) {
 		return 0;
 	}
+
 	memcpy((char*)evt, (char*)obj, n);
 
 	spllog(SPL_LOG_INFO, "data length: %d.", evt->pl - evt->pc);
