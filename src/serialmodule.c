@@ -1660,7 +1660,7 @@ int spsr_send_cmd(int cmd, char *portname, void* data, int datasz)
                 t->cmd_buff->pl += nsize;
                 pend = (int*)(t->cmd_buff->data + t->cmd_buff->pl);
                 *pend = 0;
-                spllog(0, "cmd------------------------------------: %d, size: %d", obj->type, obj->total);
+                spllog(0, "cmd type SPSR_CMD_ADD: %d, size: %d", obj->type, obj->total);
             }
             break;
         }
@@ -1735,23 +1735,21 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p )
     int fd = 0;
 #endif
     do {
-        spllog(SPL_LOG_DEBUG, "spserial_verify_info:");
         if (!p) {
             ret = SPSERIAL_PORT_INPUT_NULL;
+			spllog(SPL_LOG_ERROR, "SPSERIAL_PORT_INPUT_NULL.");
             break;
         }
-        spllog(SPL_LOG_DEBUG, "spserial_verify_info:");
         if (p->baudrate < 1) {
             ret = SPSERIAL_PORT_BAUDRATE_ERROR;
+			spllog(SPL_LOG_ERROR, "SPSERIAL_PORT_BAUDRATE_ERROR.");
             break;
         }
-        spllog(SPL_LOG_DEBUG, "spserial_verify_info:");
         if (!p->port_name[0]) {
-            spllog(SPL_LOG_DEBUG, "spserial_verify_info, portname: %s", p->port_name);
+            spllog(SPL_LOG_DEBUG, "port_name empty.");
             ret = SPSERIAL_PORT_NAME_ERROR;
             break;
         }
-        spllog(SPL_LOG_DEBUG, "spserial_verify_info:");
         if (t->init_node) 
         {
             SPSERIAL_ARR_LIST_LINED* tmp = 0;
@@ -1766,7 +1764,6 @@ int spserial_verify_info(SP_SERIAL_INPUT_ST* p )
                 tmp = tmp->next;
             }
         }
-        spllog(SPL_LOG_DEBUG, "spserial_verify_info:");
         if (ret) 
         {
             break;
@@ -1889,11 +1886,14 @@ int spsr_clear_all() {
 
     SPSERIAL_ARR_LIST_LINED* tnode = 0, *temp = 0;
     temp = t->init_node; 
-    while (temp) {
+    while (temp) 
+	{
         tnode = temp;
         temp = temp->next;
-        if(tnode->item) {
-            if(tnode->item->handle >= 0) {
+        if(tnode->item) 
+		{
+            if(tnode->item->handle >= 0) 
+			{
                 int fd = tnode->item->handle;
                 ret = close(fd);
                 if(ret) {
@@ -2063,13 +2063,13 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
                 nanosleep(&nap_time, 0);       
                 chk_delay[0] = 1;
             }                     
-            //while(1) {
+            /* while(1) { */
                 didread = (int)read(comfd, buffer, n -1);
                 if(didread < 1) {
                     spllog(SPL_LOG_ERROR, "read error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
                     break;
                 }
-            //}
+            /* } */
             buffer[didread] = 0;
 
             spllog(0, "Didread: %d, data: \"%s\", fd: %d, temp->t_delay/timeout: %d", 
