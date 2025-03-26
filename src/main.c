@@ -15,8 +15,60 @@ int number_of_ports = 0;
 #define __ISBAUDRATE__				"--is_baudrate="
 
 char *test_spsr_list_ports[100];
-int spsr_test_callback(void *dta) {
-    spllog(0, "callback--------");
+int TEST_CALLBACK_OBJ = 179;
+int spsr_test_callback(void *data) {
+    /* Data is borrowed from background thread, you should make a copy to use and delete. */
+    /* Here, please note data type. */
+    if (!data) {
+        spllog(SPL_LOG_DEBUG, "Data is empty");
+        return 0;
+    }
+    void* obj = 0;
+    int total = 0;
+    char* realdata = 0;
+    int datalen = 0;
+    /* Data is borrowed from background thread, you should make a copy to use and delete. */
+    SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*)data;
+    /*char *realdata: from evt->pc to evt->pl.*/
+    /* SPSERIAL_MODULE_EVENT evt->type */
+    total = evt->total;
+    spserial_malloc(total, evt, SP_SERIAL_GENERIC_ST); /* Clone evt memory. */
+    if (!evt) {
+        exit(1);
+    }
+    memcpy(evt, data, total);
+    spllog(SPL_LOG_DEBUG, "total: %d, type: %d", evt->total, evt->type);
+    if (sizeof(void*) == sizeof(unsigned int)) {
+        /* 32 bit */
+        unsigned int* temp = (unsigned int*)evt->data;
+        obj = (void*)(*temp);
+    } 
+    else if (sizeof(void*) == sizeof(unsigned long long int)) {
+        /* 64 bit */
+        unsigned long long int* temp = (unsigned long long int*)evt->data;
+        obj = (void*)(*temp);
+    }
+    spllog(0, "obj: 0x%p, value: %d", obj, *((int*)obj));
+    do {
+        datalen = evt->pl - evt->pc; /*char *realdata: from evt->pc to evt->pl.*/
+        realdata = evt->data + evt->pc;
+        if (evt->type == SPSERIAL_EVENT_READ_BUF) {
+            /* Read data.*/
+            spllog(0, "%s, datalen: %d", realdata, datalen);
+            break;
+        }
+        if (evt->type == SPSERIAL_EVENT_WRITE_OK) {
+            /* Port name .*/
+            spllog(0, "%s, datalen: %d", realdata, datalen);
+            break;
+        }
+        if (evt->type == SPSERIAL_EVENT_WRITE_ERROR) {
+            /* Port name .*/
+            spllog(0, "%s, datalen: %d", realdata, datalen);
+            break;
+        }
+    } while (0);
+    spserial_free(evt);
     return 0;
 }
 
@@ -75,13 +127,13 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-
+    /*You MUST init the logger first. */
 	ret = spl_init_log(cfgpath);
     if(ret) {
         spl_console_log("spl_init_log."    );
         exit(1);
     }
-    
+    /*You MUST init the serial module second. */
     ret = spsr_module_init();
     if(ret) {
         exit(1);
@@ -89,32 +141,33 @@ int main(int argc, char *argv[]) {
     spl_console_log("spsr_module_init. OK"    );
     i = 0;
     p = strtok(is_port, ",");
-    //test_spsr_list_ports[i] = p;
-    //test_spsr_list_ports = 1;
+
+
     while(p) {
         test_spsr_list_ports[number_of_ports++] = p;
         memset(&obj, 0, sizeof(obj));
         spl_console_log("port: %s.", p );
         snprintf(obj.port_name, SPSERIAL_PORT_LEN, "%s", p);
-        //snprintf(obj.port_name, SPSERIAL_PORT_LEN, "/dev/cu.Plser");
-        /*obj.baudrate = 115200;*/
+
+
         obj.baudrate = baudrate;
         obj.t_delay = 100;
+        /* The callback will receive data from reading a port. */
         obj.cb_evt_fn = spsr_test_callback;
+        obj.cb_obj = &TEST_CALLBACK_OBJ;
+        
         if (ret) {
             spl_console_log("Cannot open port."	);
             return EXIT_FAILURE;
         }
+        /* Open a port . */
         ret = spsr_inst_open(&obj);
 
         p = strtok(NULL, ",");
-        //test_spsr_list_ports[i] = p;
         spl_sleep(5);
         ++i;
-        //number_of_ports++;
     }
-    //number_of_ports = i+1;
-    
+    /* Create a thread to writing. . */
 #ifndef UNIX_LINUX
 
     hThread_test = CreateThread(NULL, 0, test_try_to_write, 0, 0, &dwThreadId_test);
@@ -145,8 +198,11 @@ int main(int argc, char *argv[]) {
 #else
     pthread_cancel(pthreadid);
 #endif
-    spl_sleep(2);
+    /* spl_sleep(2); */
+    spl_sleep(1);
+    /* You SHOULD close module before exiting.*/
 	spsr_module_finish();
+    /* You SHOULD close logger before exiting.*/
 	spl_finish_log();
 	return 0;
 }
@@ -162,7 +218,6 @@ void * test_try_to_write(void *arg)
 #define SPSR_TEST_TEXT       "hello"
     int i = 0;
     while(1) {
-        spllog(0, "===================");
         for(i = 0; i < number_of_ports; ++i) {
             
             spllog(0, "port: %s", test_spsr_list_ports[i]);

@@ -116,6 +116,8 @@ extern "C" {
 
 	typedef enum {
 		SPSERIAL_EVENT_READ_BUF,
+		SPSERIAL_EVENT_WRITE_OK,
+		SPSERIAL_EVENT_WRITE_ERROR,
 	} SPSERIAL_MODULE_EVENT;
 
 	typedef struct __SP_SERIAL_GENERIC_ST__ {
@@ -171,7 +173,6 @@ extern "C" {
 		void*
 			sem_off;    /*It need to wait for completing.*/
 #ifdef UNIX_LINUX
-		//void* sem_trigger;    /*It need to wait for UNIX_LINUX.*/
 #endif 
 		SPSERIAL_module_cb
 			cb_evt_fn;

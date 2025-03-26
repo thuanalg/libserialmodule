@@ -23,10 +23,14 @@ static int callback_to_GUI(void* obj) {
 	void* hwm = 0;
 	SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*) obj;
 	int n = evt->total;
+	if (evt->type != SPSERIAL_EVENT_READ_BUF) {
+		return 0;
+	}
 	spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
 	if (!evt) {
 		return 0;
 	}
+
 	memcpy((char*)evt, (char*)obj, n);
 
 	spllog(SPL_LOG_INFO, "data length: %d.", evt->pl - evt->pc);
@@ -353,6 +357,7 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 	spllog(SPL_LOG_INFO, "this->m_hWnd: 0x%p.", this->m_hWnd);
 	/*obj.baudrate = 115200;*/
 	//obj.baudrate = 115200;
+	obj.t_delay = 100;
 	obj.baudrate = 115200;
 	if (ret) {
 		exit(EXIT_FAILURE);
@@ -379,21 +384,6 @@ void CtestSerialPortDlg::OnBnClickedButtonRemove()
 	/*----------------------------------------------------------------------------------------*/
 	int ret = 0;
 	ret = spsr_inst_close(port);
-	//std::list<void*>::iterator it = m_listPort.begin();
-	//n = m_listPort.size();
-	//SPSERIAL_ARR_LIST_LINED* objId = 0;
-	//SP_SERIAL_INFO_ST* item = 0;
-	//void* pcomid = 0;
-	//for (i = 0; i < n; ++i) {
-	//	std::advance(it, i);
-	//	pcomid = *it;
-	//	item = (SP_SERIAL_INFO_ST*)pcomid;
-	//	if (strcmp(port, item->port_name) == 0) {
-	//
-	//		m_listPort.remove(pcomid);
-	//		break;
-	//	}
-	//}
 }
 
 

@@ -1,4 +1,4 @@
-# Serial Port Management Library
+# Async C/C++ I/O with COM/Serial Port Library
 
 ## Principle: Unix Philosophy
 KISS: Keep it simple, stupid!
@@ -56,35 +56,23 @@ This library provides a multi-threaded, cross-platform solution for managing mul
 - **Status Check**: API to check if a port is open.
 - **Error Handling Improvements**: Define specific error codes for better debugging.
 
-## Example Usage
-```c
-#include "spsr.h"
+## Build and Use
+	1. Windows: Come to "src" and call "cmake ..."
+		64 bit: cmake -G "Visual Studio 17 2022" -B ../build
+		32 bit: cmake -G "Visual Studio 17 2022" -B ../build -A win32
+	2. Linux: Come to "src/linux" and call "make debug" or "make release". I don't use "cmake" in this case.
+	3. Mac OSX : Come to "src/mach" and call "make debug" or "make release". I don't use "cmake" in this case.
 
-int main() {
-    if (spsr_module_init() < 0) {
-        printf("Failed to initialize serial module\n");
-        return -1;
-    }
-    
-    SP_SERIAL_INPUT_ST input = {"COM3", 115200, my_callback};
-    if (spsr_inst_open(&input) < 0) {
-        printf("Failed to open serial port\n");
-        return -1;
-    }
-    
-    const char* message = "Hello, Serial Port!";
-    spsr_inst_write("COM3", message, strlen(message));
-    
-    spsr_inst_close("COM3");
-    spsr_module_finish();
-    
-    return 0;
-}
-```
+## Example Usage
+Link: https://github.com/thuanalg/libserialmodule/blob/main/src/main.c
 
 ## License
-This library is open-source and distributed under the MIT License.
+Link: https://github.com/thuanalg/libserialmodule/blob/main/LICENSE.txt
 
 ## Contributions
 Contributions are welcome! Feel free to submit issues or pull requests to enhance functionality.
 
+## Reference & Dedication
+
+   - "UNIX Network Programming, Volume 2: Interprocess Communications, Second Edition": https://www.amazon.com/UNIX-Network-Programming-Interprocess-Communications/dp/0130810819
+   - "Unix Network Programming: The Sockets Networking API": https://www.amazon.com/Unix-Network-Programming-Sockets-Networking/dp/0131411551
