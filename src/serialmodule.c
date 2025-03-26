@@ -193,7 +193,7 @@ int spsr_inst_open(SP_SERIAL_INPUT_ST *p)
 int spsr_inst_close(char* portname)
 {    
     int ret = 0;
-    spllog(0, "-------------  Delete port --------------------------------------------------------------- : %s.", portname);
+    spllog(0, "Delete port: %s.", portname);
 #ifndef UNIX_LINUX
     void *p = 0;
     SPSERIAL_ARR_LIST_LINED* node = 0;
@@ -207,7 +207,7 @@ int spsr_inst_close(char* portname)
     } while (0);
 #else
         SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-        spllog(0, "-------------  Delete port --------------------------------------------------------------- : %s.", portname);
+        spllog(0, "Send cmd to delete port: %s.", portname);
         spserial_mutex_lock(t->mutex);
         /*do {*/
             ret = spsr_send_cmd(SPSR_CMD_REM, portname, 0, 0);
