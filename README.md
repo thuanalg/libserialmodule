@@ -58,6 +58,8 @@ This library provides a multi-threaded, cross-platform solution for managing mul
 
 ## Build and Use
 	1. Windows: Come to "src" and call "cmake ..."
+		64 bit: cmake -G "Visual Studio 17 2022" -B ../build
+		32 bit: cmake -G "Visual Studio 17 2022" -B ../build -A win32
 	2. Linux: Come to "src/linux" and call "make debug" or "make release". I don't use "cmake" in this case.
 	3. Mac OSX : Come to "src/mach" and call "make debug" or "make release". I don't use "cmake" in this case.
 
