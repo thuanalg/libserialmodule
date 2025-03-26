@@ -173,7 +173,7 @@ int spsr_inst_open(SP_SERIAL_INPUT_ST *p)
         spserial_mutex_unlock(t->mutex);
         /*-------------------------------------------------------------------*/
         if(ret) {
-            spllog(SPL_LOG_ERROR, "==================>>> ret error: %d.", ret);
+            spllog(SPL_LOG_ERROR, "ret error: %d.", ret);
             break;
         }
         spserial_mutex_lock(t->mutex);
@@ -622,7 +622,7 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
             }
             else if(bytesRead > 0) /*else start*/
             {
-                spllog(SPL_LOG_DEBUG, " ---------------->>>>>>>>>>>>>>>>  [[[ %s, cbInQue: %d, bRead: %d ]]]", 
+                spllog(SPL_LOG_DEBUG, " [[[ %s, cbInQue: %d, bRead: %d ]]]", 
                     readBuffer, cbInQue, bytesRead);
                 if (p->cb_evt_fn) 
                 {
@@ -1116,7 +1116,6 @@ void* spsr_init_trigger_routine(void* obj) {
 				ret = PSERIAL_FCNTL_SOCK;
 				break;
 			}
-			spllog(SPL_LOG_DEBUG, "fcntl------------------------flags: %d", flags);
 			ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 			if (ret == -1) {
 				spllog(SPL_LOG_ERROR, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
@@ -1125,7 +1124,6 @@ void* spsr_init_trigger_routine(void* obj) {
 			}
 	
 			/* Bind the socket with the server address */
-			spllog(SPL_LOG_DEBUG, "bind------------------------");
 			ret = bind(sockfd, (const struct sockaddr*)&cartridge_addr,
 				sizeof(cartridge_addr));
 			if (ret < 0)
@@ -1186,7 +1184,6 @@ void* spsr_init_trigger_routine(void* obj) {
 				}
            #else
                 /* Start epoll */
-				spllog(SPL_LOG_DEBUG, "epoll_create------------------------");
                 epollfd = epoll_create1(0);
                 if (epollfd < 0) {
                     spllog(SPL_LOG_ERROR, "epoll_create, epollfd: %d, errno: %d, text: %s.",
@@ -1414,10 +1411,10 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                             break;
                         }
                     #ifndef __SPSR_EPOLL__
-                        spllog(0, "Range of hashtable before adding, *prange: %d -------------> DONE.", *prange);
+                        spllog(0, "Range of hashtable before adding, *prange: %d,  DONE.", *prange);
                         for(i = 0; i < (*prange + 1); ++i) 
                         {
-                            spllog(0, "*prange: %d -------------> fds[%d].fd: %d .", *prange, i, fds[i].fd);
+                            spllog(0, "*prange: %d , fds[%d].fd: %d .", *prange, i, fds[i].fd);
                             if(fds[i].fd < 0) {
                                 fds[i].fd = fd;
                                 fds[i].events = POLLIN;  
@@ -1427,7 +1424,7 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                                 break;
                             }
                         }
-                        spllog(0, "Range of hashtable after adding, *prange: %d -------------> DONE.", *prange);
+                        spllog(0, "Range of hashtable after adding, *prange: %d,  DONE.", *prange);
                     #else
                         memset(&event, 0, sizeof(event));
                         event.events = EPOLLIN | EPOLLET ;
@@ -1531,7 +1528,7 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                                             } else {
                                                 spsr_hash_fd_arr[hashid] = temp->next;
                                             }
-                                            spllog(SPL_LOG_DEBUG, "--------------Clear from spsr_hash_fd_arr, hashid:%d, fd: %d.", hashid, fd); 
+                                            spllog(SPL_LOG_DEBUG, "Clear from spsr_hash_fd_arr, hashid:%d, fd: %d.", hashid, fd); 
                                             spserial_free(temp);
                                             break;
                                         }
