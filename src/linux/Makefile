@@ -28,3 +28,7 @@ release:
 
 clean:
 	rm -rf ${target_1} ${target_2}
+#Set baudrate from BASH
+#stty -F /dev/ttyUSB0 speed 115200
+#get current baudrate from BASH
+#stty -F /dev/ttyUSB0 speed
