@@ -512,27 +512,41 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                             {
                                 if (buf->pl == (int)bytesWrite) {
                                     spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
+                                    spsr_invoke_cb(SPSERIAL_EVENT_WRITE_OK, p->cb_evt_fn,
+                                        p->cb_obj, p->port_name, strlen(p->port_name));
                                 }
                                 else {
                                     spllog(SPL_LOG_ERROR, "Write Error, %d.", buf->pl);
+                                    spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, p->cb_evt_fn,
+                                        p->cb_obj, p->port_name, strlen(p->port_name));
                                 }
                             }
                             else {
                                 spllog(SPL_LOG_ERROR, "Write Error code, %d.", buf->pl);
+                                spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, p->cb_evt_fn,
+                                    p->cb_obj, p->port_name, strlen(p->port_name));
                             }
                         }
                         else 
                         {
                             if (bytesRead == buf->pl) {
                                 spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
-                                spsr_invoke_cb(SPSERIAL_EVENT_WRITE_OK, p->cb_evt_fn, p->cb_obj, p->port_name, strlen(p->port_name));
+                                spsr_invoke_cb(SPSERIAL_EVENT_WRITE_OK, p->cb_evt_fn, 
+                                    p->cb_obj, p->port_name, strlen(p->port_name));
                             }
                             else {
                                 spllog(SPL_LOG_ERROR, "Write Error, %d.", (int)GetLastError());
                                 if (p->cb_evt_fn) {
-                                    spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, p->cb_evt_fn, p->cb_obj, p->port_name, strlen(p->port_name));
+                                    spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, p->cb_evt_fn, 
+                                        p->cb_obj, p->port_name, strlen(p->port_name));
                                 }
                             }
+                        }
+                    }
+                    else {
+                        spllog(SPL_LOG_ERROR, "Write Error, %d.", (int)GetLastError());
+                        if (p->cb_evt_fn) {
+                            spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, p->cb_evt_fn, p->cb_obj, p->port_name, strlen(p->port_name));
                         }
                     }
                 }
@@ -540,9 +554,14 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
                 {
                     if (buf->pl == (int)bytesWrite) {
                         spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
+                        spsr_invoke_cb(SPSERIAL_EVENT_WRITE_OK, p->cb_evt_fn,
+                            p->cb_obj, p->port_name, strlen(p->port_name));
                     }
                     else {
                         spllog(SPL_LOG_ERROR, "Write Error, %d.", (int)GetLastError());
+                        if (p->cb_evt_fn) {
+                            spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, p->cb_evt_fn, p->cb_obj, p->port_name, strlen(p->port_name));
+                        }
                     }
                 }
                 buf->pl = 0; 

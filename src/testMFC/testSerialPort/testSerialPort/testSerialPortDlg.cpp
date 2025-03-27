@@ -23,9 +23,9 @@ static int callback_to_GUI(void* obj) {
 	void* hwm = 0;
 	SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*) obj;
 	int n = evt->total;
-	if (evt->type != SPSERIAL_EVENT_READ_BUF) {
-		return 0;
-	}
+	//if (evt->type != SPSERIAL_EVENT_READ_BUF) {
+	//	return 0;
+	//}
 	spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
 	if (!evt) {
 		return 0;
@@ -390,12 +390,35 @@ void CtestSerialPortDlg::OnBnClickedButtonRemove()
 LRESULT CtestSerialPortDlg::OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam) {
 	SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*)lParam;
 	char* p = evt->data + evt->pc;
-	CString txt;
-	p_Cdata->GetWindowText(txt);
-	CString nstr(p);
-	txt.Insert(0, nstr);
-	txt.Insert(0, _T("\r\n"));
-	p_Cdata->SetWindowText(txt);
+	if (evt->type == SPSERIAL_EVENT_READ_BUF) {
+		
+		CString txt;
+		p_Cdata->GetWindowText(txt);
+		CString nstr(p);
+		txt.Insert(0, nstr);
+		txt.Insert(0, _T("\r\n"));
+		p_Cdata->SetWindowText(txt);
+	} 
+	else if (evt->type == SPSERIAL_EVENT_WRITE_OK) {
+		CString txt;
+		p_Cdata->GetWindowText(txt);
+		CString nstr(p);
+		CString nstr1(" SPSERIAL_EVENT_WRITE_OK ");
+		txt.Insert(0, nstr);
+		txt.Insert(0, nstr1);
+		txt.Insert(0, _T("\r\n"));
+		p_Cdata->SetWindowText(txt);
+	}
+	else if (evt->type == SPSERIAL_EVENT_WRITE_ERROR) {
+		CString txt;
+		p_Cdata->GetWindowText(txt);
+		CString nstr(p);
+		CString nstr1(" SPSERIAL_EVENT_WRITE_ERROR ");
+		txt.Insert(0, nstr);
+		txt.Insert(0, nstr1);
+		txt.Insert(0, _T("\r\n"));
+		p_Cdata->SetWindowText(txt);
+	}
 	spserial_free(evt);
 	return 0;
 }
