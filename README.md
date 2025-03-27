@@ -51,7 +51,7 @@ This library provides a multi-threaded, cross-platform solution for managing mul
 - **Thread-safety**: Yes.
 - **Return Value**: `0` on success, positive value on failure.
 
-### 4. Additional Features (Planned)
+### 4. Reading Data through by callback function
 - **Reading Data**: The sample is at **spsr_test_callback** in https://github.com/thuanalg/libserialmodule/blob/main/src/main.c, and **SPSERIAL_MODULE_EVENT**.
 - **Status Check**: Please see error code **SPSERIAL_PORT_ERR**.
 - **Error Handling Improvements**: Please see error code **SERIAL_PORT_ERR**.
