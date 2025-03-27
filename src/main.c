@@ -50,21 +50,21 @@ int spsr_test_callback(void *data) {
     }
     spllog(0, "obj: 0x%p, value: %d", obj, *((int*)obj));
     do {
-        datalen = evt->pl - evt->pc; /*char *realdata: from evt->pc to evt->pl.*/
+        datalen = evt->pl + evt->pc; /*char *realdata: from evt->pc to evt->pl.*/
         realdata = evt->data + evt->pc;
         if (evt->type == SPSERIAL_EVENT_READ_BUF) {
             /* Read data.*/
-            spllog(0, "%s, datalen: %d", realdata, datalen);
+            spllog(0, "realdata: %s, datalen: %d", realdata, datalen);
             break;
         }
         if (evt->type == SPSERIAL_EVENT_WRITE_OK) {
             /* Port name .*/
-            spllog(0, "%s, datalen: %d", realdata, datalen);
+            spllog(0, "realdata: %s, datalen: %d", realdata, datalen);
             break;
         }
         if (evt->type == SPSERIAL_EVENT_WRITE_ERROR) {
             /* Port name .*/
-            spllog(0, "%s, datalen: %d", realdata, datalen);
+            spllog(0, "realdata: %s, datalen: %d", realdata, datalen);
             break;
         }
     } while (0);
