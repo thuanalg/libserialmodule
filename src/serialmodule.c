@@ -1575,18 +1575,19 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
             /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
             if(item->type == SPSR_CMD_WRITE) {
                 char *portname = 0;
+
                 fd = -1;
                 portname = item->data;
                 spserial_mutex_lock(t->mutex);
                 do {
                     temp = t->init_node;                
-                    spllog(0, "----------------SPSR_CMD_WRITE-------------------pl: %d, portname: %s, total: %d, initnode: 0x%p", 
+                    spllog(0, "SPSR_CMD_WRITE, pl: %d, portname: %s, total: %d, initnode: 0x%p", 
                         item->pl, portname, item->total, temp);   
                     while(temp) {
                         spllog(0, "portname: %s", temp->item->port_name);
                         if( strcmp(temp->item->port_name, portname) == 0) {
                             if(temp->item->handle >= 0) {
-                                fd = temp->item->handle;                    
+                                fd = temp->item->handle;             
                             }
                             break;
                         }
@@ -1596,10 +1597,13 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                 spserial_mutex_unlock(t->mutex);
 
                 if(fd >= 0) {
+                    SPSR_HASH_FD_NAME *hashobj = 0;
+                    int hashid = SPSR_HASH_FD(fd);           
                     int nwrote = 0, wlen = 0;;         
                     char *p = 0;
                     p = item->data + item->pc;
                     wlen = item->pl - item->pc;
+                    hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hashid];   
                     if (tcflush(fd, TCIOFLUSH) == -1) {
                         spllog(SPL_LOG_ERROR, "Error flushing the serial port buffer");
                     } else {
@@ -1607,12 +1611,26 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                     }                               
 
                     nwrote = write(fd, p, wlen);
-                    if(nwrote < 0) {
-                        spllog(SPL_LOG_ERROR, "write error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
-                    } else {
+
+                    if (nwrote == wlen){
                         spllog(SPL_LOG_DEBUG, "write DONE, fd: %d, nwrote: %d, p: %s, wlen: %d.", 
                             fd, nwrote, p, wlen); 
+                        if(hashobj) {
+                            if(hashobj->cb_evt_fn) {
+                                spsr_invoke_cb(SPSERIAL_EVENT_WRITE_OK, hashobj->cb_evt_fn, 
+                                    hashobj->cb_obj, hashobj->port_name, strlen(hashobj->port_name));
+                            }
+                        }                            
                     }
+                    else if(nwrote < 0) {
+                        spllog(SPL_LOG_ERROR, "write error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
+                        if(hashobj) {
+                            if(hashobj->cb_evt_fn) {
+                                spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, hashobj->cb_evt_fn, 
+                                    hashobj->cb_obj, hashobj->port_name, strlen(hashobj->port_name));
+                            }
+                        }
+                    } 
 
                     if (tcdrain(fd) == -1) {
                         spllog(SPL_LOG_ERROR, "Error flushing the serial port buffer");
