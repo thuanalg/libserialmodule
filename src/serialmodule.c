@@ -2140,11 +2140,17 @@ int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
             if (lenmsg < 1) { 
 				/* 11: Have no data in Linux */
 				/* 35: Have no data in Linux */
-                if(errno != 11 || errno != 35) {
-                    spllog(SPL_LOG_ERROR, "mach recvfrom, lenmsg: %d, errno: %d, text: %s.",
-                        (int)lenmsg, errno, strerror(errno));
-                }
-				
+            #ifndef __SPSR_EPOLL__
+                if(errno == 35) {
+                    break;
+                }   
+            #else 
+                if(errno == 11) {
+                    break;
+                }            
+            #endif
+                spllog(SPL_LOG_ERROR, "mach recvfrom, lenmsg: %d, errno: %d, text: %s.",
+                    (int)lenmsg, errno, strerror(errno));
                 break;
             }
             
