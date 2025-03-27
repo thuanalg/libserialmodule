@@ -33,3 +33,4 @@ clean:
 #get current baudrate from BASH
 #stty -F /dev/ttyUSB0 speed
 #stty -F /dev/ttyUSB0 -a
+#stty -F /dev/ttyUSB0 115200

@@ -52,9 +52,9 @@ This library provides a multi-threaded, cross-platform solution for managing mul
 - **Return Value**: `0` on success, positive value on failure.
 
 ### 4. Additional Features (Planned)
-- **Reading Data**: API to read data from the serial port.
-- **Status Check**: API to check if a port is open.
-- **Error Handling Improvements**: Define specific error codes for better debugging.
+- **Reading Data**: The sample is at **spsr_test_callback** in https://github.com/thuanalg/libserialmodule/blob/main/src/main.c, and **SPSERIAL_MODULE_EVENT**.
+- **Status Check**: Please see error code **SPSERIAL_PORT_ERR**.
+- **Error Handling Improvements**: Please see error code **SERIAL_PORT_ERR**.
 
 ## Build and Use
 	1. Windows: Come to "src" and call "cmake ..."
@@ -76,3 +76,4 @@ Contributions are welcome! Feel free to submit issues or pull requests to enhanc
 
    - "UNIX Network Programming, Volume 2: Interprocess Communications, Second Edition": https://www.amazon.com/UNIX-Network-Programming-Interprocess-Communications/dp/0130810819
    - "Unix Network Programming: The Sockets Networking API": https://www.amazon.com/Unix-Network-Programming-Sockets-Networking/dp/0131411551
+   - My ex-colleagues: Lê Duy Cường, Bùi Khánh Duy, Nguyễn Công Đức , ... in my old company FPT (https://fpt.com/).
