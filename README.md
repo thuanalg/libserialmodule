@@ -52,9 +52,9 @@ This library provides a multi-threaded, cross-platform solution for managing mul
 - **Return Value**: `0` on success, positive value on failure.
 
 ### 4. Additional Features (Planned)
-- **Reading Data**: API to read data from the serial port.
-- **Status Check**: API to check if a port is open.
-- **Error Handling Improvements**: Define specific error codes for better debugging.
+- **Reading Data**: The sample is at **spsr_test_callback** in https://github.com/thuanalg/libserialmodule/blob/main/src/main.c, and "SPSERIAL_MODULE_EVENT".
+- **Status Check**: Please see error code **SPSERIAL_PORT_ERR**.
+- **Error Handling Improvements**: Please see error code **SERIAL_PORT_ERR**.
 
 ## Build and Use
 	1. Windows: Come to "src" and call "cmake ..."
