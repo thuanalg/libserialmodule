@@ -27,4 +27,4 @@ release:
 	gcc -g -o test_main ../main.c ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2} ${INC}
 
 clean:
-	rm -rf ${target_1} ${target_2} *.dylib.* *_main*
+	rm -rf ${target_1} ${target_2} *.dylib.* *_main* *.so
