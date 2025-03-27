@@ -112,7 +112,7 @@ extern "C" {
 
 
 		SPSERIAL_PORT_PEAK,
-	} SERIAL_PORT_ERR;
+	} SPSERIAL_PORT_ERR;
 
 	typedef enum {
 		SPSERIAL_EVENT_READ_BUF,
