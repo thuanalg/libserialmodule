@@ -13,7 +13,7 @@
 *		The (only) main header file to export 5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open, spsr_inst_close, spsr_inst_write].
 */
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-#ifndef ___SIMPLE_SERIAL_MODULE__
+
 #include "serialmodule.h"
 #include <stdio.h>
 #include <simplelog.h>
