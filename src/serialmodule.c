@@ -759,15 +759,18 @@ int spsr_module_init() {
 int spsr_module_finish() 
 {
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-#ifndef UNIX_LINUX
-    spsr_clear_all();
-    spserial_sem_delete(t->sem, 0);
-#else
+
     spserial_mutex_lock(t->mutex);
     /*do {*/
         t->spsr_off = 1;
     /*} while (0);*/
     spserial_mutex_unlock(t->mutex);
+        
+#ifndef UNIX_LINUX
+    spsr_clear_all();
+    spserial_sem_delete(t->sem, 0);
+#else
+
     /*----------------------------------------*/
     while (1) {
         int is_off = 0;

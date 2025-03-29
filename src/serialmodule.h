@@ -222,10 +222,11 @@ extern "C" {
 		int count;
 		void* mutex;
 		void* sem;
+		int
+			spsr_off;			/* Check off.*/		
 #ifndef UNIX_LINUX
 #else
-		int
-			spsr_off;			/* Check off.*/
+
 		void* 
 			sem_spsr;			/* Check off.*/
 		SP_SERIAL_GENERIC_ST*
