@@ -29,9 +29,9 @@ extern "C" {
 #endif
 
 
-#ifndef UNIX_LINUX
-	#define  UNIX_LINUX
-#endif
+//#ifndef UNIX_LINUX
+//	#define  UNIX_LINUX
+//#endif
 
 
 #ifndef  UNIX_LINUX
@@ -124,6 +124,7 @@ extern "C" {
 		SPSERIAL_UNIX_EPOLL_CTL,
 		SPSERIAL_PORTNAME_EXISTED,
 		SPSERIAL_HASH_NOTFOUND,
+		SPSERIAL_CALLBACK_NULL,
 		
 
 

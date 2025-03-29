@@ -219,6 +219,9 @@ int spsr_inst_close(char* portname)
             spllog(0, "Delete port: %s.", portname);
             node = (SPSERIAL_ARR_LIST_LINED*)p;
             spserial_clear_node(node);
+
+            spserial_free(node->item);
+            spserial_free(node);
         }
     } while (0);
 #else
@@ -461,7 +464,6 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
     DWORD bytesRead = 0;
     DWORD bytesWrite = 0;
 	
-	
     while (1) {
         DWORD dwError = 0;
         int wrote = 0;
@@ -483,9 +485,21 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
             break;
         }
         ret = spserial_module_openport(p);
+
+        do {
+            SPSERIAL_module_cb cb_fn = 0;
+            void* cb_obj = 0;
+            int eventcb = 0;
+            cb_fn =p->cb_evt_fn;
+            cb_obj = p->cb_obj;
+            eventcb = ret ? SPSERIAL_EVENT_OPEN_DEVICE_ERROR : SPSERIAL_EVENT_OPEN_DEVICE_OK;
+            spsr_invoke_cb(eventcb, cb_fn, cb_obj, p->port_name, strlen(p->port_name));
+        } while (0);
+
         if (ret) {
+            break;
         }
-        
+
         while (1) {
             isoff = spserial_module_isoff(p);
             if (isoff) {
@@ -987,6 +1001,8 @@ int spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg)
 int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) 
 {
     int ret = 0;
+    int isoff = 0;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     do {
         if (!node) {
             ret = SPSERIAL_PARAM_NULL;
@@ -1002,6 +1018,18 @@ int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node)
 
         SPSERIAL_CloseHandle(node->item->mtx_off);
         SPSERIAL_CloseHandle(node->item->sem_off);
+        spserial_mutex_lock(t->mutex);
+            isoff = t->spsr_off;
+        spserial_mutex_unlock(t->mutex);
+        if (!isoff) {
+            SPSERIAL_module_cb cb_fn = 0;
+            void* cb_obj = 0;
+            int eventcb = 0;
+            cb_fn = node->item->cb_evt_fn;
+            cb_obj = node->item->cb_obj;
+            eventcb = node->item->handle ? SPSERIAL_EVENT_CLOSE_DEVICE_ERROR : SPSERIAL_EVENT_CLOSE_DEVICE_OK;
+            ret = spsr_invoke_cb(eventcb, cb_fn, cb_obj, node->item->port_name, strlen(node->item->port_name));
+        }
         spserial_free(node->item->buff);
 
     } while (0);
@@ -2288,6 +2316,10 @@ int spsr_invoke_cb(int evttype, SPSERIAL_module_cb fn_cb, void *obj, char *data,
     SP_SERIAL_GENERIC_ST* evt = 0;
     int n = 0;
 	do {
+        if (!fn_cb) {
+            ret = SPSERIAL_CALLBACK_NULL;
+            break;
+        }
 		n = 1 + sizeof(SP_SERIAL_GENERIC_ST) + len + sizeof(void*);
         spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
         if (!evt) {
