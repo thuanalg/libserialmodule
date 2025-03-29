@@ -1440,7 +1440,7 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                 do 
                 {                   
 				    temp = t->init_node;
-				    spllog(0, "\tCMD_ADD");
+				    spllog(0, "\tSPSR_CMD_ADD");
 				    while(temp) 
                     {
 				    	if(temp->item->handle > -1) {
@@ -1538,8 +1538,8 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                 int callback_evt = 0;
                 char tmp_port[SPSERIAL_PORT_LEN] = {0};
                 portname = item->data;
-                sprintf(tmp_port, SPSERIAL_PORT_LEN, "%s", item->data);
-                
+                snprintf(tmp_port, SPSERIAL_PORT_LEN, "%s", item->data);
+                spllog(0, "port: %s", tmp_port);
                 spserial_mutex_lock(t->mutex);
                 do {
                     temp = t->init_node;

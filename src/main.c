@@ -54,19 +54,39 @@ int spsr_test_callback(void *data) {
         realdata = evt->data + evt->pc; /*char *realdata: from evt->pc to evt->pl.*/
         if (evt->type == SPSERIAL_EVENT_READ_BUF) {
             /* Read data.*/
-            spllog(0, "realdata: %s, datalen: %d", realdata, datalen);
+            spllog(0, "SPSERIAL_EVENT_READ_BUF, realdata: %s, datalen: %d", realdata, datalen);
             break;
         }
         if (evt->type == SPSERIAL_EVENT_WRITE_OK) {
             /* Port name .*/
-            spllog(0, "realdata: %s, datalen: %d", realdata, datalen);
+            spllog(0, "SPSERIAL_EVENT_WRITE_OK, realdata: %s, datalen: %d", realdata, datalen);
             break;
         }
         if (evt->type == SPSERIAL_EVENT_WRITE_ERROR) {
             /* Port name .*/
-            spllog(0, "realdata: %s, datalen: %d", realdata, datalen);
+            spllog(0, "SPSERIAL_EVENT_WRITE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
             break;
         }
+        if (evt->type == SPSERIAL_EVENT_OPEN_DEVICE_OK) {
+            /* Port name .*/
+            spllog(0, "SPSERIAL_EVENT_OPEN_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
+            break;
+        }
+        if (evt->type == SPSERIAL_EVENT_OPEN_DEVICE_ERROR) {
+            /* Port name .*/
+            spllog(0, "SPSERIAL_EVENT_OPEN_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+            break;
+        }         
+        if (evt->type == SPSERIAL_EVENT_CLOSE_DEVICE_OK) {
+            /* Port name .*/
+            spllog(0, "SPSERIAL_EVENT_CLOSE_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
+            break;
+        }      
+        if (evt->type == SPSERIAL_EVENT_CLOSE_DEVICE_ERROR) {
+            /* Port name .*/
+            spllog(0, "SPSERIAL_EVENT_CLOSE_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+            break;
+        }               
     } while (0);
     spserial_free(evt);
     return 0;
