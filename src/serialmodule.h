@@ -28,11 +28,11 @@
 extern "C" {
 #endif
 
-
-//#ifndef UNIX_LINUX
-//	#define  UNIX_LINUX
-//#endif
-
+/*
+#ifndef UNIX_LINUX
+	#define  UNIX_LINUX
+#endif
+*/
 
 #ifndef  UNIX_LINUX
 	#ifndef __SIMPLE_STATIC_SERIAL_MODULE__
@@ -160,21 +160,20 @@ extern "C" {
 		char
 			port_name[SPSERIAL_PORT_LEN];
 		SPSERIAL_module_cb
-			cb_evt_fn;
+			cb_evt_fn; /* Callback function. */
 		void* 
-			cb_obj;
-
+			cb_obj; /* Determine callback object. */
 		int 
-			t_delay;
+			t_delay; /* Apply for getting full of message in many cases, look like timeout. */
 
 	} SP_SERIAL_INPUT_ST;
 	
 	
 	typedef struct __SP_SERIAL_INFO_ST__ {
 		int
-			t_delay;
+			t_delay; /* Apply for getting full of message in many cases, look like timeout. */
 		char
-			isoff;
+			isoff; /* Apply for off a session. */
 		char
 			is_retry;
 		int
@@ -190,7 +189,7 @@ extern "C" {
 #else
 		int
 #endif
-			handle;
+			handle; /* File descriptor. */
 
 		void*
 			mtx_off;
@@ -202,7 +201,7 @@ extern "C" {
 			cb_evt_fn;
 		void* cb_obj;
 		SP_SERIAL_GENERIC_ST*
-			buff;
+			buff; /* Buffer for reading. */
 
 	} SP_SERIAL_INFO_ST;
 
