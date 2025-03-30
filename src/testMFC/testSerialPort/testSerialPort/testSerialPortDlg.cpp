@@ -365,7 +365,7 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 
 	ret = spsr_inst_open(&obj);
 	if (ret) {
-		exit(1);
+		//exit(1);
 	}
 }
 
@@ -414,6 +414,46 @@ LRESULT CtestSerialPortDlg::OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam
 		p_Cdata->GetWindowText(txt);
 		CString nstr(p);
 		CString nstr1(" SPSERIAL_EVENT_WRITE_ERROR ");
+		txt.Insert(0, nstr);
+		txt.Insert(0, nstr1);
+		txt.Insert(0, _T("\r\n"));
+		p_Cdata->SetWindowText(txt);
+	}
+	else if (evt->type == SPSERIAL_EVENT_CLOSE_DEVICE_OK) {
+		CString txt;
+		p_Cdata->GetWindowText(txt);
+		CString nstr(p);
+		CString nstr1(" SPSERIAL_EVENT_CLOSE_DEVICE_OK ");
+		txt.Insert(0, nstr);
+		txt.Insert(0, nstr1);
+		txt.Insert(0, _T("\r\n"));
+		p_Cdata->SetWindowText(txt);
+	}
+	else if (evt->type == SPSERIAL_EVENT_CLOSE_DEVICE_ERROR) {
+		CString txt;
+		p_Cdata->GetWindowText(txt);
+		CString nstr(p);
+		CString nstr1(" SPSERIAL_EVENT_CLOSE_DEVICE_ERROR ");
+		txt.Insert(0, nstr);
+		txt.Insert(0, nstr1);
+		txt.Insert(0, _T("\r\n"));
+		p_Cdata->SetWindowText(txt);
+	}
+	else if (evt->type == SPSERIAL_EVENT_OPEN_DEVICE_OK) {
+		CString txt;
+		p_Cdata->GetWindowText(txt);
+		CString nstr(p);
+		CString nstr1(" SPSERIAL_EVENT_OPEN_DEVICE_OK ");
+		txt.Insert(0, nstr);
+		txt.Insert(0, nstr1);
+		txt.Insert(0, _T("\r\n"));
+		p_Cdata->SetWindowText(txt);
+	}
+	else if (evt->type == SPSERIAL_EVENT_OPEN_DEVICE_ERROR) {
+		CString txt;
+		p_Cdata->GetWindowText(txt);
+		CString nstr(p);
+		CString nstr1(" SPSERIAL_EVENT_OPEN_DEVICE_ERROR ");
 		txt.Insert(0, nstr);
 		txt.Insert(0, nstr1);
 		txt.Insert(0, _T("\r\n"));

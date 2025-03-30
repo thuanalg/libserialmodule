@@ -219,6 +219,9 @@ int spsr_inst_close(char* portname)
             spllog(0, "Delete port: %s.", portname);
             node = (SPSERIAL_ARR_LIST_LINED*)p;
             spserial_clear_node(node);
+
+            spserial_free(node->item);
+            spserial_free(node);
         }
     } while (0);
 #else
@@ -461,7 +464,6 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
     DWORD bytesRead = 0;
     DWORD bytesWrite = 0;
 	
-	
     while (1) {
         DWORD dwError = 0;
         int wrote = 0;
@@ -483,9 +485,21 @@ DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
             break;
         }
         ret = spserial_module_openport(p);
+
+        do {
+            SPSERIAL_module_cb cb_fn = 0;
+            void* cb_obj = 0;
+            int eventcb = 0;
+            cb_fn =p->cb_evt_fn;
+            cb_obj = p->cb_obj;
+            eventcb = ret ? SPSERIAL_EVENT_OPEN_DEVICE_ERROR : SPSERIAL_EVENT_OPEN_DEVICE_OK;
+            spsr_invoke_cb(eventcb, cb_fn, cb_obj, p->port_name, strlen(p->port_name));
+        } while (0);
+
         if (ret) {
+            break;
         }
-        
+
         while (1) {
             isoff = spserial_module_isoff(p);
             if (isoff) {
@@ -759,15 +773,18 @@ int spsr_module_init() {
 int spsr_module_finish() 
 {
     SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-#ifndef UNIX_LINUX
-    spsr_clear_all();
-    spserial_sem_delete(t->sem, 0);
-#else
+
     spserial_mutex_lock(t->mutex);
     /*do {*/
         t->spsr_off = 1;
     /*} while (0);*/
     spserial_mutex_unlock(t->mutex);
+        
+#ifndef UNIX_LINUX
+    spsr_clear_all();
+    spserial_sem_delete(t->sem, 0);
+#else
+
     /*----------------------------------------*/
     while (1) {
         int is_off = 0;
@@ -984,6 +1001,8 @@ int spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg)
 int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) 
 {
     int ret = 0;
+    int isoff = 0;
+    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
     do {
         if (!node) {
             ret = SPSERIAL_PARAM_NULL;
@@ -999,6 +1018,18 @@ int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node)
 
         SPSERIAL_CloseHandle(node->item->mtx_off);
         SPSERIAL_CloseHandle(node->item->sem_off);
+        spserial_mutex_lock(t->mutex);
+            isoff = t->spsr_off;
+        spserial_mutex_unlock(t->mutex);
+        if (!isoff) {
+            SPSERIAL_module_cb cb_fn = 0;
+            void* cb_obj = 0;
+            int eventcb = 0;
+            cb_fn = node->item->cb_evt_fn;
+            cb_obj = node->item->cb_obj;
+            eventcb = node->item->handle ? SPSERIAL_EVENT_CLOSE_DEVICE_ERROR : SPSERIAL_EVENT_CLOSE_DEVICE_OK;
+            ret = spsr_invoke_cb(eventcb, cb_fn, cb_obj, node->item->port_name, strlen(node->item->port_name));
+        }
         spserial_free(node->item->buff);
 
     } while (0);
@@ -1430,21 +1461,40 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
             step += item->total;
 			spllog(0, "\tCMD: %d", item->type);
 			if(item->type == SPSR_CMD_ADD) {
+
+                SPSERIAL_module_cb callback_fn = 0;
+                void *callback_obj = 0;
+                int callback_evt = 0;
+                char tmp_port[SPSERIAL_PORT_LEN] = {0};
+
                 spserial_mutex_lock(t->mutex);
-                do {                   
+                do 
+                {                   
 				    temp = t->init_node;
-				    spllog(0, "\tCMD_ADD");
-				    while(temp) {
+				    spllog(0, "\tSPSR_CMD_ADD");
+				    while(temp) 
+                    {
 				    	if(temp->item->handle > -1) {
 				    		temp = temp->next;
 				    		continue;
 				    	}
+                        memset(tmp_port, 0, sizeof(tmp_port));
 				    	input = temp->item;
                         fd = -1;
                         ret = spsr_open_fd(input->port_name, input->baudrate, &fd);
+                        memcpy(tmp_port, input->port_name, strlen(input->port_name));
+                        callback_fn = input->cb_evt_fn;
+                        callback_obj = input->cb_obj;
+
                         if(ret) {
+                            callback_evt = SPSERIAL_EVENT_OPEN_DEVICE_ERROR;
+                            if(callback_fn) {
+                                spsr_invoke_cb(callback_evt, callback_fn, callback_obj, tmp_port, strlen(tmp_port));                    
+                            }                              
                             break;
                         }
+                        
+
                     #ifndef __SPSR_EPOLL__
                         spllog(0, "Range of hashtable before adding, *prange: %d,  DONE.", *prange);
                         for(i = 0; i < (*prange + 1); ++i) 
@@ -1496,7 +1546,10 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                                 }
                                 temp->next = hashitem;
                             }
-
+                            callback_evt = SPSERIAL_EVENT_OPEN_DEVICE_OK;
+                            if(callback_fn) {
+                                spsr_invoke_cb(callback_evt, callback_fn, callback_obj, tmp_port, strlen(tmp_port));                    
+                            }  
                         } while(0);               
 
                         temp->item->handle = fd;
@@ -1504,13 +1557,20 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
 				    }
                 } while(0);
                 spserial_mutex_unlock(t->mutex);
+                
                 continue;
 			}
             /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
             if(item->type == SPSR_CMD_REM) 
             {
                 char *portname = 0;
+                SPSERIAL_module_cb callback_fn = 0;
+                void *callback_obj = 0;
+                int callback_evt = 0;
+                char tmp_port[SPSERIAL_PORT_LEN] = {0};
                 portname = item->data;
+                snprintf(tmp_port, SPSERIAL_PORT_LEN, "%s", item->data);
+                spllog(0, "port: %s", tmp_port);
                 spserial_mutex_lock(t->mutex);
                 do {
                     temp = t->init_node;
@@ -1558,6 +1618,8 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                                     temp = hashobj;
                                     while(temp) {
                                         if(temp->fd == fd) {
+                                            callback_fn = temp->cb_evt_fn;
+                                            callback_obj = temp->cb_obj;
                                             if(prev) {
                                                 prev->next = temp->next;
                                             } else {
@@ -1574,8 +1636,10 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                                 /* Close handle*/
                                 errr = close(fd);
                                 if(errr) {
+                                    callback_evt = SPSERIAL_EVENT_CLOSE_DEVICE_ERROR;
                                     spllog(SPL_LOG_ERROR, "close error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
                                 } else {
+                                    callback_evt = SPSERIAL_EVENT_CLOSE_DEVICE_OK;
                                     spllog(SPL_LOG_DEBUG, "close, fd: %d, DONE", fd); 
                                 }
                                 /* Remove out of root list*/
@@ -1605,6 +1669,9 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
                     } 
                 } while(0);
                 spserial_mutex_unlock(t->mutex);
+                if(callback_fn) {
+                    spsr_invoke_cb(callback_evt, callback_fn, callback_obj, tmp_port, strlen(tmp_port));                    
+                }
                 continue;
             }
             /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -2249,6 +2316,10 @@ int spsr_invoke_cb(int evttype, SPSERIAL_module_cb fn_cb, void *obj, char *data,
     SP_SERIAL_GENERIC_ST* evt = 0;
     int n = 0;
 	do {
+        if (!fn_cb) {
+            ret = SPSERIAL_CALLBACK_NULL;
+            break;
+        }
 		n = 1 + sizeof(SP_SERIAL_GENERIC_ST) + len + sizeof(void*);
         spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
         if (!evt) {

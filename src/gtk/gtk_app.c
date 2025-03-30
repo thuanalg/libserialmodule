@@ -14,6 +14,9 @@ int myusleep = 0;
 #define __ISCFG__					"--is_cfg="
 #define __ISBAUDRATE__				"--is_baudrate="
 #define __IS_USLEEP__				"--is_usleep="
+char *test_spsr_list_ports[100];
+int TEST_CALLBACK_OBJ = 179;
+int spsr_test_callback(void *data) ;
 static int spsr_call_back_read(void *data);
 static gboolean update_ui(gpointer data);
 GtkWidget *entries[7];
@@ -39,8 +42,9 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
 	snprintf(obj->port_name, SPSERIAL_PORT_LEN, "%s", portname);
 	/*obj.baudrate = 115200;*/
 	obj->baudrate = baudrate; 
-    obj->cb_evt_fn = spsr_call_back_read;
-    obj->cb_obj = 0;
+    //obj->cb_evt_fn = spsr_call_back_read;
+    obj->cb_evt_fn = spsr_test_callback;
+    obj->cb_obj = &TEST_CALLBACK_OBJ;
     obj->t_delay = 55;
     
     spllog(0, "baudrate:=========================++++++++++++> %d, portname: %s", 
@@ -199,5 +203,81 @@ int spsr_call_back_read(void *data) {
     spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
     memcpy(evt, data, n);
     g_idle_add(update_ui, (void*)evt);
+    return 0;
+}
+
+int spsr_test_callback(void *data) {
+    /* Data is borrowed from background thread, you should make a copy to use and delete. */
+    /* Here, please note data type. */
+    if (!data) {
+        spllog(SPL_LOG_DEBUG, "Data is empty");
+        return 0;
+    }
+    void* obj = 0;
+    int total = 0;
+    char* realdata = 0;
+    int datalen = 0;
+    /* Data is borrowed from background thread, you should make a copy to use and delete. */
+    SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*)data;
+    /*char *realdata: from evt->pc to evt->pl.*/
+    /* SPSERIAL_MODULE_EVENT evt->type */
+    total = evt->total;
+    spserial_malloc(total, evt, SP_SERIAL_GENERIC_ST); /* Clone evt memory. */
+    if (!evt) {
+        exit(1);
+    }
+    memcpy(evt, data, total);
+    spllog(SPL_LOG_DEBUG, "total: %d, type: %d", evt->total, evt->type);
+    if (sizeof(void*) == sizeof(unsigned int)) {
+        /* 32 bit */
+        unsigned int* temp = (unsigned int*)evt->data;
+        obj = (void*)(*temp);
+    } 
+    else if (sizeof(void*) == sizeof(unsigned long long int)) {
+        /* 64 bit */
+        unsigned long long int* temp = (unsigned long long int*)evt->data;
+        obj = (void*)(*temp);
+    }
+    spllog(0, "obj: 0x%p, value: %d", obj, *((int*)obj));
+    do {
+        datalen = evt->pl - evt->pc; /*datalen.*/
+        realdata = evt->data + evt->pc; /*char *realdata: from evt->pc to evt->pl.*/
+        if (evt->type == SPSERIAL_EVENT_READ_BUF) {
+            /* Read data.*/
+            spllog(0, "SPSERIAL_EVENT_READ_BUF, realdata: %s, datalen: %d", realdata, datalen);
+            break;
+        }
+        if (evt->type == SPSERIAL_EVENT_WRITE_OK) {
+            /* Port name .*/
+            spllog(0, "SPSERIAL_EVENT_WRITE_OK, realdata: %s, datalen: %d", realdata, datalen);
+            break;
+        }
+        if (evt->type == SPSERIAL_EVENT_WRITE_ERROR) {
+            /* Port name .*/
+            spllog(0, "SPSERIAL_EVENT_WRITE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+            break;
+        }
+        if (evt->type == SPSERIAL_EVENT_OPEN_DEVICE_OK) {
+            /* Port name .*/
+            spllog(0, "SPSERIAL_EVENT_OPEN_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
+            break;
+        }
+        if (evt->type == SPSERIAL_EVENT_OPEN_DEVICE_ERROR) {
+            /* Port name .*/
+            spllog(0, "SPSERIAL_EVENT_OPEN_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+            break;
+        }         
+        if (evt->type == SPSERIAL_EVENT_CLOSE_DEVICE_OK) {
+            /* Port name .*/
+            spllog(0, "SPSERIAL_EVENT_CLOSE_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
+            break;
+        }      
+        if (evt->type == SPSERIAL_EVENT_CLOSE_DEVICE_ERROR) {
+            /* Port name .*/
+            spllog(0, "SPSERIAL_EVENT_CLOSE_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+            break;
+        }               
+    } while (0);
+    spserial_free(evt);
     return 0;
 }
