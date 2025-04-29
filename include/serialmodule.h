@@ -6,9 +6,11 @@
 * Skype:
 *		<nguyenthaithuanalg>
 * Date:
-*		<2025-March-01>
+*		<2025-Mar-01>
 * The lasted modified date:
-		<2025-March-27>
+		<2025-Mar-27>
+		<2025-Apr-29>
+
 * Decription:
 *		The (only) main header file to export 5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
 spsr_inst_close, spsr_inst_write].
@@ -111,10 +113,6 @@ spsr_inst_close, spsr_inst_write].
 extern "C" {
 #endif
 
-// #ifndef UNIX_LINUX
-//	#define  UNIX_LINUX
-// #endif
-
 #ifndef UNIX_LINUX
 #ifndef __SIMPLE_STATIC_SERIAL_MODULE__
 #ifdef EXPORT_DLL_API_SERIAL_MODULE
@@ -136,7 +134,7 @@ extern "C" {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #define SPSR_PORT_LEN             32
-#define SPSR_KEY_LEN              (SPSR_PORT_LEN * 2)
+#define SPSR_KEY_LEN              (SPSR_PORT_LEN)
 #ifndef SPSR_LLU
 #define SPSR_LLU                  unsigned long long
 #endif

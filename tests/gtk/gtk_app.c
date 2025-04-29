@@ -26,7 +26,6 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
     int i = 0;
     int ret = 0;
     SP_SERIAL_INPUT_ST *obj = 0;
-    SP_SERIAL_INFO_ST *obj1 = 0;
     const char *portname = gtk_entry_get_text(GTK_ENTRY(entries[0])); 
     spllog(0, "Button %s clicked, text: %s!\n", (char *)data, portname);
     spsr_malloc(sizeof(SP_SERIAL_INPUT_ST), obj, SP_SERIAL_INPUT_ST);

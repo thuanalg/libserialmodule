@@ -52,28 +52,31 @@ This library provides a multi-threaded, cross-platform solution for managing mul
 - **Return Value**: `0` on success, positive value on failure.
 
 ### 4. Reading Data through by callback function
-- **Reading Data**: The sample is at **spsr_test_callback** in https://github.com/thuanalg/libserialmodule/blob/main/src/main.c, and **SPSERIAL_MODULE_EVENT**.
+- **Reading Data**: The sample is at [spsr_test_callback](https://github.com/thuanalg/libserialmodule/blob/main/src/main.c), and **SPSERIAL_MODULE_EVENT**.
 - **Status Check**: Please see error code **SPSERIAL_PORT_ERR**.
 - **Error Handling Improvements**: Please see error code **SERIAL_PORT_ERR**.
 
 ## Build and Use
 	1. Windows: Come to "src" and call "cmake ..."
-		64 bit: cmake -G "Visual Studio 17 2022" -B ../build
-		32 bit: cmake -G "Visual Studio 17 2022" -B ../build -A win32
-	2. Linux: Come to "src/linux" and call "make debug" or "make release". I don't use "cmake" in this case.
-	3. Mac OSX : Come to "src/mach" and call "make debug" or "make release". I don't use "cmake" in this case.
+		Come to root folder, **mkdir build && cd build**
+		64 bit: cmake -G "Visual Studio 17 2022"
+		32 bit: cmake -G "Visual Studio 17 2022" -A win32
+	2. For Linux: **cmake .. -DUNIX_LINUX=1**.
+	3. Mac OSX : **cmake .. -DUNIX_LINUX=1 -DMACOSX=1**.
+	3. Mac OSX/Linux : **make; sudo make install**.
+	4. Note configuring file [simplelog.cfg](https://github.com/thuanalg/libserialmodule/blob/main/src/simplelog.cfg).
 
 ## Example Usage
-Link: https://github.com/thuanalg/libserialmodule/blob/main/src/main.c
+Link: [Example](https://github.com/thuanalg/libserialmodule/blob/main/src/main.c)
 
 ## License
-Link: https://github.com/thuanalg/libserialmodule/blob/main/LICENSE.txt
+[License](https://github.com/thuanalg/libserialmodule/blob/main/LICENSE.txt)
 
 ## Contributions
 Contributions are welcome! Feel free to submit issues or pull requests to enhance functionality.
 
 ## Reference & Dedication
 
-   - "UNIX Network Programming, Volume 2: Interprocess Communications, Second Edition": https://www.amazon.com/UNIX-Network-Programming-Interprocess-Communications/dp/0130810819
-   - "Unix Network Programming: The Sockets Networking API": https://www.amazon.com/Unix-Network-Programming-Sockets-Networking/dp/0131411551
-   - My ex-colleagues: Lê Duy Cường, Bùi Khánh Duy, Nguyễn Công Đức , ... in my old company FPT (https://fpt.com/).
+   - [UNIX Network Programming, Volume 2: Interprocess Communications, Second Edition](https://www.amazon.com/UNIX-Network-Programming-Interprocess-Communications/dp/0130810819)
+   - [Unix Network Programming: The Sockets Networking API](https://www.amazon.com/Unix-Network-Programming-Sockets-Networking/dp/0131411551)
+   - My ex-colleagues: Lê Duy Cường, Bùi Khánh Duy, Nguyễn Công Đức , ... .
