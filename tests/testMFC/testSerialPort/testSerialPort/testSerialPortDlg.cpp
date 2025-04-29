@@ -26,7 +26,7 @@ static int callback_to_GUI(void* obj) {
 	//if (evt->type != SPSR_EVENT_READ_BUF) {
 	//	return 0;
 	//}
-	spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
+	spsr_malloc(n, evt, SP_SERIAL_GENERIC_ST);
 	if (!evt) {
 		return 0;
 	}
@@ -459,7 +459,7 @@ LRESULT CtestSerialPortDlg::OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam
 		txt.Insert(0, _T("\r\n"));
 		p_Cdata->SetWindowText(txt);
 	}
-	spserial_free(evt);
+	spsr_free(evt);
 	return 0;
 }
 
