@@ -1,5 +1,9 @@
-target_1=libsimplelog.dylib
-target_2=libspserial.dylib
+LIB_SUFF=so
+#LIB_SUFF=dylib
+MACOSX_FLAG=
+#MACOSX_FLAG=-D __MACH__
+target_1=libsimplelog.${LIB_SUFF}
+target_2=libspserial.${LIB_SUFF}
 #debugFlag=-g -fPIC -Wall -shared 
 debugFlag=-g -fPIC -shared 
 #releaseFlag=-fPIC -Wall -shared
@@ -11,10 +15,10 @@ src=../simplelog/simplelog.c
 src1=../serialmodule.c 
 INC=-I../simplelog/ -I../
 #CFLAGS=-ansi
-CFLAGS=-std=gnu89 -D UNIX_LINUX -Wunused-variable -Wunused-function
+CFLAGS=-std=gnu89 -D UNIX_LINUX -Wunused-variable -Wunused-function ${MACOSX_FLAG} 
 #CPPFLAGS=-std=c++98 
 #CPPFLAGS=-std=c++98 -D UNIX_LINUX -D __UNIX_LINUX_CPP11_AND_NEWERS
-CPPFLAGS=-D UNIX_LINUX -D __UNIX_LINUX_CPP11_AND_NEWERS__
+CPPFLAGS=-D UNIX_LINUX -D __UNIX_LINUX_CPP11_AND_NEWERS__ ${MACOSX_FLAG}
 
 debug:
 	gcc ${debugFlag} -o ${target_1} ${src} ${LIBS} ${CFLAGS} ${INC}

@@ -23,7 +23,7 @@ static int callback_to_GUI(void* obj) {
 	void* hwm = 0;
 	SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*) obj;
 	int n = evt->total;
-	//if (evt->type != SPSERIAL_EVENT_READ_BUF) {
+	//if (evt->type != SPSR_EVENT_READ_BUF) {
 	//	return 0;
 	//}
 	spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
@@ -44,7 +44,7 @@ static int callback_to_GUI(void* obj) {
 	}
 	//hwm = (void*)evt->data;
 	spllog(SPL_LOG_INFO, "hwm: 0x%p", hwm);
-	::SendMessageA((HWND)hwm, WM_SPSERIAL_CUSTOM_MESSAGE, 0, (LPARAM)evt);
+	::SendMessageA((HWND)hwm, WM_SPSR_CUSTOM_MESSAGE, 0, (LPARAM)evt);
 	//spserial_free(evt);
 	return 0;
 }
@@ -114,7 +114,7 @@ BEGIN_MESSAGE_MAP(CtestSerialPortDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_ADD, &CtestSerialPortDlg::OnBnClickedButtonAdd)
 	ON_BN_CLICKED(IDC_BUTTON_REMOVE, &CtestSerialPortDlg::OnBnClickedButtonRemove)
 	ON_BN_CLICKED(IDC_BUTTON_REMOVE, &CtestSerialPortDlg::OnBnClickedButtonRemove)
-	ON_MESSAGE(WM_SPSERIAL_CUSTOM_MESSAGE, &CtestSerialPortDlg::OnSpSerialCustomMessage)
+	ON_MESSAGE(WM_SPSR_CUSTOM_MESSAGE, &CtestSerialPortDlg::OnSpSerialCustomMessage)
 END_MESSAGE_MAP()
 
 
@@ -266,7 +266,7 @@ void CtestSerialPortDlg::OnBnClickedButtonmsg()
 	void* pcomid = 0;
 	char portport[64] = { 0 };
 	char data[1024] = { 0 };
-	SPSERIAL_ARR_LIST_LINED* objId = 0;
+	SPSR_ARR_LIST_LINED* objId = 0;
 	SP_SERIAL_INFO_ST* item = 0;
 	int comid = 0;
 	int i = 0;
@@ -348,10 +348,10 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 	FILE* fp = 0;
 	int k = 0;
 
-	SPSERIAL_ARR_LIST_LINED* objId = 0;
+	SPSR_ARR_LIST_LINED* objId = 0;
 
 	memset(&obj, 0, sizeof(obj));
-	snprintf(obj.port_name, SPSERIAL_PORT_LEN, port);
+	snprintf(obj.port_name, SPSR_PORT_LEN, port);
 	obj.cb_evt_fn = callback_to_GUI;
 	obj.cb_obj = this->m_hWnd;
 	spllog(SPL_LOG_INFO, "this->m_hWnd: 0x%p.", this->m_hWnd);
@@ -365,7 +365,7 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 
 	ret = spsr_inst_open(&obj);
 	if (ret) {
-		exit(1);
+		//exit(1);
 	}
 }
 
@@ -390,7 +390,7 @@ void CtestSerialPortDlg::OnBnClickedButtonRemove()
 LRESULT CtestSerialPortDlg::OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam) {
 	SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*)lParam;
 	char* p = evt->data + evt->pc;
-	if (evt->type == SPSERIAL_EVENT_READ_BUF) {
+	if (evt->type == SPSR_EVENT_READ_BUF) {
 		
 		CString txt;
 		p_Cdata->GetWindowText(txt);
@@ -399,21 +399,61 @@ LRESULT CtestSerialPortDlg::OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam
 		txt.Insert(0, _T("\r\n"));
 		p_Cdata->SetWindowText(txt);
 	} 
-	else if (evt->type == SPSERIAL_EVENT_WRITE_OK) {
+	else if (evt->type == SPSR_EVENT_WRITE_OK) {
 		CString txt;
 		p_Cdata->GetWindowText(txt);
 		CString nstr(p);
-		CString nstr1(" SPSERIAL_EVENT_WRITE_OK ");
+		CString nstr1(" SPSR_EVENT_WRITE_OK ");
 		txt.Insert(0, nstr);
 		txt.Insert(0, nstr1);
 		txt.Insert(0, _T("\r\n"));
 		p_Cdata->SetWindowText(txt);
 	}
-	else if (evt->type == SPSERIAL_EVENT_WRITE_ERROR) {
+	else if (evt->type == SPSR_EVENT_WRITE_ERROR) {
 		CString txt;
 		p_Cdata->GetWindowText(txt);
 		CString nstr(p);
-		CString nstr1(" SPSERIAL_EVENT_WRITE_ERROR ");
+		CString nstr1(" SPSR_EVENT_WRITE_ERROR ");
+		txt.Insert(0, nstr);
+		txt.Insert(0, nstr1);
+		txt.Insert(0, _T("\r\n"));
+		p_Cdata->SetWindowText(txt);
+	}
+	else if (evt->type == SPSR_EVENT_CLOSE_DEVICE_OK) {
+		CString txt;
+		p_Cdata->GetWindowText(txt);
+		CString nstr(p);
+		CString nstr1(" SPSR_EVENT_CLOSE_DEVICE_OK ");
+		txt.Insert(0, nstr);
+		txt.Insert(0, nstr1);
+		txt.Insert(0, _T("\r\n"));
+		p_Cdata->SetWindowText(txt);
+	}
+	else if (evt->type == SPSR_EVENT_CLOSE_DEVICE_ERROR) {
+		CString txt;
+		p_Cdata->GetWindowText(txt);
+		CString nstr(p);
+		CString nstr1(" SPSR_EVENT_CLOSE_DEVICE_ERROR ");
+		txt.Insert(0, nstr);
+		txt.Insert(0, nstr1);
+		txt.Insert(0, _T("\r\n"));
+		p_Cdata->SetWindowText(txt);
+	}
+	else if (evt->type == SPSR_EVENT_OPEN_DEVICE_OK) {
+		CString txt;
+		p_Cdata->GetWindowText(txt);
+		CString nstr(p);
+		CString nstr1(" SPSR_EVENT_OPEN_DEVICE_OK ");
+		txt.Insert(0, nstr);
+		txt.Insert(0, nstr1);
+		txt.Insert(0, _T("\r\n"));
+		p_Cdata->SetWindowText(txt);
+	}
+	else if (evt->type == SPSR_EVENT_OPEN_DEVICE_ERROR) {
+		CString txt;
+		p_Cdata->GetWindowText(txt);
+		CString nstr(p);
+		CString nstr1(" SPSR_EVENT_OPEN_DEVICE_ERROR ");
 		txt.Insert(0, nstr);
 		txt.Insert(0, nstr1);
 		txt.Insert(0, _T("\r\n"));

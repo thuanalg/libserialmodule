@@ -10,7 +10,8 @@
 * The lasted modified date:
 		<2025-March-27>
 * Decription:
-*		The (only) main header file to export 5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open, spsr_inst_close, spsr_inst_write].
+*		The (only) main header file to export 5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
+spsr_inst_close, spsr_inst_write].
 */
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
@@ -19,1671 +20,1875 @@
 #include <simplelog.h>
 
 #ifndef UNIX_LINUX
-    #include <Windows.h>
+#include <Windows.h>
 #else
-    #include <sys/types.h>
-    #include <sys/stat.h>
-    #include <pthread.h>
-    #include <semaphore.h>
-    #include <unistd.h>
-    #include <sys/mman.h>
-    #include <sys/stat.h> /* For mode constants */
-    #include <fcntl.h> /* For O_* constants */
-    #include <errno.h>
-    #include <termios.h>
-    #include <stdlib.h> 
-    #include <unistd.h> 
-    #include <string.h> 
-    #include <sys/types.h> 
-    #include <sys/socket.h> 
-    #include <arpa/inet.h> 
-    #include <netinet/in.h> 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/stat.h> /* For mode constants */
+#include <fcntl.h> /* For O_* constants */
+#include <errno.h>
+#include <termios.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #ifndef __SPSR_EPOLL__
-	#include <poll.h>
+#include <poll.h>
 #else
-    #include <sys/epoll.h>
-#endif	
-    /* https://gist.github.com/reterVision/8300781 */
+#include <sys/epoll.h>
+#endif
+/* https://gist.github.com/reterVision/8300781 */
 #endif
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
-#define SPSERIAL_CloseHandle(__o0bj__) \
-		{void *__serialpp__ = (__o0bj__);\
-            if(__serialpp__) { \
-                ;int bl = CloseHandle((__serialpp__));\
-                ;if(!bl) { \
-                    ;spllog(SPL_LOG_ERROR, "CloseHandle error: %lu", GetLastError()); \
-                ;}\
-                ;spllog(0, "SPSERIAL_CloseHandle 0x%p -->> %s", __serialpp__, (bl ? "DONE": "ERROR")); \
-                ;(__o0bj__) = 0;\
-            ;}\
-        }
+#define SPSR_CloseHandle(__o0bj__)                                                                                          \
+	{                                                                                                                   \
+		void *__serialpp__ = (__o0bj__);                                                                            \
+		if (__serialpp__) {                                                                                         \
+			;                                                                                                   \
+			int bl = CloseHandle((__serialpp__));                                                               \
+			;                                                                                                   \
+			if (!bl) {                                                                                          \
+				;                                                                                           \
+				spllog(SPL_LOG_ERROR, "CloseHandle error: %lu", GetLastError());                            \
+				;                                                                                           \
+			};                                                                                                  \
+			spllog(0, "SPSR_CloseHandle 0x%p -->> %s", __serialpp__, (bl ? "DONE" : "ERROR"));                  \
+			;                                                                                                   \
+			(__o0bj__) = 0;                                                                                     \
+			;                                                                                                   \
+		}                                                                                                           \
+	}
 #else
-    #define SPSR_MAXLINE                            1024
-    #define SPSR_PORT_TRIGGER                       (10024 + 1)
-    #define SPSR_PORT_CARTRIDGE                     (SPSR_PORT_TRIGGER + 10)
+#define SPSR_MAXLINE               2048
+#define SPSR_PORT_TRIGGER          (10024 + 1)
+#define SPSR_PORT_CARTRIDGE        (SPSR_PORT_TRIGGER + 10)
 #endif
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-#define SPSERIAL_MAX_AB(__a__, __b__)               ((__a__) > (__b__)) ? (__a__) : (__b__)
-#define SPSERIAL_STEP_MEM                           1024
-#define SPSERIAL_BUFFER_SIZE                        2048
-#define SPSR_DATA_RANGE								1024
+#define SPSR_MAX_AB(__a__, __b__) ((__a__) > (__b__)) ? (__a__) : (__b__)
+#define SPSR_STEP_MEM              2048
+#define SPSR_BUFFER_SIZE           2048
+#define SPSR_DATA_RANGE            2048
 
 #ifndef UNIX_LINUX
 
-#define SP_SERIAL_THREAD_ROUTINE LPTHREAD_START_ROUTINE
+#define SP_SERIAL_THREAD_ROUTINE   LPTHREAD_START_ROUTINE
 
-static int 
-    spserial_clear_node(SPSERIAL_ARR_LIST_LINED *);
-static int 
-    spserial_module_isoff(SP_SERIAL_INFO_ST* obj);
 static int
-    spserial_module_openport(void*);
+spsr_clear_node(SPSR_ARR_LIST_LINED *);
+static int
+spsr_module_isoff(SP_SERIAL_INFO_ST *obj);
+static int
+spsr_module_openport(void *);
 static DWORD WINAPI
-    spserial_thread_operating_routine(LPVOID lpParam);
+spsr_thread_operating_routine(LPVOID lpParam);
 static int
-    spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg);
-static int 
-    spsr_get_obj(char* portname, void** obj, int takeoff);    
+spsr_create_thread(SP_SERIAL_THREAD_ROUTINE f, void *arg);
+static int
+spsr_get_obj(char *portname, void **obj, int takeoff);
 #else
 
-typedef void* (*SP_SERIAL_THREAD_ROUTINE)(void*);
-static int spsr_init_trigger(void*);
+typedef void *(*SP_SERIAL_THREAD_ROUTINE)(void *);
+static int
+spsr_init_trigger(void *);
 
 #ifndef __SPSR_EPOLL__
-    #define SPSERIAL_LOG_UNIX__SHARED_MODE					(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)	
-    #define SPSERIAL_LOG_UNIX_CREATE_MODE					(O_CREAT | O_RDWR | O_EXCL)	
-    #define SPSERIAL_LOG_UNIX_OPEN_MODE						(O_RDWR | O_EXCL)	
-    #define SPSERIAL_LOG_UNIX_PROT_FLAGS					(PROT_READ | PROT_WRITE | PROT_EXEC)
+#define SPSR_LOG_UNIX__SHARED_MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+#define SPSR_LOG_UNIX_CREATE_MODE  (O_CREAT | O_RDWR | O_EXCL)
+#define SPSR_LOG_UNIX_OPEN_MODE    (O_RDWR | O_EXCL)
+#define SPSR_LOG_UNIX_PROT_FLAGS   (PROT_READ | PROT_WRITE | PROT_EXEC)
 
-    #define SPSERIAL_SENDSK_FLAG                            0
+#define SPSR_SENDSK_FLAG           0
 
-	static int spserial_fetch_commands(void *, int *,char*, int n);
-    static int spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer, int *chk_off) ;
-    static int spsr_fmt_name(char *input, char *output);
-#else
-    #define SPSERIAL_SENDSK_FLAG                            MSG_CONFIRM
-	static int spserial_fetch_commands(int, char*, int n);
-    static int spsr_ctrl_sock(int epollfd, int sockfd, char *buffer, int lenbuffer, int *chk_off) ;
-#endif    
-
-static void* 
-    spsr_init_trigger_routine(void*);
-static void*
-    spsr_init_cartridge_routine(void*);
 static int
-    spsr_send_cmd(int cmd, char *portname, void* data, int lendata);
+spsr_fetch_commands(void *, int *, char *, int n, SP_SERIAL_GENERIC_ST *evt);
+static int
+spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, SP_SERIAL_GENERIC_ST *evt, int *chk_off);
+#if 0
+static int
+spsr_ctrl_1sock(void *fds, int *mx_number, int sockfd, SP_SERIAL_GENERIC_ST *evt, int *chk_off);
+#endif
+static int
+spsr_fmt_name(char *input, char *output);
+#else
+#define SPSR_SENDSK_FLAG           MSG_CONFIRM
+static int
+spsr_fetch_commands(int, char *, int n, SP_SERIAL_GENERIC_ST *evt);
+static int
+spsr_ctrl_sock(int epollfd, int sockfd, SP_SERIAL_GENERIC_ST *evt, int *chk_off);
+#if 0
+static int
+spsr_ctrl_1sock(int epollfd, int sockfd, SP_SERIAL_GENERIC_ST *evt, int *chk_off);
+#endif
+#endif
 
-#define SPSR_MAX_NUMBER_OF_PORT     10
+static void *
+spsr_init_trigger_routine(void *);
+static void *
+spsr_init_cartridge_routine(void *);
+static int
+spsr_send_cmd(int cmd, char *portname, void *data, int lendata);
+
+#define SPSR_MAX_NUMBER_OF_PORT    10
 
 static void *spsr_hash_fd_arr[SPSR_MAX_NUMBER_OF_PORT];
 
 /* static void *spsr_hash_name_arr[SPSR_MAX_NUMBER_OF_PORT]; */
 
-
 typedef struct __SPSR_HASH_FD_NAME__ {
-    int fd;
-    char port_name[SPSERIAL_PORT_LEN];
-    SPSERIAL_module_cb cb_evt_fn;
-    void* cb_obj;    
-    struct __SPSR_HASH_FD_NAME__ *next;
-    int t_delay;
+	int fd;
+	char port_name[SPSR_PORT_LEN];
+	SPSR_module_cb cb_evt_fn;
+	void *cb_obj;
+	struct __SPSR_HASH_FD_NAME__ *next;
+	int t_delay;
 } SPSR_HASH_FD_NAME;
 
-#define SPSR_HASH_FD(__fd__)    (__fd__%SPSR_MAX_NUMBER_OF_PORT)
+#define SPSR_HASH_FD(__fd__) (__fd__ % SPSR_MAX_NUMBER_OF_PORT)
 
 /* static int spsr_hash_port(char* port, int len); */
 
-static int spsr_clear_hash();
-static int spsr_open_fd(char *port_name, int brate, int*);
-static int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay);
+static int
+spsr_clear_hash();
+static int
+spsr_open_fd(char *port_name, int brate, int *);
+
+static int
+spsr_read_fd(int fd, SP_SERIAL_GENERIC_ST *pevt, char *chk_delay);
 
 #endif
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-static SPSERIAL_ROOT_TYPE
-    spserial_root_node;
+static SPSR_ROOT_TYPE spsr_root_node;
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-static int 
-    spsr_clear_all();
 static int
-    spserial_verify_info(SP_SERIAL_INPUT_ST* obj);
+spsr_clear_all();
+static int
+spsr_verify_info(SP_SERIAL_INPUT_ST *obj);
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* Group of sync tool. */
-static void*
-    spserial_mutex_create();
+static void *
+spsr_mutex_create();
 static int
-    spserial_mutex_delete(void *);
-static void*
-    spserial_sem_create(char*);
+spsr_mutex_delete(void *);
+static void *
+spsr_sem_create(char *);
 static int
-    spserial_sem_delete(void *, char *);
-static  int 
-    spserial_mutex_lock(void* obj);
+spsr_sem_delete(void *, char *);
 static int
-    spserial_mutex_unlock(void* obj);
+spsr_mutex_lock(void *obj);
 static int
-    spserial_rel_sem(void* sem);
+spsr_mutex_unlock(void *obj);
 static int
-    spserial_wait_sem(void* sem);
-static int 
-	spsr_invoke_cb(int evttype, SPSERIAL_module_cb fn_cb, void *obj, char *data, int len);
+spsr_rel_sem(void *sem);
+static int
+spsr_wait_sem(void *sem);
+static int
+spsr_invoke_cb(int evttype, SPSR_module_cb fn_cb, void *obj, char *data, int len);
+
+static int
+spsr_invoke_1cb(int evttype, SPSR_module_cb fn_cb, void *obj_cb, SP_SERIAL_GENERIC_ST *evt, int lendata);
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spsr_inst_open(SP_SERIAL_INPUT_ST *p)
+int
+spsr_inst_open(SP_SERIAL_INPUT_ST *p)
 {
-    int ret = 0;
-    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-    do {
-        /*-------------------------------------------------------------------*/
-        spserial_mutex_lock(t->mutex);
-        /*do {*/
-            ret = spserial_verify_info(p);
-        /*} while (0); */
-        spserial_mutex_unlock(t->mutex);
-        /*-------------------------------------------------------------------*/
-        if(ret) {
-            spllog(SPL_LOG_ERROR, "ret error: %d.", ret);
-            break;
-        }
-        spserial_mutex_lock(t->mutex);
-#ifndef UNIX_LINUX
-#else
-        /*do {*/
-            ret = spsr_send_cmd(SPSR_CMD_ADD, 0, 0, 0);
-        /*} while (0); */
-#endif
-        spserial_mutex_unlock(t->mutex);
-        /*-------------------------------------------------------------------*/
-    } while (0);
-
-	return ret;
-}
-
-int spsr_inst_close(char* portname)
-{    
-    int ret = 0;
-    spllog(0, "Delete port: %s.", portname);
-#ifndef UNIX_LINUX
-    void *p = 0;
-    SPSERIAL_ARR_LIST_LINED* node = 0;
-    do {
-        ret = spsr_get_obj(portname, &p, 1);
-        if (p) {
-            spllog(0, "Delete port: %s.", portname);
-            node = (SPSERIAL_ARR_LIST_LINED*)p;
-            spserial_clear_node(node);
-        }
-    } while (0);
-#else
-        SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-        spllog(0, "Send cmd to delete port: %s.", portname);
-        spserial_mutex_lock(t->mutex);
-        /*do {*/
-            ret = spsr_send_cmd(SPSR_CMD_REM, portname, 0, 0);
-        /*} while (0); */
-        spserial_mutex_unlock(t->mutex);
-#endif       
-	return ret;
-}
-
-
-int spserial_module_openport(void* obj) {
 	int ret = 0;
-    SP_SERIAL_INFO_ST* p = (SP_SERIAL_INFO_ST*)obj;
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	do {
+		/*-------------------------------------------------------------------*/
+		spsr_mutex_lock(t->mutex);
+		/*do {*/
+		ret = spsr_verify_info(p);
+		/*} while (0); */
+		spsr_mutex_unlock(t->mutex);
+		/*-------------------------------------------------------------------*/
+		if (ret) {
+			spllog(SPL_LOG_ERROR, "ret error: %d.", ret);
+			break;
+		}
+		spsr_mutex_lock(t->mutex);
+#ifndef UNIX_LINUX
+#else
+		/*do {*/
+		ret = spsr_send_cmd(SPSR_CMD_ADD, 0, 0, 0);
+		/*} while (0); */
+#endif
+		spsr_mutex_unlock(t->mutex);
+		/*-------------------------------------------------------------------*/
+	} while (0);
 
-    /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+	return ret;
+}
+
+int
+spsr_inst_close(char *portname)
+{
+	int ret = 0;
+	spllog(0, "Delete port: %s.", portname);
+#ifndef UNIX_LINUX
+	void *p = 0;
+	SPSR_ARR_LIST_LINED *node = 0;
+	do {
+		ret = spsr_get_obj(portname, &p, 1);
+		if (p) {
+			spllog(0, "Delete port: %s.", portname);
+			node = (SPSR_ARR_LIST_LINED *)p;
+			spsr_clear_node(node);
+
+			spsr_free(node->item);
+			spsr_free(node);
+		}
+	} while (0);
+#else
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	spllog(0, "Send cmd to delete port: %s.", portname);
+	spsr_mutex_lock(t->mutex);
+	/*do {*/
+	ret = spsr_send_cmd(SPSR_CMD_REM, portname, 0, 0);
+	/*} while (0); */
+	spsr_mutex_unlock(t->mutex);
+#endif
+	return ret;
+}
+
+int
+spsr_module_openport(void *obj)
+{
+	int ret = 0;
+	SP_SERIAL_INFO_ST *p = (SP_SERIAL_INFO_ST *)obj;
+
+	/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 	do {
 #ifndef UNIX_LINUX
-	DCB dcb = {0};
-	HANDLE hSerial = 0;
-        COMSTAT comStat = {0};
-        DWORD dwError = 0;
-        BOOL fSuccess = FALSE;
-        DCB dcbSerialParams = { 0 };  
-        COMMTIMEOUTS timeouts = {0};
-        if (!p) {
-            ret= SPSERIAL_PORT_INFO_NULL;
-            break;
-        }
+		DCB dcb = {0};
+		HANDLE hSerial = 0;
+		COMSTAT comStat = {0};
+		DWORD dwError = 0;
+		BOOL fSuccess = FALSE;
+		DCB dcbSerialParams = {0};
+		COMMTIMEOUTS timeouts = {0};
+		if (!p) {
+			ret = SPSR_PORT_INFO_NULL;
+			break;
+		}
 
-        /*Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation*/
-        hSerial = CreateFile(p->port_name, GENERIC_READ | GENERIC_WRITE,
-                            0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);                         
+		/*Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation*/
+		hSerial =
+		    CreateFile(p->port_name, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
 
-         if (hSerial == INVALID_HANDLE_VALUE) {
-             DWORD dwError = GetLastError();
-             spllog(SPL_LOG_ERROR, "Open port errcode: %lu", dwError);
-             ret = SPSERIAL_PORT_OPEN;
-             hSerial = 0;
-             break;
-         }
-         p->handle = hSerial;
-         spllog(0, "Create hSerial: 0x%p.", hSerial);
-         if (p->is_retry) {
-             break;
-         }
-         /* Set up the serial port parameters(baud rate, etc.) */
-         dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
-         if (!GetCommState(hSerial, &dcbSerialParams)) {
-             DWORD dwError = GetLastError();
-             spllog(SPL_LOG_ERROR, "GetCommState: %lu", dwError);
-             ret = SPSERIAL_PORT_GETCOMMSTATE;
-             break;
-         }
-         dcbSerialParams.BaudRate = p->baudrate;  
-         dcbSerialParams.ByteSize = 8;         
-         dcbSerialParams.StopBits = ONESTOPBIT;
-         dcbSerialParams.Parity = NOPARITY;
-         /* dcbSerialParams.StopBits */
+		if (hSerial == INVALID_HANDLE_VALUE) {
+			DWORD dwError = GetLastError();
+			spllog(SPL_LOG_ERROR, "Open port errcode: %lu", dwError);
+			ret = SPSR_PORT_OPEN;
+			hSerial = 0;
+			break;
+		}
+		p->handle = hSerial;
+		spllog(0, "Create hSerial: 0x%p.", hSerial);
+		if (p->is_retry) {
+			break;
+		}
+		/* Set up the serial port parameters(baud rate, etc.) */
+		dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+		if (!GetCommState(hSerial, &dcbSerialParams)) {
+			DWORD dwError = GetLastError();
+			spllog(SPL_LOG_ERROR, "GetCommState: %lu", dwError);
+			ret = SPSR_PORT_GETCOMMSTATE;
+			break;
+		}
+		dcbSerialParams.BaudRate = p->baudrate;
+		dcbSerialParams.ByteSize = 8;
+		dcbSerialParams.StopBits = ONESTOPBIT;
+		dcbSerialParams.Parity = NOPARITY;
+		/* dcbSerialParams.StopBits */
 
-        /* Enable hardware flow control (RTS/CTS) */
-        dcbSerialParams.fOutxCtsFlow = TRUE;    // Enable CTS output flow control
-        /* dcbSerialParams.fCtsHandshake = TRUE;   // Enable CTS handshake */
-        dcbSerialParams.fOutxDsrFlow = FALSE;   /* Disable DSR output flow control */
-        dcbSerialParams.fDsrSensitivity = FALSE; /* DSR sensitivity disabled */
-        dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE; /* Enable DTR */
-        dcbSerialParams.fRtsControl = RTS_CONTROL_ENABLE; /* Enable RTS */
+		/* Enable hardware flow control (RTS/CTS) */
+		dcbSerialParams.fOutxCtsFlow = TRUE; // Enable CTS output flow control
+		/* dcbSerialParams.fCtsHandshake = TRUE;   // Enable CTS handshake */
+		dcbSerialParams.fOutxDsrFlow = FALSE; /* Disable DSR output flow control */
+		dcbSerialParams.fDsrSensitivity = FALSE; /* DSR sensitivity disabled */
+		dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE; /* Enable DTR */
+		dcbSerialParams.fRtsControl = RTS_CONTROL_ENABLE; /* Enable RTS */
 
-        /* Enable software flow control (XON/XOFF) */
-        dcbSerialParams.fInX = TRUE;    /* Enable XON/XOFF input flow control */
-        dcbSerialParams.fOutX = TRUE;   /* Enable XON/XOFF output flow control */        
+		/* Enable software flow control (XON/XOFF) */
+		dcbSerialParams.fInX = TRUE; /* Enable XON/XOFF input flow control */
+		dcbSerialParams.fOutX = TRUE; /* Enable XON/XOFF output flow control */
 
-        if (!SetCommState(hSerial, &dcbSerialParams)) {
-            DWORD dwError = GetLastError();
-            spllog(SPL_LOG_ERROR, "SetCommState: %lu", dwError);
-            ret = SPSERIAL_PORT_SETCOMMSTATE;
-        }
-        p->hEvent = CreateEvent(0, TRUE, FALSE, 0);
-        if (!p->hEvent) {
-            DWORD dwError = GetLastError();
-            spllog(SPL_LOG_ERROR, "CreateEvent: %lu", dwError);
-            ret = SPSERIAL_PORT_CREATEEVENT;
-            break;
-        }
-        
+		if (!SetCommState(hSerial, &dcbSerialParams)) {
+			DWORD dwError = GetLastError();
+			spllog(SPL_LOG_ERROR, "SetCommState: %lu", dwError);
+			ret = SPSR_PORT_SETCOMMSTATE;
+		}
+		p->hEvent = CreateEvent(0, TRUE, FALSE, 0);
+		if (!p->hEvent) {
+			DWORD dwError = GetLastError();
+			spllog(SPL_LOG_ERROR, "CreateEvent: %lu", dwError);
+			ret = SPSR_PORT_CREATEEVENT;
+			break;
+		}
+
 		spllog(SPL_LOG_DEBUG, "Create hEvent: 0x%p.", p->hEvent);
-        
-		/* Set timeouts(e.g., read timeout of 500ms, write timeout of 500ms) 
-        //timeouts.ReadIntervalTimeout = 500;
-        //timeouts.ReadTotalTimeoutConstant = 500;
-        //timeouts.ReadTotalTimeoutMultiplier = 500;
-        //timeouts.WriteTotalTimeoutConstant = 500;
-        //timeouts.WriteTotalTimeoutMultiplier = 500;
-		*/
-        timeouts.ReadIntervalTimeout = 50;
-        timeouts.ReadTotalTimeoutConstant = 50;
-        timeouts.ReadTotalTimeoutMultiplier = 10;
-        timeouts.WriteTotalTimeoutConstant = 50;
-        timeouts.WriteTotalTimeoutMultiplier = 10;
 
-        if (!SetCommTimeouts(hSerial, &timeouts)) {
-            DWORD dwError = GetLastError();
-            spllog(SPL_LOG_ERROR, "SetCommTimeouts: %lu", dwError);
-            ret = SPSERIAL_PORT_SETCOMMTIMEOUTS;
-            break;
-        }
-        p->mtx_off = spserial_mutex_create();
-        if (!p->mtx_off) {
-            DWORD dwError = GetLastError();
-            spllog(SPL_LOG_ERROR, "spserial_mutex_create: %lu", dwError);
-            ret = SPSERIAL_PORT_SPSERIAL_MUTEX_CREATE;
-            break;
-        }
-        p->sem_off = spserial_sem_create(0);
-        if (!p->sem_off) {
-            DWORD dwError = GetLastError();
-            spllog(SPL_LOG_ERROR, "spserial_sem_create: %lu", dwError);
-            ret = SPSERIAL_PORT_SPSERIAL_SEM_CREATE;
-            break;
-        }
+		/* Set timeouts(e.g., read timeout of 500ms, write timeout of 500ms)
+	//timeouts.ReadIntervalTimeout = 500;
+	//timeouts.ReadTotalTimeoutConstant = 500;
+	//timeouts.ReadTotalTimeoutMultiplier = 500;
+	//timeouts.WriteTotalTimeoutConstant = 500;
+	//timeouts.WriteTotalTimeoutMultiplier = 500;
+		*/
+		timeouts.ReadIntervalTimeout = 50;
+		timeouts.ReadTotalTimeoutConstant = 50;
+		timeouts.ReadTotalTimeoutMultiplier = 10;
+		timeouts.WriteTotalTimeoutConstant = 50;
+		timeouts.WriteTotalTimeoutMultiplier = 10;
+
+		if (!SetCommTimeouts(hSerial, &timeouts)) {
+			DWORD dwError = GetLastError();
+			spllog(SPL_LOG_ERROR, "SetCommTimeouts: %lu", dwError);
+			ret = SPSR_PORT_SETCOMMTIMEOUTS;
+			break;
+		}
+		p->mtx_off = spsr_mutex_create();
+		if (!p->mtx_off) {
+			DWORD dwError = GetLastError();
+			spllog(SPL_LOG_ERROR, "spsr_mutex_create: %lu", dwError);
+			ret = SPSR_PORT_SPSR_MUTEX_CREATE;
+			break;
+		}
+		p->sem_off = spsr_sem_create(0);
+		if (!p->sem_off) {
+			DWORD dwError = GetLastError();
+			spllog(SPL_LOG_ERROR, "spsr_sem_create: %lu", dwError);
+			ret = SPSR_PORT_SPSR_SEM_CREATE;
+			break;
+		}
 #else
 #endif
 	} while (0);
-    /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-    if (ret && p) {
+	/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+	if (ret && p) {
 #ifndef UNIX_LINUX
-        if (p->handle) {
-            SPSERIAL_CloseHandle(p->handle);
-        }
+		if (p->handle) {
+			SPSR_CloseHandle(p->handle);
+		}
 #else
 #endif
-    }
-    /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+	}
+	/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 	return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-void* spserial_sem_create(char *name_key) {
-    void* ret = 0;
-    do {
-#ifndef UNIX_LINUX
-        ret = CreateSemaphoreA(0, 0, 1, 0);
-#else
-    #ifndef __SPSR_EPOLL__
-        int retry = 0; 
-        char name[SPSERIAL_KEY_LEN];
-
-        spsr_fmt_name(name_key, name);
-        do {
-            ret = sem_open(name, SPSERIAL_LOG_UNIX_CREATE_MODE, SPSERIAL_LOG_UNIX__SHARED_MODE, 1);
-            spllog(0, "sem_open ret: 0x%p", ret);
-            if (ret == SEM_FAILED) 
-            {
-                int err = 0;
-                ret = 0;
-                if(retry) {
-                    spllog(SPL_LOG_ERROR, "mach sem_open, errno: %d, text: %s, name: %s.", 
-                        errno, strerror(errno), name);                    
-                    break;
-                } else {
-                    spllog(SPL_LOG_ERROR, "mach sem_open, errno: %d, text: %s, name: %s.", 
-                        errno, strerror(errno), name);                       
-                }
-                err = sem_unlink(name);
-                if(err) {
-                    spllog(SPL_LOG_ERROR, "mach sem_unlink, errno: %d, text: %s, name: %s.", 
-                        errno, strerror(errno), name);   
-                    break;
-                }
-                retry++;
-                continue;
-            }
-            break;
-        } while(1);
-    #else
-    
-        /*https://linux.die.net/man/3/sem_init*/
-        spserial_malloc(sizeof(sem_t), ret, void);
-        if (!ret) {
-            break;
-        }
-        memset(ret, 0, sizeof(sem_t));
-        sem_init((sem_t*)ret, 0, 1);
-    #endif
-#endif 
-    } while (0);
-    spllog(0, "Create: 0x%p.", ret);
-    return ret;
-}
-
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-
-void* spserial_mutex_create() {
-    void* ret = 0;
-    do {
-#ifndef UNIX_LINUX
-        ret = CreateMutexA(0, 0, 0);
-#else
-        /*https://linux.die.net/man/3/pthread_mutex_init*/
-        spserial_malloc(sizeof(pthread_mutex_t), ret, void);
-        if (!ret) {
-            break;
-        }
-        memset(ret, 0, sizeof(pthread_mutex_t));
-        pthread_mutex_init((pthread_mutex_t*)ret, 0);
-#endif 
-    } while (0);
-    spllog(0, "Create: 0x%p.", ret);
-    return ret;
-}
-
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-
-int spserial_module_isoff(SP_SERIAL_INFO_ST* obj) {
-    int ret = 0;
-    spserial_mutex_lock(obj->mtx_off);
-        ret = obj->isoff;
-    spserial_mutex_unlock(obj->mtx_off);
-    return ret;
-}
-
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-#ifndef UNIX_LINUX
-DWORD WINAPI spserial_thread_operating_routine(LPVOID arg)
+void *
+spsr_sem_create(char *name_key)
 {
-
-    SPSERIAL_ARR_LIST_LINED* pp = (SPSERIAL_ARR_LIST_LINED*)arg;
-    SP_SERIAL_INFO_ST* p = pp->item;
-    int isoff = 0;
-    int ret = 0;
-    SP_SERIAL_GENERIC_ST* buf = 0;
-    int kkkk = 0;
-    int step = sizeof(SP_SERIAL_GENERIC_ST) + SPSERIAL_STEP_MEM;
-    spserial_malloc(step, buf, SP_SERIAL_GENERIC_ST);
-    buf->total = step;
-    buf->range = buf->total - sizeof(SP_SERIAL_GENERIC_ST);
-    DWORD bytesRead = 0;
-    DWORD bytesWrite = 0;
-	
-	
-    while (1) {
-        DWORD dwError = 0;
-        int wrote = 0;
-        DWORD dwEvtMask = 0, flags = 0;
-        OVERLAPPED olReadWrite = { 0 };
-        BOOL rs = FALSE;
-        BOOL wrs = FALSE;
-        int count = 0, cbInQue = 0;
-        char readBuffer[SPSERIAL_BUFFER_SIZE + 1];
-        COMSTAT csta = { 0 };
-        olReadWrite.hEvent = p->hEvent;
-        flags = EV_RXCHAR | EV_BREAK | EV_RXFLAG | EV_DSR;
-
-        if (!buf) {
-            break;
-        }
-        isoff = spserial_module_isoff(p);
-        if (isoff) {
-            break;
-        }
-        ret = spserial_module_openport(p);
-        if (ret) {
-        }
-        
-        while (1) {
-            isoff = spserial_module_isoff(p);
-            if (isoff) {
-                break;
-            }
-            memset(&olReadWrite, 0, sizeof(olReadWrite));
-            olReadWrite.hEvent = p->hEvent;
-            wrs = TRUE;
-            spserial_mutex_lock(p->mtx_off);
-                do {
-                    if (!p->buff) {
-                        break;
-                    }
-                    if (p->buff->pl < 1) {
-                        break;
-                    }
-                    buf->pl = p->buff->pl;
-                    memcpy(buf->data, p->buff->data, buf->pl);
-                    p->buff->pl = 0;
-                    
-                } while (0);
-            spserial_mutex_unlock(p->mtx_off);
-            while (buf->pl > 0) 
-            {
-                bytesWrite = 0;
-                memset(&olReadWrite, 0, sizeof(olReadWrite));
-                olReadWrite.hEvent = p->hEvent;
-                wrs = WriteFile(p->handle, buf->data, buf->pl, &bytesWrite, &olReadWrite);
-                
-                if (!wrs) {
-                    DWORD wErr = GetLastError();
-                    spllog(SPL_LOG_DEBUG, "WriteFile: %d", (int)wErr);
-                    if (wErr == ERROR_IO_PENDING) 
-                    {
-                        DWORD dwWaitResult = WaitForSingleObject(p->hEvent, INFINITE);
-                        if (dwWaitResult == WAIT_OBJECT_0) 
-                        {
-                            bytesWrite = 0;
-                            if (GetOverlappedResult(p->handle, &olReadWrite, &bytesWrite, TRUE)) 
-                            {
-                                if (buf->pl == (int)bytesWrite) {
-                                    spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
-                                    spsr_invoke_cb(SPSERIAL_EVENT_WRITE_OK, p->cb_evt_fn,
-                                        p->cb_obj, p->port_name, strlen(p->port_name));
-                                }
-                                else {
-                                    spllog(SPL_LOG_ERROR, "Write Error, %d.", buf->pl);
-                                    spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, p->cb_evt_fn,
-                                        p->cb_obj, p->port_name, strlen(p->port_name));
-                                }
-                            }
-                            else {
-                                spllog(SPL_LOG_ERROR, "Write Error code, %d.", buf->pl);
-                                spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, p->cb_evt_fn,
-                                    p->cb_obj, p->port_name, strlen(p->port_name));
-                            }
-                        }
-                        else 
-                        {
-                            if (bytesRead == buf->pl) {
-                                spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
-                                spsr_invoke_cb(SPSERIAL_EVENT_WRITE_OK, p->cb_evt_fn, 
-                                    p->cb_obj, p->port_name, strlen(p->port_name));
-                            }
-                            else {
-                                spllog(SPL_LOG_ERROR, "Write Error, %d.", (int)GetLastError());
-                                if (p->cb_evt_fn) {
-                                    spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, p->cb_evt_fn, 
-                                        p->cb_obj, p->port_name, strlen(p->port_name));
-                                }
-                            }
-                        }
-                    }
-                    else {
-                        spllog(SPL_LOG_ERROR, "Write Error, %d.", (int)GetLastError());
-                        if (p->cb_evt_fn) {
-                            spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, p->cb_evt_fn, p->cb_obj, p->port_name, strlen(p->port_name));
-                        }
-                    }
-                }
-                else 
-                {
-                    if (buf->pl == (int)bytesWrite) {
-                        spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
-                        spsr_invoke_cb(SPSERIAL_EVENT_WRITE_OK, p->cb_evt_fn,
-                            p->cb_obj, p->port_name, strlen(p->port_name));
-                    }
-                    else {
-                        spllog(SPL_LOG_ERROR, "Write Error, %d.", (int)GetLastError());
-                        if (p->cb_evt_fn) {
-                            spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, p->cb_evt_fn, p->cb_obj, p->port_name, strlen(p->port_name));
-                        }
-                    }
-                }
-                buf->pl = 0; 
-            }
-
-            rs = SetCommMask(p->handle, flags);
-            dwEvtMask = flags;
-            memset(&olReadWrite, 0, sizeof(olReadWrite));
-            olReadWrite.hEvent = p->hEvent;
-            rs = WaitCommEvent(p->handle, &dwEvtMask, &olReadWrite);
-            if (!rs) {
-                DWORD dwRet = GetLastError();
-                if (ERROR_IO_PENDING != dwRet) {
-                    ++count;
-                }
-                if (count > 3) {
-                    break;
-                }
-            }
-            else {
-                spllog(SPL_LOG_DEBUG, "WaitCommEvent OK");
-            }
-            memset(&csta, 0, sizeof(csta));
-            ClearCommError(p->handle, &dwError, &csta);
-            cbInQue = csta.cbInQue;
-            if (!cbInQue) {
-                WaitForSingleObject(p->hEvent, INFINITE);
-                if (GetOverlappedResult(p->handle, &olReadWrite, &bytesRead, TRUE)) {
-                }
-                else {
-                    PurgeComm(p->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
-                }
-                continue;
-            }
-            
-            bytesRead = 0;
-            memset(readBuffer, 0, sizeof(readBuffer));
-            do {
-                rs = ReadFile(p->handle, readBuffer, SPSERIAL_BUFFER_SIZE, &bytesRead, &olReadWrite);
-                spllog(SPL_LOG_DEBUG, "olRead.InternalHigh: %d, olRead.Internal: %d, rs : %s!!!", 
-                    (int)olReadWrite.InternalHigh, (int)olReadWrite.Internal, rs ? "true" : "false");
-                if (!rs) {
-                    BOOL rs1 = FALSE;
-                    DWORD readErr = GetLastError();
-                    if (readErr == ERROR_IO_PENDING) 
-                    {
-                        bytesRead = 0;
-                        if(p->t_delay > 0) {
-                            Sleep(p->t_delay);
-                        }
-                        WaitForSingleObject(p->hEvent, INFINITE);
-                        rs1 = GetOverlappedResult(p->handle, &olReadWrite, &bytesRead, 1);
-                        if (rs1) {
-                            spllog(SPL_LOG_DEBUG, "bRead: %d", (int)bytesRead);
-                        }
-                        else {
-                            spllog(SPL_LOG_ERROR, "PurgeComm: %d", (int)GetLastError());
-                            PurgeComm(p->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
-                        }
-                        if (!bytesRead) {
-                            /* PurgeComm(p->handle, PURGE_RXCLEAR | PURGE_TXCLEAR) ; */
-                        }
-                    }
-                    else {
-                        spllog(SPL_LOG_ERROR, "Read error readErr: %d", (int)readErr);
-                    }
-                }
-                else {
-                    spllog(SPL_LOG_INFO, "Read OK");
-                }
-            } while (0);
-            memset(&csta, 0, sizeof(csta));
-            ClearCommError(p->handle, &dwError, &csta);
-            
-            if (csta.cbInQue > 0) {
-                spllog(SPL_LOG_ERROR, "Read Com not finished!!!");
-            }
-            else if(bytesRead > 0) /*else start*/
-            {
-                spllog(SPL_LOG_DEBUG, " [[[ %s, cbInQue: %d, bRead: %d ]]]", 
-                    readBuffer, cbInQue, bytesRead);
-                if (p->cb_evt_fn) 
-                {
-                    ret = spsr_invoke_cb(SPSERIAL_EVENT_READ_BUF, p->cb_evt_fn, p->cb_obj, readBuffer, bytesRead);
-                }
-                /*p->cb end*/
-            }
-            bytesRead = 0;
-
-        }
-
-        p->is_retry = 1;
-        if (isoff) {
-            break;
-        }
-    }
-    spserial_free(buf);
-    SPSERIAL_CloseHandle(p->hEvent);
-    SPSERIAL_CloseHandle(p->handle);
-    spserial_rel_sem(p->sem_off);
-    return 0;
-}
-#else 
-
-#endif
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spsr_module_init() {
-    int ret = 0;
-    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+	void *ret = 0;
+	do {
 #ifndef UNIX_LINUX
+		ret = CreateSemaphoreA(0, 0, 1, 0);
 #else
-    pthread_t idd = 0;
-    int err = 0;
-    int nsize = 0;
-    #ifndef __SPSR_EPOLL__
-        snprintf(t->sem_key, SPSERIAL_KEY_LEN, "/spsr_%llu", (LLU)getpid());
-    #endif
-#endif
-    do {
-        t->mutex = spserial_mutex_create();
-        if (!t->mutex) {
-            ret = SPSERIAL_MTX_CREATE;
-            break;
-        }
-    #ifndef UNIX_LINUX
-        t->sem = spserial_sem_create(0);
-    #else
-        #ifndef __SPSR_EPOLL__
-            t->sem = spserial_sem_create(SPSR_MAINKEY);
-        #else
-            t->sem = spserial_sem_create(0);
-        #endif            
-    #endif                
-        if (!t->sem) {
-            ret = SPSERIAL_SEM_CREATE;
-            break;
-        }
-#ifndef UNIX_LINUX
+#ifndef __SPSR_EPOLL__
+		int retry = 0;
+		char name[SPSR_KEY_LEN];
+
+		spsr_fmt_name(name_key, name);
+		do {
+			ret = sem_open(name, 
+				SPSR_LOG_UNIX_CREATE_MODE, 
+				SPSR_LOG_UNIX__SHARED_MODE, 
+				1);
+			spllog(0, "sem_open ret: 0x%p", ret);
+			if (ret == SEM_FAILED) {
+				int err = 0;
+				ret = 0;
+				if (retry) {
+					spllog(SPL_LOG_ERROR, 
+						"mach sem_open, errno: "
+						"%d, text: %s, name: %s.", 
+						errno,
+					    strerror(errno), 
+						name);
+					break;
+				} else {
+					spllog(SPL_LOG_ERROR, 
+						"mach sem_open, errno: "
+						"%d, text: %s, name: %s.", 
+						errno,
+					    strerror(errno), name);
+				}
+				err = sem_unlink(name);
+				if (err) {
+					spllog(SPL_LOG_ERROR, 
+						"mach sem_unlink, errno: "
+						"%d, text: %s, name: %s.", 
+						errno,
+					    strerror(errno), name);
+					break;
+				}
+				retry++;
+				continue;
+			}
+			break;
+		} while (1);
 #else
-    #ifndef __SPSR_EPOLL__
-        
-        t->sem_spsr = spserial_sem_create(SPSR_MAINKEY_MACH); /*Mach*/
-    #else
-        t->sem_spsr = spserial_sem_create(0); /*Linux*/
-    #endif        
-        if (!t->sem_spsr) {
-            ret = SPSERIAL_SEM_CREATE;
-            break;
-        }
 
-        err = pthread_create(&idd, 0, spsr_init_trigger_routine, t);
-        if (err) {
-            ret = SPSERIAL_CREATE_THREAD_ERROR;
-            break;
-        }
-
-        idd = 0;
-        err = pthread_create(&idd, 0, spsr_init_cartridge_routine, t);
-        if (err) {
-            ret = SPSERIAL_CREATE_THREAD_ERROR;
-            break;
-        }
-		
-        nsize = SPSERIAL_BUFFER_SIZE + sizeof(int);
-        spserial_malloc(nsize, t->cmd_buff, SP_SERIAL_GENERIC_ST);
-        if (!t->cmd_buff) {
-            spllog(SPL_LOG_ERROR, "spserial_malloc error");
-            exit(1);
-        }
-        t->cmd_buff->total = nsize;
-        t->cmd_buff->range = SPSERIAL_BUFFER_SIZE;
+		/*https://linux.die.net/man/3/sem_init*/
+		spsr_malloc(sizeof(sem_t), ret, void);
+		if (!ret) {
+			break;
+		}
+		memset(ret, 0, sizeof(sem_t));
+		sem_init((sem_t *)ret, 0, 1);
 #endif
-        spllog(SPL_LOG_DEBUG, "spsr_module_init: DONE");
-
-    } while (0);
-    return ret;
+#endif
+	} while (0);
+	spllog(0, "Create: 0x%p.", ret);
+	return ret;
 }
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spsr_module_finish() 
+
+void *
+spsr_mutex_create()
 {
-    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+	void *ret = 0;
+	do {
 #ifndef UNIX_LINUX
-    spsr_clear_all();
-    spserial_sem_delete(t->sem, 0);
+		ret = CreateMutexA(0, 0, 0);
 #else
-    spserial_mutex_lock(t->mutex);
-    /*do {*/
-        t->spsr_off = 1;
-    /*} while (0);*/
-    spserial_mutex_unlock(t->mutex);
-    /*----------------------------------------*/
-    while (1) {
-        int is_off = 0;
-        spserial_rel_sem(t->sem);
-        /*t->sem_spsr*/
-        spserial_wait_sem(t->sem_spsr);
-
-        spserial_mutex_lock(t->mutex);
-        /*do {*/
-            is_off = t->spsr_off;
-        /*} while (0);*/
-        spserial_mutex_unlock(t->mutex);
-        if (is_off > 2) {            
-        #ifndef __SPSR_EPOLL__
-            spserial_sem_delete(t->sem_spsr, SPSR_MAINKEY_MACH);
-        #else
-            spserial_sem_delete(t->sem_spsr, 0);
-        #endif            
-            break;
-        }
-    } 
-    
-    #ifndef __SPSR_EPOLL__
-        spserial_sem_delete(t->sem, SPSR_MAINKEY);
-    #else
-        spserial_sem_delete(t->sem, 0);
-    #endif    
+		/*https://linux.die.net/man/3/pthread_mutex_init*/
+		spsr_malloc(sizeof(pthread_mutex_t), ret, void);
+		if (!ret) {
+			break;
+		}
+		memset(ret, 0, sizeof(pthread_mutex_t));
+		pthread_mutex_init((pthread_mutex_t *)ret, 0);
 #endif
-    spserial_mutex_delete(t->mutex);
-    
-    return 0;
+	} while (0);
+	spllog(0, "Create: 0x%p.", ret);
+	return ret;
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_mutex_lock(void* obj) {
-    int ret = 0;
-#ifndef UNIX_LINUX
-    DWORD err = 0;
-#else
-#endif	
-    do {
-        if (!obj) {
-            ret = SPSERIAL_MUTEX_NULL_ERROR;
-            break;
-        }
-#ifndef UNIX_LINUX
-        err = WaitForSingleObject(obj, INFINITE);
-        if (err != WAIT_OBJECT_0) {
-            ret = 1;
-            break;
-        }
-#else
-        ret = pthread_mutex_lock((pthread_mutex_t*)obj);
-        if (ret) {
-            spllog(SPL_LOG_ERROR, "pthread_mutex_lock: ret: %d, errno: %d, text: %s, obj: 0x%p.",
-                ret, errno, strerror(errno), obj);
-        }
-#endif
-    } while (0);
-    return ret;
-}
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_mutex_unlock(void* obj) {
-    int ret = 0;
-#ifndef UNIX_LINUX
-    DWORD done = 0;
-#else
-#endif	
-    do {
-        if (!obj) {
-            ret = SPSERIAL_MUTEX_NULL_ERROR;
-            break;
-        }
-#ifndef UNIX_LINUX
-        done = ReleaseMutex(obj);
-        if (!done) {
-            DWORD dwError = GetLastError();
-            spllog(SPL_LOG_ERROR, "WaitForSingleObject errcode: %lu", dwError);
-            ret = 1;
-            break;
-        }
-#else
-        ret = pthread_mutex_unlock((pthread_mutex_t*)obj);
-        if (ret) {
-            spllog(SPL_LOG_ERROR, "pthread_mutex_unlock: ret: %d, errno: %d, text: %s.", 
-                ret, errno, strerror(errno));
-        }
-#endif
-    } while (0);
-    return ret;
-}
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_rel_sem(void* sem) {
-    int ret = 0;
-#ifndef UNIX_LINUX
-#else
-#endif
-    do {
-        if (!sem) {
-            ret = SPSERIAL_SEM_NULL_ERROR;
-            break;
-        }
-#ifndef UNIX_LINUX
-        ReleaseSemaphore(sem, 1, 0);
-#else
 
-        ret = sem_post((sem_t*)sem);
-        if (ret) {
-            spllog(SPL_LOG_DEBUG, "sem_post: ret: %d, errno: %d, text: %s, sem: 0x%p.",
-                   ret, errno, strerror(errno), sem);
-        }
-#endif 
-    } while (0);
-    return ret;
-}
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_wait_sem(void* sem) 
+int spsr_module_isoff(SP_SERIAL_INFO_ST *obj)
 {
-    int ret = 0;
-    do {
-        if (!sem) {
-            ret = SPSERIAL_SEM_NULL_ERROR;
-            break;
-        }
-#ifndef UNIX_LINUX
-        int iswell = WaitForSingleObject((HANDLE)sem, INFINITE);
-        if (iswell != WAIT_OBJECT_0) {
-            DWORD dwError = GetLastError();
-            spllog(SPL_LOG_ERROR, "WaitForSingleObject errcode: %lu", dwError);
-            ret = SPSERIAL_SEM_POST_ERROR;
-        }
-#else
-        ret = sem_wait((sem_t*)sem);
-#endif 
-    } while (0);
-    return ret;
+	int ret = 0;
+	spsr_mutex_lock(obj->mtx_off);
+	ret = obj->isoff;
+	spsr_mutex_unlock(obj->mtx_off);
+	return ret;
 }
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
-int spsr_get_obj(char* portname, void** obj, int takeoff) 
+DWORD WINAPI
+spsr_thread_operating_routine(LPVOID arg)
 {
-    int ret = 0;
-    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-    SPSERIAL_ARR_LIST_LINED* node = 0, * prev = 0;;
-    int found = 0;
-    do 
-    {
-        if (!obj) {
+	SPSR_ARR_LIST_LINED *pp = (SPSR_ARR_LIST_LINED *)arg;
+	SP_SERIAL_INFO_ST *p = pp->item;
+	int isoff = 0;
+	int ret = 0;
+	SP_SERIAL_GENERIC_ST *buf = 0;
+	// int kkkk = 0;
+	int step = sizeof(SP_SERIAL_GENERIC_ST) + SPSR_STEP_MEM;
+	spsr_malloc(step, buf, SP_SERIAL_GENERIC_ST);
+	buf->total = step;
+	buf->range = buf->total - sizeof(SP_SERIAL_GENERIC_ST);
+	DWORD bytesRead = 0;
+	DWORD bytesWrite = 0;
+	SP_SERIAL_GENERIC_ST *evt_callback = 0;
+	int portlen = 0;
 
-            break;
-        }
-        spserial_mutex_lock(t->mutex);
-        node = t->init_node;
-        while (node) 
-        {
-            if ( strcmp(portname, node->item->port_name) == 0) 
-            {
-                *obj = node;
-                if (takeoff)
-                {
-                    if (prev) {
-                        prev->next = node->next;
-                        if (!prev->next) {
-                            t->last_node = prev;
-                        }
-                    }
-                    else {
-                        t->init_node = t->init_node->next;
-                    }
-                    t->count--;
-                    if (t->count < 1) {
-                        t->init_node = 0;
-                        t->last_node = 0;
-                    }
-                }
-                found = 1;
-                break;
-            }
-            prev = node;
-            node = node->next;
-        }
-        spserial_mutex_unlock(t->mutex);
-    } while (0);
+	// char readBuffer[SPSR_BUFFER_SIZE + 1] = {0};
+	char *tbuffer = 0;
+	char evtbytes[SPSR_BUFFER_SIZE + sizeof(SP_SERIAL_GENERIC_ST) + 1] = {0};
+	evt_callback = (SP_SERIAL_GENERIC_ST *)evtbytes;
+	evt_callback->total = SPSR_BUFFER_SIZE + sizeof(SP_SERIAL_GENERIC_ST) + 1;
+	evt_callback->range = SPSR_BUFFER_SIZE;
+	evt_callback->pc = evt_callback->pl = 0;
+	// evt_callback.
+	tbuffer = evt_callback->data + sizeof(void *);
 
-    if (!found) {
-        spllog(SPL_LOG_WARNING, "Cannot find port: %s", portname);
-        ret = SPSERIAL_ITEM_NOT_FOUND;
-    }
+	while (1) {
+		DWORD dwError = 0;
+		int wrote = 0;
+		DWORD dwEvtMask = 0, flags = 0;
+		OVERLAPPED olReadWrite = {0};
+		BOOL rs = FALSE;
+		BOOL wrs = FALSE;
+		int count = 0, cbInQue = 0;
 
-    return ret;
+		COMSTAT csta = {0};
+		olReadWrite.hEvent = p->hEvent;
+		flags = EV_RXCHAR | EV_BREAK | EV_RXFLAG | EV_DSR;
+
+		if (!buf) {
+			break;
+		}
+		isoff = spsr_module_isoff(p);
+		if (isoff) {
+			break;
+		}
+		ret = spsr_module_openport(p);
+		portlen = strlen(p->port_name);
+		do {
+			int eventcb = 0;
+			memcpy(tbuffer, p->port_name, portlen);
+			tbuffer[portlen] = 0;
+			eventcb = ret ? SPSR_EVENT_OPEN_DEVICE_ERROR : SPSR_EVENT_OPEN_DEVICE_OK;
+			spsr_invoke_1cb(SPSR_EVENT_WRITE_OK, p->cb_evt_fn, p->cb_obj, evt_callback, portlen);
+		} while (0);
+
+		if (ret) {
+			break;
+		}
+
+		while (1) {
+			isoff = spsr_module_isoff(p);
+			if (isoff) {
+				break;
+			}
+			memset(&olReadWrite, 0, sizeof(olReadWrite));
+			olReadWrite.hEvent = p->hEvent;
+			wrs = TRUE;
+			spsr_mutex_lock(p->mtx_off);
+			do {
+				if (!p->buff) {
+					break;
+				}
+				if (p->buff->pl < 1) {
+					break;
+				}
+				buf->pl = p->buff->pl;
+				memcpy(buf->data, p->buff->data, buf->pl);
+				p->buff->pl = 0;
+
+			} while (0);
+			spsr_mutex_unlock(p->mtx_off);
+			while (buf->pl > 0) {
+				int wroteRes = 0;
+				bytesWrite = 0;
+				memset(&olReadWrite, 0, sizeof(olReadWrite));
+				olReadWrite.hEvent = p->hEvent;
+				wrs = WriteFile(p->handle, buf->data, buf->pl, &bytesWrite, &olReadWrite);
+
+				if (!wrs) {
+					DWORD wErr = 0;
+					wErr = GetLastError();
+					spllog(SPL_LOG_DEBUG, "WriteFile: %d", (int)wErr);
+					if (wErr == ERROR_IO_PENDING) {
+						DWORD dwWaitResult = WaitForSingleObject(p->hEvent, INFINITE);
+						if (dwWaitResult == WAIT_OBJECT_0) {
+							bytesWrite = 0;
+							if (GetOverlappedResult(
+								p->handle, &olReadWrite, &bytesWrite, TRUE)) {
+								if (buf->pl == (int)bytesWrite) {
+									spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
+									wroteRes = 1;
+								} else {
+									spllog(SPL_LOG_ERROR, "Write Error, %d.", buf->pl);
+								}
+							} else {
+								spllog(SPL_LOG_ERROR, "Write Error code, %d.", buf->pl);
+							}
+						} else {
+							spllog(SPL_LOG_ERROR, "Write Error, %d.", buf->pl);
+						}
+					} else {
+						spllog(SPL_LOG_ERROR, "Write Error, %d.", buf->pl);
+					}
+				} else {
+					if (buf->pl == (int)bytesWrite) {
+						spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
+						wroteRes = 1;
+					} else {
+						spllog(SPL_LOG_ERROR, "Write Error, %d.", buf->pl);
+					}
+				}
+				buf->pl = 0;
+				if (wroteRes) {
+					memcpy(tbuffer, p->port_name, portlen);
+					tbuffer[portlen] = 0;
+					spsr_invoke_1cb(SPSR_EVENT_WRITE_OK, p->cb_evt_fn, p->cb_obj, evt_callback, portlen);
+				} else {
+					memcpy(tbuffer, p->port_name, portlen);
+					tbuffer[portlen] = 0;
+					spsr_invoke_1cb(
+					    SPSR_EVENT_WRITE_ERROR, p->cb_evt_fn, p->cb_obj, evt_callback, portlen);
+				}
+			}
+
+			rs = SetCommMask(p->handle, flags);
+			dwEvtMask = flags;
+			memset(&olReadWrite, 0, sizeof(olReadWrite));
+			olReadWrite.hEvent = p->hEvent;
+			rs = WaitCommEvent(p->handle, &dwEvtMask, &olReadWrite);
+			if (!rs) {
+				DWORD dwRet = GetLastError();
+				if (ERROR_IO_PENDING != dwRet) {
+					++count;
+				}
+				if (count > 3) {
+					break;
+				}
+			} else {
+				spllog(SPL_LOG_DEBUG, "WaitCommEvent OK");
+			}
+			memset(&csta, 0, sizeof(csta));
+			ClearCommError(p->handle, &dwError, &csta);
+			cbInQue = csta.cbInQue;
+			if (!cbInQue) {
+				WaitForSingleObject(p->hEvent, INFINITE);
+				if (GetOverlappedResult(p->handle, &olReadWrite, &bytesRead, TRUE)) {
+				} else {
+					PurgeComm(p->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
+				}
+				continue;
+			}
+
+			bytesRead = 0;
+			// memset(readBuffer, 0, sizeof(readBuffer));
+			do {
+				rs = ReadFile(p->handle, tbuffer, SPSR_BUFFER_SIZE, &bytesRead, &olReadWrite);
+				// rs = ReadFile(p->handle, readBuffer, SPSR_BUFFER_SIZE, &bytesRead, &olReadWrite);
+				spllog(SPL_LOG_DEBUG, "olRead.InternalHigh: %d, olRead.Internal: %d, rs : %s!!!",
+				    (int)olReadWrite.InternalHigh, (int)olReadWrite.Internal, rs ? "true" : "false");
+				if (!rs) {
+					BOOL rs1 = FALSE;
+					DWORD readErr = GetLastError();
+					if (readErr == ERROR_IO_PENDING) {
+						bytesRead = 0;
+						if (p->t_delay > 0) {
+							Sleep(p->t_delay);
+						}
+						WaitForSingleObject(p->hEvent, INFINITE);
+						rs1 = GetOverlappedResult(p->handle, &olReadWrite, &bytesRead, 1);
+						if (rs1) {
+							spllog(SPL_LOG_DEBUG, "bRead: %d", (int)bytesRead);
+						} else {
+							spllog(SPL_LOG_ERROR, "PurgeComm: %d", (int)GetLastError());
+							PurgeComm(p->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
+						}
+						if (!bytesRead) {
+							/* PurgeComm(p->handle, PURGE_RXCLEAR | PURGE_TXCLEAR) ; */
+						}
+					} else {
+						spllog(SPL_LOG_ERROR, "Read error readErr: %d", (int)readErr);
+					}
+				} else {
+					spllog(SPL_LOG_INFO, "Read OK");
+				}
+			} while (0);
+			memset(&csta, 0, sizeof(csta));
+			ClearCommError(p->handle, &dwError, &csta);
+
+			if (csta.cbInQue > 0) {
+				spllog(SPL_LOG_ERROR, "Read Com not finished!!!");
+			} else if (bytesRead > 0) /*else start*/
+			{
+				tbuffer[bytesRead] = 0;
+				spllog(SPL_LOG_DEBUG, " [[[ %s, cbInQue: %d, bRead: %d ]]]", tbuffer, cbInQue, bytesRead);
+				spsr_invoke_1cb(SPSR_EVENT_READ_BUF, p->cb_evt_fn, p->cb_obj, evt_callback, bytesRead);
+				/*p->cb end*/
+			}
+			bytesRead = 0;
+		}
+
+		p->is_retry = 1;
+		if (isoff) {
+			break;
+		}
+	}
+	spsr_free(buf);
+	SPSR_CloseHandle(p->hEvent);
+	SPSR_CloseHandle(p->handle);
+	spsr_rel_sem(p->sem_off);
+	return 0;
 }
 #else
+
 #endif
-
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-
-#ifndef UNIX_LINUX
-int spserial_create_thread(SP_SERIAL_THREAD_ROUTINE f, void* arg) 
+int
+spsr_module_init()
 {
-    int ret = 0;
-    DWORD dwThreadId = 0;
-    HANDLE hThread = 0;
-    hThread = CreateThread(NULL, 0, f, arg, 0, &dwThreadId);
-    if (!hThread) {
-        ret = SPSERIAL_THREAD_W32_CREATE;
-        spllog(SPL_LOG_DEBUG, "CreateThread error: %d", (int)GetLastError());
-    }
-    return ret;
-}
-#else
-#endif
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+	int ret = 0;
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
 #ifndef UNIX_LINUX
-int spserial_clear_node(SPSERIAL_ARR_LIST_LINED* node) 
+#else
+	pthread_t idd = 0;
+	int err = 0;
+	int nsize = 0;
+#ifndef __SPSR_EPOLL__
+	snprintf(t->sem_key, SPSR_KEY_LEN, "/spsr_%llu", (LLU)getpid());
+#endif
+#endif
+	do {
+		t->mutex = spsr_mutex_create();
+		if (!t->mutex) {
+			ret = SPSR_MTX_CREATE;
+			break;
+		}
+#ifndef UNIX_LINUX
+		t->sem = spsr_sem_create(0);
+#else
+#ifndef __SPSR_EPOLL__
+		t->sem = spsr_sem_create(SPSR_MAINKEY);
+#else
+		t->sem = spsr_sem_create(0);
+#endif
+#endif
+		if (!t->sem) {
+			ret = SPSR_SEM_CREATE;
+			break;
+		}
+#ifndef UNIX_LINUX
+#else
+#ifndef __SPSR_EPOLL__
+
+		t->sem_spsr = spsr_sem_create(SPSR_MAINKEY_MACH); /*Mach*/
+#else
+		t->sem_spsr = spsr_sem_create(0); /*Linux*/
+#endif
+		if (!t->sem_spsr) {
+			ret = SPSR_SEM_CREATE;
+			break;
+		}
+
+		err = pthread_create(&idd, 0, spsr_init_trigger_routine, t);
+		if (err) {
+			ret = SPSR_CREATE_THREAD_ERROR;
+			break;
+		}
+
+		idd = 0;
+		err = pthread_create(&idd, 0, spsr_init_cartridge_routine, t);
+		if (err) {
+			ret = SPSR_CREATE_THREAD_ERROR;
+			break;
+		}
+
+		nsize = SPSR_BUFFER_SIZE + sizeof(int);
+		spsr_malloc(nsize, t->cmd_buff, SP_SERIAL_GENERIC_ST);
+		if (!t->cmd_buff) {
+			spllog(SPL_LOG_ERROR, "spsr_malloc error");
+			exit(1);
+		}
+		t->cmd_buff->total = nsize;
+		t->cmd_buff->range = SPSR_BUFFER_SIZE;
+#endif
+		spllog(SPL_LOG_DEBUG, "spsr_module_init: DONE");
+
+	} while (0);
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int
+spsr_module_finish()
 {
-    int ret = 0;
-    do {
-        if (!node) {
-            ret = SPSERIAL_PARAM_NULL;
-            break;
-        }
-        spserial_mutex_lock(node->item->mtx_off);
-        /*do {*/
-            node->item->isoff = 1;
-        /*} while (0); */
-        spserial_mutex_unlock(node->item->mtx_off);
-        SetEvent(node->item->hEvent);
-        spserial_wait_sem(node->item->sem_off);
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
 
-        SPSERIAL_CloseHandle(node->item->mtx_off);
-        SPSERIAL_CloseHandle(node->item->sem_off);
-        spserial_free(node->item->buff);
+	spsr_mutex_lock(t->mutex);
+	/*do {*/
+	t->spsr_off = 1;
+	/*} while (0);*/
+	spsr_mutex_unlock(t->mutex);
 
-    } while (0);
-    return ret;
-}
-#endif
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spsr_inst_write(char* portname, char*data, int sz) {
-    int ret = 0;
-    do {
 #ifndef UNIX_LINUX
-        SPSERIAL_ARR_LIST_LINED* node = 0;
-        SP_SERIAL_INFO_ST* item = 0;
-        void* p = 0;
-        ret = spsr_get_obj(portname, &p, 0);
-        if (!p) {
-            ret = SPSERIAL_NOT_FOUND_IDD;
-            spllog(SPL_LOG_ERROR, "Cannot find the object.");
-            break;
-        }
-        node = (SPSERIAL_ARR_LIST_LINED*) p;
-        item = node->item;
-        spserial_mutex_lock(item->mtx_off);
-            do {
-            if (item->buff) {
-                if (item->buff->range > item->buff->pl + sz) {
-                    memcpy(item->buff->data + item->buff->pl, data, sz);
-                    item->buff->pl += sz;
-                    break;
-                }
-                else {
-                    int range = 0;
-                    int total = 0;
-                    int addition = 0; 
-                    SP_SERIAL_GENERIC_ST* tmp = 0;
-                    addition = SPSERIAL_MAX_AB(sz, SPSERIAL_STEP_MEM);
-                    range = item->buff->range;
-                    total = item->buff->total;
-                    tmp = (SP_SERIAL_GENERIC_ST*)realloc(item->buff, total + addition);
-                    if (!tmp) {
-                        ret = SPSERIAL_REALLOC_ERROR;
-                        break;
-                    }
-                    item->buff = tmp;
-                    item->buff->range = addition + range;
-                    item->buff->total = addition + total;
-
-                    memcpy(item->buff->data + item->buff->pl, data, sz);
-                    item->buff->pl += sz;
-                    break;
-                }
-            }
-            else {
-                int step = 0;
-                step = SPSERIAL_MAX_AB(sz, SPSERIAL_STEP_MEM);
-                step += sizeof(SP_SERIAL_GENERIC_ST);
-                spserial_malloc(step, item->buff, SP_SERIAL_GENERIC_ST);
-                if (!item->buff) {
-                    ret = SPSERIAL_MALLOC_ERROR;
-                    break;
-                }
-                item->buff->total = step;
-                item->buff->range = item->buff->total - sizeof(SP_SERIAL_GENERIC_ST);
-                memcpy(item->buff->data + item->buff->pl, data, sz);
-                item->buff->pl += sz;
-                break;
-            }
-        } while (0);
-        spserial_mutex_unlock(item->mtx_off);
-
-        SetEvent(item->hEvent);
+	spsr_clear_all();
+	spsr_sem_delete(t->sem, 0);
 #else
-        SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-        spserial_mutex_lock(t->mutex);
-            ret = spsr_send_cmd(SPSR_CMD_WRITE, portname, data, sz);
-        spserial_mutex_unlock(t->mutex);
-        if(ret) {
-            spllog(SPL_LOG_ERROR, "SEND command error ret: %d.", ret);
-        }
+
+	/*----------------------------------------*/
+	while (1) {
+		int is_off = 0;
+		spsr_rel_sem(t->sem);
+		/*t->sem_spsr*/
+		spsr_wait_sem(t->sem_spsr);
+
+		spsr_mutex_lock(t->mutex);
+		/*do {*/
+		is_off = t->spsr_off;
+		/*} while (0);*/
+		spsr_mutex_unlock(t->mutex);
+		if (is_off > 2) {
+#ifndef __SPSR_EPOLL__
+			spsr_sem_delete(t->sem_spsr, SPSR_MAINKEY_MACH);
+#else
+			spsr_sem_delete(t->sem_spsr, 0);
 #endif
-    } while(0);
-    return ret;
-}
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-#ifndef UNIX_LINUX
-#else
-#define SPSR_SIZE_CARTRIDGE         10
-#define SPSR_SIZE_TRIGGER           2
-#define SPSR_SIZE_MAX_EVENTS        10
-#define SPSR_MSG_OFF        		"SPSR_MSG_OFF"
-#define SPSR_MILLION        		1000000
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-void* spsr_init_trigger_routine(void* obj) {
-        spsr_init_trigger(obj);
-        return 0;
-    }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-    void* spsr_init_cartridge_routine(void* obj) {
-        SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-        int ret = 0;
-        int sockfd = 0;
-        int isoff = 0; 
-        int flags = 0;
-        char buffer[SPSR_MAXLINE + 1];
-        struct sockaddr_in cartridge_addr;
-        int k  = 0;
-        
+			break;
+		}
+	}
 
 #ifndef __SPSR_EPOLL__
-    int n = 0;
-    
-    int mx_number = 0;
-    struct pollfd fds[SPSR_SIZE_MAX_EVENTS];
-    memset(&fds, 0, sizeof(fds));
-    for(n = 0; n < SPSR_SIZE_MAX_EVENTS; ++n) {
-        fds[n].fd = -1;
-    }
-    n = 0;
+	spsr_sem_delete(t->sem, SPSR_MAINKEY);
 #else
-    int epollfd = 0;;
-    int i = 0;
+	spsr_sem_delete(t->sem, 0);
+#endif
+#endif
+	spsr_mutex_delete(t->mutex);
+
+	return 0;
+}
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int
+spsr_mutex_lock(void *obj)
+{
+	int ret = 0;
+#ifndef UNIX_LINUX
+	DWORD err = 0;
+#else
+#endif
+	do {
+		if (!obj) {
+			ret = SPSR_MUTEX_NULL_ERROR;
+			break;
+		}
+#ifndef UNIX_LINUX
+		err = WaitForSingleObject(obj, INFINITE);
+		if (err != WAIT_OBJECT_0) {
+			ret = 1;
+			break;
+		}
+#else
+		ret = pthread_mutex_lock((pthread_mutex_t *)obj);
+		if (ret) {
+			spllog(SPL_LOG_ERROR, "pthread_mutex_lock: ret: %d, errno: %d, text: %s, obj: 0x%p.", ret, errno,
+			    strerror(errno), obj);
+		}
+#endif
+	} while (0);
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int
+spsr_mutex_unlock(void *obj)
+{
+	int ret = 0;
+#ifndef UNIX_LINUX
+	DWORD done = 0;
+#else
+#endif
+	do {
+		if (!obj) {
+			ret = SPSR_MUTEX_NULL_ERROR;
+			break;
+		}
+#ifndef UNIX_LINUX
+		done = ReleaseMutex(obj);
+		if (!done) {
+			DWORD dwError = GetLastError();
+			spllog(SPL_LOG_ERROR, "WaitForSingleObject errcode: %lu", dwError);
+			ret = 1;
+			break;
+		}
+#else
+		ret = pthread_mutex_unlock((pthread_mutex_t *)obj);
+		if (ret) {
+			spllog(SPL_LOG_ERROR, "pthread_mutex_unlock: ret: %d, errno: %d, text: %s.", ret, errno,
+			    strerror(errno));
+		}
+#endif
+	} while (0);
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int
+spsr_rel_sem(void *sem)
+{
+	int ret = 0;
+#ifndef UNIX_LINUX
+#else
+#endif
+	do {
+		if (!sem) {
+			ret = SPSR_SEM_NULL_ERROR;
+			break;
+		}
+#ifndef UNIX_LINUX
+		ReleaseSemaphore(sem, 1, 0);
+#else
+
+		ret = sem_post((sem_t *)sem);
+		if (ret) {
+			spllog(SPL_LOG_DEBUG, "sem_post: ret: %d, errno: %d, text: %s, sem: 0x%p.", ret, errno,
+			    strerror(errno), sem);
+		}
+#endif
+	} while (0);
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int
+spsr_wait_sem(void *sem)
+{
+	int ret = 0;
+	do {
+		if (!sem) {
+			ret = SPSR_SEM_NULL_ERROR;
+			break;
+		}
+#ifndef UNIX_LINUX
+		int iswell = WaitForSingleObject((HANDLE)sem, INFINITE);
+		if (iswell != WAIT_OBJECT_0) {
+			DWORD dwError = GetLastError();
+			spllog(SPL_LOG_ERROR, "WaitForSingleObject errcode: %lu", dwError);
+			ret = SPSR_SEM_POST_ERROR;
+		}
+#else
+		ret = sem_wait((sem_t *)sem);
+#endif
+	} while (0);
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+#ifndef UNIX_LINUX
+int
+spsr_get_obj(char *portname, void **obj, int takeoff)
+{
+	int ret = 0;
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	SPSR_ARR_LIST_LINED *node = 0, *prev = 0;
+	;
+	int found = 0;
+	do {
+		if (!obj) {
+			break;
+		}
+		spsr_mutex_lock(t->mutex);
+		node = t->init_node;
+		while (node) {
+			if (strcmp(portname, node->item->port_name) == 0) {
+				*obj = node;
+				if (takeoff) {
+					if (prev) {
+						prev->next = node->next;
+						if (!prev->next) {
+							t->last_node = prev;
+						}
+					} else {
+						t->init_node = t->init_node->next;
+					}
+					t->count--;
+					if (t->count < 1) {
+						t->init_node = 0;
+						t->last_node = 0;
+					}
+				}
+				found = 1;
+				break;
+			}
+			prev = node;
+			node = node->next;
+		}
+		spsr_mutex_unlock(t->mutex);
+	} while (0);
+
+	if (!found) {
+		spllog(SPL_LOG_WARNING, "Cannot find port: %s", portname);
+		ret = SPSR_ITEM_NOT_FOUND;
+	}
+
+	return ret;
+}
+#else
+#endif
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+#ifndef UNIX_LINUX
+int
+spsr_create_thread(SP_SERIAL_THREAD_ROUTINE f, void *arg)
+{
+	int ret = 0;
+	DWORD dwThreadId = 0;
+	HANDLE hThread = 0;
+	hThread = CreateThread(NULL, 0, f, arg, 0, &dwThreadId);
+	if (!hThread) {
+		ret = SPSR_THREAD_W32_CREATE;
+		spllog(SPL_LOG_DEBUG, "CreateThread error: %d", (int)GetLastError());
+	}
+	return ret;
+}
+#else
+#endif
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+#ifndef UNIX_LINUX
+int
+spsr_clear_node(SPSR_ARR_LIST_LINED *node)
+{
+	int ret = 0;
+	int isoff = 0;
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	do {
+		if (!node) {
+			ret = SPSR_PARAM_NULL;
+			break;
+		}
+		spsr_mutex_lock(node->item->mtx_off);
+		/*do {*/
+		node->item->isoff = 1;
+		/*} while (0); */
+		spsr_mutex_unlock(node->item->mtx_off);
+		SetEvent(node->item->hEvent);
+		spsr_wait_sem(node->item->sem_off);
+
+		SPSR_CloseHandle(node->item->mtx_off);
+		SPSR_CloseHandle(node->item->sem_off);
+		spsr_mutex_lock(t->mutex);
+		isoff = t->spsr_off;
+		spsr_mutex_unlock(t->mutex);
+		if (!isoff) {
+			SPSR_module_cb cb_fn = 0;
+			void *cb_obj = 0;
+			int eventcb = 0;
+			cb_fn = node->item->cb_evt_fn;
+			cb_obj = node->item->cb_obj;
+			eventcb = node->item->handle ? SPSR_EVENT_CLOSE_DEVICE_ERROR : SPSR_EVENT_CLOSE_DEVICE_OK;
+			ret = spsr_invoke_cb(eventcb, cb_fn, cb_obj, node->item->port_name, strlen(node->item->port_name));
+		}
+		spsr_free(node->item->buff);
+
+	} while (0);
+	return ret;
+}
+#endif
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int
+spsr_inst_write(char *portname, char *data, int sz)
+{
+	int ret = 0;
+	do {
+#ifndef UNIX_LINUX
+		SPSR_ARR_LIST_LINED *node = 0;
+		SP_SERIAL_INFO_ST *item = 0;
+		void *p = 0;
+		ret = spsr_get_obj(portname, &p, 0);
+		if (!p) {
+			ret = SPSR_NOT_FOUND_IDD;
+			spllog(SPL_LOG_ERROR, "Cannot find the object.");
+			break;
+		}
+		node = (SPSR_ARR_LIST_LINED *)p;
+		item = node->item;
+		spsr_mutex_lock(item->mtx_off);
+		do {
+			if (item->buff) {
+				if (item->buff->range > item->buff->pl + sz) {
+					memcpy(item->buff->data + item->buff->pl, data, sz);
+					item->buff->pl += sz;
+					break;
+				} else {
+					int range = 0;
+					int total = 0;
+					int addition = 0;
+					SP_SERIAL_GENERIC_ST *tmp = 0;
+					addition = SPSR_MAX_AB(sz, SPSR_STEP_MEM);
+					range = item->buff->range;
+					total = item->buff->total;
+					tmp = (SP_SERIAL_GENERIC_ST *)realloc(item->buff, total + addition);
+					if (!tmp) {
+						ret = SPSR_REALLOC_ERROR;
+						break;
+					}
+					item->buff = tmp;
+					item->buff->range = addition + range;
+					item->buff->total = addition + total;
+
+					memcpy(item->buff->data + item->buff->pl, data, sz);
+					item->buff->pl += sz;
+					break;
+				}
+			} else {
+				int step = 0;
+				step = SPSR_MAX_AB(sz, SPSR_STEP_MEM);
+				step += sizeof(SP_SERIAL_GENERIC_ST);
+				spsr_malloc(step, item->buff, SP_SERIAL_GENERIC_ST);
+				if (!item->buff) {
+					ret = SPSR_MALLOC_ERROR;
+					break;
+				}
+				item->buff->total = step;
+				item->buff->range = item->buff->total - sizeof(SP_SERIAL_GENERIC_ST);
+				memcpy(item->buff->data + item->buff->pl, data, sz);
+				item->buff->pl += sz;
+				break;
+			}
+		} while (0);
+		spsr_mutex_unlock(item->mtx_off);
+
+		SetEvent(item->hEvent);
+#else
+		SPSR_ROOT_TYPE *t = &spsr_root_node;
+		spsr_mutex_lock(t->mutex);
+		ret = spsr_send_cmd(SPSR_CMD_WRITE, portname, data, sz);
+		spsr_mutex_unlock(t->mutex);
+		if (ret) {
+			spllog(SPL_LOG_ERROR, "SEND command error ret: %d.", ret);
+		}
+#endif
+	} while (0);
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+#ifndef UNIX_LINUX
+#else
+#define SPSR_SIZE_CARTRIDGE        10
+#define SPSR_SIZE_TRIGGER          2
+#define SPSR_SIZE_MAX_EVENTS       10
+#define SPSR_MSG_OFF               "SPSR_MSG_OFF"
+#define SPSR_MILLION               1000000
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+void *
+spsr_init_trigger_routine(void *obj)
+{
+	spsr_init_trigger(obj);
+	return 0;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+void *
+spsr_init_cartridge_routine(void *obj)
+{
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	int ret = 0;
+	int sockfd = 0;
+	int isoff = 0;
+	int flags = 0;
+	/*
+	char buffer[SPSR_MAXLINE + 1] = {0};
+	*/
+	struct sockaddr_in cartridge_addr = {0};
+	int k = 0;
+	char chk_delay = 0;
+
+#if 1
+	SP_SERIAL_GENERIC_ST *evt_callback = 0;
+	int portlen = 0;
+
+	// char readBuffer[SPSR_BUFFER_SIZE + 1] = {0};
+	char *tbuffer = 0;
+	char evtbytes[SPSR_BUFFER_SIZE + sizeof(SP_SERIAL_GENERIC_ST) + 1] = {0};
+	evt_callback = (SP_SERIAL_GENERIC_ST *)evtbytes;
+	evt_callback->total = SPSR_BUFFER_SIZE + sizeof(SP_SERIAL_GENERIC_ST) + 1;
+	evt_callback->range = SPSR_BUFFER_SIZE;
+	evt_callback->pl = 0;
+	evt_callback->pc = sizeof(void *);
+	// evt_callback.
+	tbuffer = evt_callback->data + evt_callback->pc;
+#endif
+	/*
+	SP_SERIAL_GENERIC_ST* evt_callback = 0;
+	char rwbuff[SPSR_MAXLINE + 1 + sizeof(SP_SERIAL_GENERIC_ST) + sizeof(void*)] = {0};
+
+	evt_callback = (SP_SERIAL_GENERIC_ST*)rwbuff;
+	evt_callback->total = SPSR_MAXLINE + 1 + sizeof(SP_SERIAL_GENERIC_ST) + sizeof(void*);
+	evt_callback->range = evt_callback->total - (sizeof(SP_SERIAL_GENERIC_ST) + sizeof(void*));
+	evt_callback->pc = sizeof(void*);
+	*/
+
+#ifndef __SPSR_EPOLL__
+	int n = 0;
+
+	int mx_number = 0;
+	struct pollfd fds[SPSR_SIZE_MAX_EVENTS];
+	memset(&fds, 0, sizeof(fds));
+	for (n = 0; n < SPSR_SIZE_MAX_EVENTS; ++n) {
+		fds[n].fd = -1;
+	}
+	n = 0;
+#else
+	int epollfd = 0;
+	;
+	int i = 0;
 	struct epoll_event event, events[SPSR_SIZE_MAX_EVENTS];
 #endif
-        spllog(SPL_LOG_DEBUG, "cartridge: ");
-        /* Creating socket file descriptor */
-		do {
-			sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-			if (sockfd < 0) {
-				spllog(SPL_LOG_ERROR, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
-				ret = SPSERIAL_CREATE_SOCK;
+	spllog(SPL_LOG_DEBUG, "cartridge: ");
+	/* Creating socket file descriptor */
+	do {
+		sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+		if (sockfd < 0) {
+			spllog(SPL_LOG_ERROR, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
+			ret = SPSR_CREATE_SOCK;
+			break;
+		}
+
+		memset(&cartridge_addr, 0, sizeof(cartridge_addr));
+
+		/* Filling server information */
+
+		cartridge_addr.sin_family = AF_INET;
+		/*
+		    cartridge_addr.sin_addr.s_addr = INADDR_ANY
+		*/
+		cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+		;
+		cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
+
+		/* Set socket to non - blocking mode */
+
+		flags = fcntl(sockfd, F_GETFL, 0);
+		if (flags == -1) {
+			spllog(SPL_LOG_ERROR, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+			ret = SPSR_FCNTL_SOCK;
+			break;
+		}
+		ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+		if (ret == -1) {
+			spllog(SPL_LOG_ERROR, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+			ret = SPSR_FCNTL_SOCK;
+			break;
+		}
+
+		/* Bind the socket with the server address */
+		ret = bind(sockfd, (const struct sockaddr *)&cartridge_addr, sizeof(cartridge_addr));
+		if (ret < 0) {
+			spllog(SPL_LOG_ERROR, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+			ret = SPSR_BIND_SOCK;
+			break;
+		}
+
+		while (1) {
+			chk_delay = 0;
+			k = 0;
+			spsr_mutex_lock(t->mutex);
+			/*do {*/
+			isoff = t->spsr_off;
+			/*} while (0);*/
+			spsr_mutex_unlock(t->mutex);
+			if (isoff) {
 				break;
 			}
-	
-			memset(&cartridge_addr, 0, sizeof(cartridge_addr));
-	
-			/* Filling server information */
-	
-			cartridge_addr.sin_family = AF_INET;
-			/*
-			    cartridge_addr.sin_addr.s_addr = INADDR_ANY
-			*/
-			cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
-			cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
-	
-			/* Set socket to non - blocking mode */
-	
-            flags = fcntl(sockfd, F_GETFL, 0);
-			if (flags == -1) {
-				spllog(SPL_LOG_ERROR, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-				ret = SPSERIAL_FCNTL_SOCK;
-				break;
-			}
-			ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
-			if (ret == -1) {
-				spllog(SPL_LOG_ERROR, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-				ret = SPSERIAL_FCNTL_SOCK;
-				break;
-			}
-	
-			/* Bind the socket with the server address */
-			ret = bind(sockfd, (const struct sockaddr*)&cartridge_addr,
-				sizeof(cartridge_addr));
-			if (ret < 0)
-			{
-				spllog(SPL_LOG_ERROR, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-				ret = SPSERIAL_BIND_SOCK;
-				break;
-			}
-	
+			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+#ifndef __SPSR_EPOLL__
+
+			fds[0].fd = sockfd;
+			fds[0].events = POLLIN;
+			mx_number = 1;
 			while (1) {
-                char chk_delay = 0;
-				k = 0;
-				spserial_mutex_lock(t->mutex);
-				/*do {*/
-					isoff = t->spsr_off;
-				/*} while (0);*/
-				spserial_mutex_unlock(t->mutex);
 				if (isoff) {
 					break;
 				}
-				/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-				
-#ifndef __SPSR_EPOLL__
-
-				fds[0].fd = sockfd;  
-				fds[0].events = POLLIN;  
-                mx_number = 1;
-				while(1) {
-					if (isoff) {
-						break;
-					}
-                    chk_delay = 0;
-					ret = poll(fds, mx_number, 60 * 1000);
-                    spllog(SPL_LOG_DEBUG, "poll,  mx_number: %d", mx_number);
-					if(ret == -1) {
-						continue;
-					}
-					if(ret == 0) {
-						continue;
-					}
-					for(k = 0; k < mx_number; ++k) {
-                        if(fds[k].fd < 0) {
-                            continue;
-                        }
-						if (!(fds[k].revents & POLLIN)) {
-							continue;
-						}
-
-						if(k == 0) {
-                            spsr_ctrl_sock( fds, &mx_number, sockfd, buffer, SPSR_MAXLINE, &isoff) ;   
-							continue;
-						}
-						if (fds[k].fd >= 0) {      
-                            ret = spsr_read_fd(fds[k].fd, buffer, SPSR_MAXLINE + 1, &chk_delay);
-						}                        
-					}
-					
+				chk_delay = 0;
+				ret = poll(fds, mx_number, 60 * 1000);
+				spllog(SPL_LOG_DEBUG, "poll,  mx_number: %d", mx_number);
+				if (ret == -1) {
+					continue;
 				}
-           #else
-                /* Start epoll */
-                epollfd = epoll_create1(0);
-                if (epollfd < 0) {
-                    spllog(SPL_LOG_ERROR, "epoll_create, epollfd: %d, errno: %d, text: %s.",
-                        epollfd, errno, strerror(errno));
-                    ret = SPSERIAL_EPOLL_CREATE;
-                    break;
-                }
-                event.events = EPOLLIN | EPOLLET;
-				event.data.fd = sockfd;
-				
-                ret = epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &event);
-                if (ret < 0) {
-                    spllog(SPL_LOG_ERROR, "epoll_ctl, ret: %d, errno: %d, text: %s.",
-                        ret, errno, strerror(errno));
-                    ret = SPSERIAL_EPOLL_CTL;
-                    break;
-                }
-                while (1) {
-                    int nfds = 0;
-					if (isoff) {
-						break;
-					}					
-                    chk_delay = 0;
-                    nfds = epoll_wait(epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
-                    for (i = 0; i < nfds; i++) 
-                    {
-                        if (events[i].data.fd == sockfd) 
-                        {
-                            spsr_ctrl_sock(epollfd, sockfd, buffer, SPSR_MAXLINE, &isoff);
-							continue;
-                        } 
-						if (events[i].data.fd >= 0) {
-                            ret = spsr_read_fd(events[i].data.fd, buffer, SPSR_MAXLINE + 1, &chk_delay);
-						}
-                        /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-                    }
-                    /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-                }
-           #endif	
+				if (ret == 0) {
+					continue;
+				}
+				for (k = 0; k < mx_number; ++k) {
+					if (fds[k].fd < 0) {
+						continue;
+					}
+					if (!(fds[k].revents & POLLIN)) {
+						continue;
+					}
+
+					if (k == 0) {
+						spsr_ctrl_sock(fds, &mx_number, sockfd, evt_callback, &isoff);
+						continue;
+					}
+					if (fds[k].fd >= 0) {
+						ret = spsr_read_fd(fds[k].fd, evt_callback, &chk_delay);
+					}
+				}
+			}
+#else
+			/* Start epoll */
+			epollfd = epoll_create1(0);
+			if (epollfd < 0) {
+				spllog(SPL_LOG_ERROR, "epoll_create, epollfd: %d, errno: %d, text: %s.", epollfd, errno,
+				    strerror(errno));
+				ret = SPSR_EPOLL_CREATE;
+				break;
+			}
+			event.events = EPOLLIN | EPOLLET;
+			event.data.fd = sockfd;
+
+			ret = epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &event);
+			if (ret < 0) {
+				spllog(
+				    SPL_LOG_ERROR, "epoll_ctl, ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+				ret = SPSR_EPOLL_CTL;
+				break;
+			}
+			while (1) {
+				int nfds = 0;
+				if (isoff) {
+					break;
+				}
+				chk_delay = 0;
+				nfds = epoll_wait(epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
+				for (i = 0; i < nfds; i++) {
+					if (events[i].data.fd == sockfd) {
+						spsr_ctrl_sock(epollfd, sockfd, evt_callback, &isoff);
+						continue;
+					}
+					if (events[i].data.fd >= 0) {
+						ret = spsr_read_fd(events[i].data.fd, evt_callback, &chk_delay);
+					}
+					/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+				}
 				/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 			}
-		} while(0);
-        spserial_mutex_lock(t->mutex);
-        /*do {*/
-             t->spsr_off++;
-             spsr_clear_all();
-        /*} while (0);*/
-        spserial_mutex_unlock(t->mutex);
-        spsr_clear_hash();
-		if(sockfd > 0) {
-			ret = close(sockfd);
-			if (ret) {
-				spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-				ret = SPSERIAL_CLOSE_SOCK;
-            }
-            else {
-                spllog(SPL_LOG_DEBUG, "close socket done: %d", sockfd);
-            }
+#endif
+			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 		}
+	} while (0);
+	spsr_mutex_lock(t->mutex);
+	/*do {*/
+	t->spsr_off++;
+	spsr_clear_all();
+	/*} while (0);*/
+	spsr_mutex_unlock(t->mutex);
+	spsr_clear_hash();
+	if (sockfd > 0) {
+		ret = close(sockfd);
+		if (ret) {
+			spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+			ret = SPSR_CLOSE_SOCK;
+		} else {
+			spllog(SPL_LOG_DEBUG, "close socket done: %d", sockfd);
+		}
+	}
 #ifndef __SPSR_EPOLL__
 
 #else
-        if (epollfd > -1) {
+	if (epollfd > -1) {
+	}
+#endif
 
-        }
-#endif	
+	spsr_rel_sem(t->sem_spsr);
 
-        spserial_rel_sem(t->sem_spsr);
-
-        return 0;
-    }
+	return 0;
+}
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-    int spsr_init_trigger(void* obj) { 
-        SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-        int ret = 0;
-        int sockfd = 0;
-        int isoff = 0;
-        int flags = 0;
-        socklen_t len = 0;
-        struct sockaddr_in trigger_addr, cartridge_addr;
-        spllog(SPL_LOG_DEBUG, "trigger: ");
-        char had_cmd = 0;
-        do {
-        
-            /* Creating socket file descriptor */
-            if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-                spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
-                ret = SPSERIAL_CREATE_SOCK;
-                break;
-            }
+int
+spsr_init_trigger(void *obj)
+{
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	int ret = 0;
+	int sockfd = 0;
+	int isoff = 0;
+	int flags = 0;
+	socklen_t len = 0;
+	struct sockaddr_in trigger_addr, cartridge_addr;
+	spllog(SPL_LOG_DEBUG, "trigger: ");
+	char had_cmd = 0;
+	do {
+		/* Creating socket file descriptor */
+		if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+			spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", sockfd, errno, strerror(errno));
+			ret = SPSR_CREATE_SOCK;
+			break;
+		}
 
-            memset(&trigger_addr, 0, sizeof(trigger_addr));
-            memset(&cartridge_addr, 0, sizeof(cartridge_addr));
+		memset(&trigger_addr, 0, sizeof(trigger_addr));
+		memset(&cartridge_addr, 0, sizeof(cartridge_addr));
 
-            /* Filling server information */
-            trigger_addr.sin_family = AF_INET; 
-            trigger_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;;
-            trigger_addr.sin_port = htons(SPSR_PORT_TRIGGER);
+		/* Filling server information */
+		trigger_addr.sin_family = AF_INET;
+		trigger_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+		;
+		;
+		trigger_addr.sin_port = htons(SPSR_PORT_TRIGGER);
 
-            cartridge_addr.sin_family = AF_INET; 
-            cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");;
-            cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
+		cartridge_addr.sin_family = AF_INET;
+		cartridge_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+		;
+		cartridge_addr.sin_port = htons(SPSR_PORT_CARTRIDGE);
 
-            /* Set socket to non-blocking mode */
-            ret = fcntl(sockfd, F_GETFL, 0);
-            if (ret == -1) {
-                spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-                ret = SPSERIAL_FCNTL_SOCK;
-                break;
-            }
+		/* Set socket to non-blocking mode */
+		ret = fcntl(sockfd, F_GETFL, 0);
+		if (ret == -1) {
+			spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+			ret = SPSR_FCNTL_SOCK;
+			break;
+		}
 
-            ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
-            if ( ret == -1) {
-                spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-                ret = SPSERIAL_FCNTL_SOCK;
-                break;
-            }
+		ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+		if (ret == -1) {
+			spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+			ret = SPSR_FCNTL_SOCK;
+			break;
+		}
 
-            /* Bind the socket with the server address */
-            ret = bind(sockfd, (const struct sockaddr*)&trigger_addr, sizeof(trigger_addr));
-            if ( ret < 0)
-            {
-                /* perror("bind failed"); */
-                spllog(SPL_LOG_ERROR, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-                ret = SPSERIAL_BIND_SOCK;
-                break;
-            }
-            len = sizeof(trigger_addr);
-            while (1) {
+		/* Bind the socket with the server address */
+		ret = bind(sockfd, (const struct sockaddr *)&trigger_addr, sizeof(trigger_addr));
+		if (ret < 0) {
+			/* perror("bind failed"); */
+			spllog(SPL_LOG_ERROR, "bind failed: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+			ret = SPSR_BIND_SOCK;
+			break;
+		}
+		len = sizeof(trigger_addr);
+		while (1) {
+			spsr_wait_sem(t->sem);
 
-                spserial_wait_sem(t->sem);
+			spsr_mutex_lock(t->mutex);
+			/*do {*/
+			isoff = t->spsr_off;
+			if (isoff) {
+				t->spsr_off++;
+			}
+			if (t->cmd_buff) {
+				if (t->cmd_buff->pl > 0) {
+					had_cmd = 1;
+				}
+			}
+			/*} while (0);*/
+			spsr_mutex_unlock(t->mutex);
 
-                spserial_mutex_lock(t->mutex);
-                /*do {*/
-                    isoff = t->spsr_off;
-                    if (isoff) {
-                        t->spsr_off++;
-                    }
-                    if (t->cmd_buff) {
-                        if (t->cmd_buff->pl > 0) {
-                            had_cmd = 1;
-                        }
-                    }
-                /*} while (0);*/
-                spserial_mutex_unlock(t->mutex);
+			if (isoff) {
+				int kkk = sendto(sockfd, (const char *)SPSR_MSG_OFF, strlen(SPSR_MSG_OFF), SPSR_SENDSK_FLAG,
+				    (const struct sockaddr *)&cartridge_addr, len);
+				spllog(SPL_LOG_DEBUG, "sendto kkk: %d", kkk);
+				break;
+			}
+			if (had_cmd) {
+				sendto(sockfd, (const char *)"CMD", strlen("CMD"), SPSR_SENDSK_FLAG,
+				    (const struct sockaddr *)&cartridge_addr, len);
+			}
+			had_cmd = 0;
+			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+		}
 
-                if (isoff) {
-                    int kkk = sendto(sockfd, (const char*)SPSR_MSG_OFF, strlen(SPSR_MSG_OFF),
-                        SPSERIAL_SENDSK_FLAG, (const struct sockaddr*)&cartridge_addr, len);
-					spllog(SPL_LOG_DEBUG, "sendto kkk: %d", kkk);
-                    break;
-                }
-                if (had_cmd) {
-                    sendto(sockfd, (const char*)"CMD", strlen("CMD"),
-                        SPSERIAL_SENDSK_FLAG, (const struct sockaddr*)&cartridge_addr, len);
-                }
-                had_cmd = 0;
-                /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-                
-            }
-
-
-
-            ret = close(sockfd);
-            if (ret) {
-                spllog(SPL_LOG_ERROR, "Close socket, ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-                ret = SPSERIAL_CLOSE_SOCK;
-            }
-            else {
-                spllog(SPL_LOG_DEBUG, "Close socket DONE: %d.", sockfd);
-            }
-			/* Clean linked list. TODO 2.*/
-            spserial_rel_sem(t->sem_spsr);
-        } 
-        while (0);
-        return 0;
-    }
+		ret = close(sockfd);
+		if (ret) {
+			spllog(SPL_LOG_ERROR, "Close socket, ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+			ret = SPSR_CLOSE_SOCK;
+		} else {
+			spllog(SPL_LOG_DEBUG, "Close socket DONE: %d.", sockfd);
+		}
+		/* Clean linked list. TODO 2.*/
+		spsr_rel_sem(t->sem_spsr);
+	} while (0);
+	return 0;
+}
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef __SPSR_EPOLL__
-int spserial_fetch_commands(void *mp, int *prange, char* info,int n)
+int
+spsr_fetch_commands(void *mp, int *prange, char *info, int n, SP_SERIAL_GENERIC_ST *evt)
 #else
-int spserial_fetch_commands(int epollfd, char* info,int n) 
+int
+spsr_fetch_commands(int epollfd, char *info, int n, SP_SERIAL_GENERIC_ST *evt)
 #endif
 {
 	int ret = 0;
-	SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-	SPSERIAL_ARR_LIST_LINED * temp = 0, *prev = 0;
-	SP_SERIAL_GENERIC_ST* item = 0;;
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	SPSR_ARR_LIST_LINED *temp = 0, *prev = 0;
+	SP_SERIAL_GENERIC_ST *item = 0;
+	;
 	SP_SERIAL_INFO_ST *input = 0;
 	int fd = 0;
+	char tmp_buff[256];
 
 #ifndef __SPSR_EPOLL__
-    int i = 0;
-    struct pollfd *fds = (struct pollfd*)mp;
+	int i = 0;
+	struct pollfd *fds = (struct pollfd *)mp;
 #else
 	struct epoll_event event = {0};
-    int rerr = 0;
-#endif   
-    int step = 0;
+	int rerr = 0;
+#endif
+	int step = 0;
 	spllog(0, "Enter fetching command, n: %d", n);
-	do 
-    {
-		for(step = 0; step < n;) 
-        {
-			item = (SP_SERIAL_GENERIC_ST*) (info + step);
-            step += item->total;
+	do {
+		for (step = 0; step < n;) {
+			item = (SP_SERIAL_GENERIC_ST *)(info + step);
+			step += item->total;
 			spllog(0, "\tCMD: %d", item->type);
-			if(item->type == SPSR_CMD_ADD) {
-                spserial_mutex_lock(t->mutex);
-                do {                   
-				    temp = t->init_node;
-				    spllog(0, "\tCMD_ADD");
-				    while(temp) {
-				    	if(temp->item->handle > -1) {
-				    		temp = temp->next;
-				    		continue;
-				    	}
-				    	input = temp->item;
-                        fd = -1;
-                        ret = spsr_open_fd(input->port_name, input->baudrate, &fd);
-                        if(ret) {
-                            break;
-                        }
-                    #ifndef __SPSR_EPOLL__
-                        spllog(0, "Range of hashtable before adding, *prange: %d,  DONE.", *prange);
-                        for(i = 0; i < (*prange + 1); ++i) 
-                        {
-                            spllog(0, "*prange: %d , fds[%d].fd: %d .", *prange, i, fds[i].fd);
-                            if(fds[i].fd < 0) {
-                                fds[i].fd = fd;
-                                fds[i].events = POLLIN;  
-                                (*prange)++;
-                                spllog(0, "Add to poll list, index: %d, fd: %d, range: %d", 
-                                    i, fd, (*prange));
-                                break;
-                            }
-                        }
-                        spllog(0, "Range of hashtable after adding, *prange: %d,  DONE.", *prange);
-                    #else
-                        memset(&event, 0, sizeof(event));
-                        event.events = EPOLLIN | EPOLLET ;
-                        event.data.fd = fd;
-                        rerr = epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
-                        if (rerr == -1) {
-                            spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-                            ret = SPSERIAL_UNIX_EPOLL_CTL;
-                            break;
-                        }                
-                    #endif  
-                        do 
-                        {
-                            SPSR_HASH_FD_NAME *hashobj = 0, *hashitem = 0;
-                            int hashid = 0;
-                            spserial_malloc(sizeof(SPSR_HASH_FD_NAME), hashobj, SPSR_HASH_FD_NAME);
-                            if(!hashobj) {
-                                break;
-                            }
-                            hashobj->fd = fd;
-                            memcpy(hashobj->port_name, temp->item->port_name, strlen(temp->item->port_name));
-                            hashobj->cb_evt_fn = temp->item->cb_evt_fn;
-                            hashobj->cb_obj = temp->item->cb_obj; 
-                            hashobj->t_delay = temp->item-> t_delay;                      
-                            hashid = SPSR_HASH_FD(fd);
-                            hashitem = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
-                            if(!hashitem) {
-                                spsr_hash_fd_arr[hashid] = (void*) hashobj;
-                            } else {
-                                SPSR_HASH_FD_NAME *temp = 0;
-                                temp = hashobj;
-                                while(!temp->next) {
-                                    temp = temp->next;
-                                }
-                                temp->next = hashitem;
-                            }
+			if (item->type == SPSR_CMD_ADD) {
+				SPSR_module_cb callback_fn = 0;
+				void *callback_obj = 0;
+				char tmp_port[SPSR_PORT_LEN] = {0};
 
-                        } while(0);               
+				spsr_mutex_lock(t->mutex);
+				do {
+					temp = t->init_node;
+					spllog(0, "\tSPSR_CMD_ADD");
+					while (temp) {
+						if (temp->item->handle > -1) {
+							temp = temp->next;
+							continue;
+						}
+						memset(tmp_port, 0, sizeof(tmp_port));
+						input = temp->item;
+						fd = -1;
+						ret = spsr_open_fd(input->port_name, input->baudrate, &fd);
+						memcpy(tmp_port, input->port_name, strlen(input->port_name));
+						callback_fn = input->cb_evt_fn;
+						callback_obj = input->cb_obj;
 
-                        temp->item->handle = fd;
-				    	temp = temp->next;
-				    }
-                } while(0);
-                spserial_mutex_unlock(t->mutex);
-                continue;
+						if (ret) {
+							if (callback_fn) {
+#if 0
+								callback_evt = SPSR_EVENT_OPEN_DEVICE_ERROR;
+								spsr_invoke_cb(callback_evt, callback_fn, callback_obj,
+								    tmp_port, strlen(tmp_port));
+#endif
+								ret = spsr_invoke_1cb(SPSR_EVENT_OPEN_DEVICE_ERROR,
+								    callback_fn, callback_obj, evt, strlen(tmp_port));
+							}
+							break;
+						}
+
+#ifndef __SPSR_EPOLL__
+						spllog(0, "Range of hashtable before adding, *prange: %d,  DONE.", *prange);
+						for (i = 0; i < (*prange + 1); ++i) {
+							spllog(0, "*prange: %d , fds[%d].fd: %d .", *prange, i, fds[i].fd);
+							if (fds[i].fd < 0) {
+								fds[i].fd = fd;
+								fds[i].events = POLLIN;
+								(*prange)++;
+								spllog(0, "Add to poll list, index: %d, fd: %d, range: %d",
+								    i, fd, (*prange));
+								break;
+							}
+						}
+						spllog(0, "Range of hashtable after adding, *prange: %d,  DONE.", *prange);
+#else
+						memset(&event, 0, sizeof(event));
+						event.events = EPOLLIN | EPOLLET;
+						event.data.fd = fd;
+						rerr = epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
+						if (rerr == -1) {
+							spllog(SPL_LOG_ERROR,
+							    "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno,
+							    strerror(errno));
+							ret = SPSR_UNIX_EPOLL_CTL;
+							break;
+						}
+#endif
+						do {
+							SPSR_HASH_FD_NAME *hashobj = 0, *hashitem = 0;
+							int hashid = 0;
+							spsr_malloc(
+							    sizeof(SPSR_HASH_FD_NAME), hashobj, SPSR_HASH_FD_NAME);
+							if (!hashobj) {
+								break;
+							}
+							hashobj->fd = fd;
+							memcpy(hashobj->port_name, temp->item->port_name,
+							    strlen(temp->item->port_name));
+							hashobj->cb_evt_fn = temp->item->cb_evt_fn;
+							hashobj->cb_obj = temp->item->cb_obj;
+							hashobj->t_delay = temp->item->t_delay;
+							hashid = SPSR_HASH_FD(fd);
+							hashitem = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
+							if (!hashitem) {
+								spsr_hash_fd_arr[hashid] = (void *)hashobj;
+							} else {
+								SPSR_HASH_FD_NAME *temp = 0;
+								temp = hashobj;
+								while (!temp->next) {
+									temp = temp->next;
+								}
+								temp->next = hashitem;
+							}
+
+							if (callback_fn) {
+#if 0
+								callback_evt = SPSR_EVENT_OPEN_DEVICE_OK;
+								spsr_invoke_cb(callback_evt, callback_fn, callback_obj,
+								    tmp_port, strlen(tmp_port));
+#endif
+								ret = spsr_invoke_1cb(SPSR_EVENT_OPEN_DEVICE_OK, callback_fn,
+								    callback_obj, evt, strlen(tmp_port));
+							}
+						} while (0);
+
+						temp->item->handle = fd;
+						temp = temp->next;
+					}
+				} while (0);
+				spsr_mutex_unlock(t->mutex);
+
+				continue;
 			}
-            /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-            if(item->type == SPSR_CMD_REM) 
-            {
-                char *portname = 0;
-                portname = item->data;
-                spserial_mutex_lock(t->mutex);
-                do {
-                    temp = t->init_node;
-                    spllog(0, "SPSR_CMD_REM command, pl: %d, portname: %s, total: %d, initnode: 0x%p", 
-                        item->pl, portname, item->total, temp);                
-                    while(temp) 
-                    {
-                        spllog(0, "portname: %s", temp->item->port_name);
-                        if( strcmp(temp->item->port_name, portname) == 0) {
-                            if(temp->item->handle >= 0) {
-                                int fd = temp->item->handle;
-                                int errr = 0;
-                                spllog(0, "Did catch handle: %d", fd);
-                                /* Remove fd out of epoll*/
-                            #ifndef __SPSR_EPOLL__
-                               for(i = 1; i < *prange; ++i) {
-                                    if(fds[i].fd == fd) {
-                                        int j = 0;
-                                        for(j = i; j < (*prange -1); ++j) {
-                                            fds[j].fd = fds[j+1].fd;
-                                        }
-                                        fds[(*prange -1)].fd = -1;
-                                        (*prange)--;
-                                        spllog(SPL_LOG_DEBUG, "EPOLL_CTL_DEL, fd: %d DONE", fd); 
-                                        break;
-                                    }
-                                }                           
-                            #else
-                                errr = epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, 0);
-                                if(errr == -1) {
-                                    spllog(SPL_LOG_ERROR, "epoll_ctl error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
-                                } else {
-                                    spllog(SPL_LOG_DEBUG, "EPOLL_CTL_DEL, fd: %d DONE", fd); 
-                                }                        
-                            #endif                           
-                                /* Close handle*/
-                                do {
-                                    SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0, *prev = 0;
-                                    int hashid = SPSR_HASH_FD(fd);
-                                    hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hashid];
-                                    if(!hashobj) {
-                                        spllog(SPL_LOG_ERROR, "Cannot find object."); 
-                                        break;
-                                    }
-                                    temp = hashobj;
-                                    while(temp) {
-                                        if(temp->fd == fd) {
-                                            if(prev) {
-                                                prev->next = temp->next;
-                                            } else {
-                                                spsr_hash_fd_arr[hashid] = temp->next;
-                                            }
-                                            spllog(SPL_LOG_DEBUG, "Clear from spsr_hash_fd_arr, hashid:%d, fd: %d.", hashid, fd); 
-                                            spserial_free(temp);
-                                            break;
-                                        }
-                                        prev = temp;
-                                        temp = temp->next;
-                                    }
-                                } while(0);
-                                /* Close handle*/
-                                errr = close(fd);
-                                if(errr) {
-                                    spllog(SPL_LOG_ERROR, "close error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
-                                } else {
-                                    spllog(SPL_LOG_DEBUG, "close, fd: %d, DONE", fd); 
-                                }
-                                /* Remove out of root list*/
-                                if(t->count < 2) {
-                                    t->init_node = 0;
-                                    t->last_node = 0;
-                                }
-                                else {
-                                    if(prev){
-                                        prev->next = temp->next;
-                                        if(!prev->next) {
-                                            t->last_node = prev;
-                                        }
-                                    } else {
-                                        t->init_node = temp->next;
-                                    }
-                                }
-                                spserial_free(temp->item);
-                                spserial_free(temp);
-                                t->count--;
-                                spllog(SPL_LOG_DEBUG, "t->count: %d", t->count); 
-                            }
-                            break;
-                        }
-                        prev = temp;
-                        temp = temp->next;
-                    } 
-                } while(0);
-                spserial_mutex_unlock(t->mutex);
-                continue;
-            }
-            /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-            if(item->type == SPSR_CMD_WRITE) {
-                char *portname = 0;
+			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+			if (item->type == SPSR_CMD_REM) {
+				char *portname = 0;
+				SPSR_module_cb callback_fn = 0;
+				void *callback_obj = 0;
+				int callback_evt = 0;
+				char tmp_port[SPSR_PORT_LEN] = {0};
+				portname = item->data;
+				snprintf(tmp_port, SPSR_PORT_LEN, "%s", item->data);
+				spllog(0, "port: %s", tmp_port);
+				spsr_mutex_lock(t->mutex);
+				do {
+					temp = t->init_node;
+					spllog(0,
+					    "SPSR_CMD_REM command, "
+					    "pl: %d, "
+					    "portname: %s, "
+					    "total: %d, "
+					    "initnode: 0x%p",
+					    item->pl, portname, item->total, temp);
+					while (temp) {
+						spllog(0, "portname: %s", temp->item->port_name);
+						if (strcmp(temp->item->port_name, portname) == 0) {
+							if (temp->item->handle >= 0) {
+								int fd = temp->item->handle;
+								int errr = 0;
+								spllog(0, "Did catch handle: %d", fd);
+								/* Remove fd out of epoll*/
+#ifndef __SPSR_EPOLL__
+								for (i = 1; i < *prange; ++i) {
+									if (fds[i].fd == fd) {
+										int j = 0;
+										for (j = i; j < (*prange - 1); ++j) {
+											fds[j].fd = fds[j + 1].fd;
+										}
+										fds[(*prange - 1)].fd = -1;
+										(*prange)--;
+										spllog(SPL_LOG_DEBUG,
+										    "EPOLL_CTL_DEL, "
+										    "fd: %d DONE",
+										    fd);
+										break;
+									}
+								}
+#else
+								errr = epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, 0);
+								if (errr == -1) {
+									spllog(SPL_LOG_ERROR,
+									    "epoll_ctl error, fd: %d, "
+									    "errno: %d, text: %s.",
+									    fd, errno, strerror(errno));
+								} else {
+									spllog(SPL_LOG_DEBUG,
+									    "EPOLL_CTL_DEL, "
+									    "fd: %d DONE",
+									    fd);
+								}
+#endif
+								/* Close handle*/
+								do {
+									SPSR_HASH_FD_NAME
+									*hashobj = 0, *temp = 0, *prev = 0;
+									int hashid = SPSR_HASH_FD(fd);
+									hashobj =
+									    (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
+									if (!hashobj) {
+										spllog(SPL_LOG_ERROR, "Cannot find object.");
+										break;
+									}
+									temp = hashobj;
+									while (temp) {
+										if (temp->fd == fd) {
+											callback_fn = temp->cb_evt_fn;
+											callback_obj = temp->cb_obj;
+											if (prev) {
+												prev->next = temp->next;
+											} else {
+												spsr_hash_fd_arr[hashid] =
+												    temp->next;
+											}
+											spllog(SPL_LOG_DEBUG,
+											    "Clear from spsr_hash_fd_arr, "
+											    "hashid:%d, fd: %d.",
+											    hashid, fd);
+											spsr_free(temp);
+											break;
+										}
+										prev = temp;
+										temp = temp->next;
+									}
+								} while (0);
+								/* Close handle*/
+								errr = close(fd);
+								if (errr) {
+									callback_evt = SPSR_EVENT_CLOSE_DEVICE_ERROR;
+									spllog(SPL_LOG_ERROR,
+									    "close error, "
+									    "fd: %d, "
+									    "errno: %d, text: %s.",
+									    fd, errno, strerror(errno));
+								} else {
+									callback_evt = SPSR_EVENT_CLOSE_DEVICE_OK;
+									spllog(SPL_LOG_DEBUG, "close, fd: %d, DONE", fd);
+								}
+								/* Remove out of root list*/
+								if (t->count < 2) {
+									t->init_node = 0;
+									t->last_node = 0;
+								} else {
+									if (prev) {
+										prev->next = temp->next;
+										if (!prev->next) {
+											t->last_node = prev;
+										}
+									} else {
+										t->init_node = temp->next;
+									}
+								}
+								spsr_free(temp->item);
+								spsr_free(temp);
+								t->count--;
+								spllog(SPL_LOG_DEBUG, "t->count: %d", t->count);
+							}
+							break;
+						}
+						prev = temp;
+						temp = temp->next;
+					}
+				} while (0);
+				spsr_mutex_unlock(t->mutex);
+				if (callback_fn) {
+#if 0
+					spsr_invoke_cb(
+						callback_evt, 
+						callback_fn, 
+						callback_obj, 
+						tmp_port, 
+						strlen(tmp_port));
+#endif
+					memcpy(evt->data + evt->pc, tmp_port, strlen(tmp_port));
+					ret =
+					    spsr_invoke_1cb(callback_evt, callback_fn, callback_obj, evt, strlen(tmp_port));
+				}
+				continue;
+			}
+			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+			if (item->type == SPSR_CMD_WRITE) {
+				char *portname = 0;
 
-                fd = -1;
-                portname = item->data;
-                spserial_mutex_lock(t->mutex);
-                do {
-                    temp = t->init_node;                
-                    spllog(0, "SPSR_CMD_WRITE, pl: %d, portname: %s, total: %d, initnode: 0x%p", 
-                        item->pl, portname, item->total, temp);   
-                    while(temp) {
-                        spllog(0, "portname: %s", temp->item->port_name);
-                        if( strcmp(temp->item->port_name, portname) == 0) {
-                            if(temp->item->handle >= 0) {
-                                fd = temp->item->handle;             
-                            }
-                            break;
-                        }
-                        temp = temp->next;
-                    }  
-                } while(0);
-                spserial_mutex_unlock(t->mutex);
+				fd = -1;
+				portname = item->data;
+				spsr_mutex_lock(t->mutex);
+				do {
+					temp = t->init_node;
+					spllog(0,
+					    "SPSR_CMD_WRITE, "
+					    "pl: %d, "
+					    "portname: %s, "
+					    "total: %d, "
+					    "initnode: 0x%p",
+					    item->pl, portname, item->total, temp);
+					while (temp) {
+						spllog(0, "portname: %s", temp->item->port_name);
+						if (strcmp(temp->item->port_name, portname) == 0) {
+							if (temp->item->handle >= 0) {
+								fd = temp->item->handle;
+							}
+							break;
+						}
+						temp = temp->next;
+					}
+				} while (0);
+				spsr_mutex_unlock(t->mutex);
 
-                if(fd >= 0) {
-                    SPSR_HASH_FD_NAME *hashobj = 0;
-                    int hashid = SPSR_HASH_FD(fd);           
-                    int nwrote = 0, wlen = 0;;         
-                    char *p = 0;
-                    p = item->data + item->pc;
-                    wlen = item->pl - item->pc;
-                    hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hashid];   
-                    if (tcflush(fd, TCIOFLUSH) == -1) {
-                        spllog(SPL_LOG_ERROR, "Error flushing the serial port buffer");
-                    } else {
-                        spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
-                    }                               
+				if (fd >= 0) {
+					SPSR_HASH_FD_NAME *hashobj = 0;
+					int hashid = SPSR_HASH_FD(fd);
+					int nwrote = 0, wlen = 0;
+					;
+					char *p = 0;
+					p = item->data + item->pc;
+					wlen = item->pl - item->pc;
+					hashobj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
+					if (tcflush(fd, TCIOFLUSH) == -1) {
+						spllog(SPL_LOG_ERROR, "Error flushing the "
+								      "serial port buffer");
+					} else {
+						spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
+					}
 
-                    nwrote = write(fd, p, wlen);
+					nwrote = write(fd, p, wlen);
 
-                    if (nwrote == wlen){
-                        spllog(SPL_LOG_DEBUG, "write DONE, fd: %d, nwrote: %d, p: %s, wlen: %d.", 
-                            fd, nwrote, p, wlen); 
-                        if(hashobj) {
-                            if(hashobj->cb_evt_fn) {
-                                spsr_invoke_cb(SPSERIAL_EVENT_WRITE_OK, hashobj->cb_evt_fn, 
-                                    hashobj->cb_obj, hashobj->port_name, strlen(hashobj->port_name));
-                            }
-                        }                            
-                    }
-                    else if(nwrote < 0) {
-                        spllog(SPL_LOG_ERROR, "write error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno)); 
-                        if(hashobj) {
-                            if(hashobj->cb_evt_fn) {
-                                spsr_invoke_cb(SPSERIAL_EVENT_WRITE_ERROR, hashobj->cb_evt_fn, 
-                                    hashobj->cb_obj, hashobj->port_name, strlen(hashobj->port_name));
-                            }
-                        }
-                    } 
+					if (nwrote == wlen) {
+						snprintf(tmp_buff, (wlen + 1) < 256 ? (wlen + 1) : 256, "%s", p);
+						spllog(SPL_LOG_DEBUG,
+						    "write DONE, fd: %d, "
+						    "nwrote: %d, "
+						    "p: \"[%s]\", "
+						    "wlen: %d.",
+						    fd, nwrote, tmp_buff, wlen);
 
-                    if (tcdrain(fd) == -1) {
-                        spllog(SPL_LOG_ERROR, "Error flushing the serial port buffer");
+						if (hashobj) {
+							if (hashobj->cb_evt_fn) {
+#if 0
+								spsr_invoke_cb(SPSR_EVENT_WRITE_OK, hashobj->cb_evt_fn,
+								    hashobj->cb_obj, hashobj->port_name,
+								    strlen(hashobj->port_name));
+#endif
+#if 1
+								memcpy(evt->data + evt->pc, hashobj->port_name,
+								    strlen(hashobj->port_name));
+								ret =
+								    spsr_invoke_1cb(SPSR_EVENT_WRITE_OK, hashobj->cb_evt_fn,
+									hashobj->cb_obj, evt, strlen(hashobj->port_name));
+#endif
+							}
+						}
+					} else if (nwrote < 0) {
+						spllog(SPL_LOG_ERROR,
+						    "write error, fd: %d, "
+						    "errno: %d, text: %s.",
+						    fd, errno, strerror(errno));
 
-                    } else {
-                        spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
-                    }
-                }
-                continue;
-            }
-			if(ret) {
+						if (hashobj) {
+							if (hashobj->cb_evt_fn) {
+#if 0
+								spsr_invoke_cb(SPSR_EVENT_WRITE_ERROR,
+								    hashobj->cb_evt_fn, hashobj->cb_obj, hashobj->port_name,
+								    strlen(hashobj->port_name));
+								/*
+								portlen = strlen(hashobj->port_name);
+								memcpy(tbuffer, hashobj->port_name, portlen);
+								tbuffer[portlen] = 0;
+								*/
+#endif
+
+								memcpy(evt->data + evt->pc, hashobj->port_name,
+								    strlen(hashobj->port_name));
+								ret = spsr_invoke_1cb(SPSR_EVENT_WRITE_ERROR,
+								    hashobj->cb_evt_fn, hashobj->cb_obj, evt,
+								    strlen(hashobj->port_name));
+							}
+						}
+					}
+
+					if (tcdrain(fd) == -1) {
+						spllog(SPL_LOG_ERROR, "Error flushing the "
+								      "serial port buffer");
+
+					} else {
+						spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
+					}
+				}
+				continue;
+			}
+			if (ret) {
 				break;
 			}
 		}
-	} while(0);
+	} while (0);
 
-	if(ret) {
-		if(fd >= 0) {
+	if (ret) {
+		if (fd >= 0) {
 			close(fd);
 		}
 	}
@@ -1693,82 +1898,94 @@ int spserial_fetch_commands(int epollfd, char* info,int n)
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spsr_send_cmd(int cmd, char *portname, void* data, int datasz) 
+int
+spsr_send_cmd(int cmd, char *portname, void *data, int datasz)
 {
-    int ret = 0;
-    int nsize = 0;
-    int* pend = 0;
-    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-    do {
-        if (cmd == SPSR_CMD_ADD ) {
-            
-            SP_SERIAL_GENERIC_ST *obj = 0;
-            nsize = sizeof(SP_SERIAL_GENERIC_ST);
-            
-            if (t->cmd_buff->range > t->cmd_buff->pl + sizeof(obj)) {
-                obj = (SP_SERIAL_GENERIC_ST *) (t->cmd_buff->data + t->cmd_buff->pl);
-                memset(obj, 0, nsize);
-                obj->total = nsize;
-                obj->type = cmd;
-                
-                t->cmd_buff->pl += nsize;
-                pend = (int*)(t->cmd_buff->data + t->cmd_buff->pl);
-                *pend = 0;
-                spllog(0, "cmd type SPSR_CMD_ADD: %d, size: %d", obj->type, obj->total);
-            }
-            break;
-        }
-        if (cmd == SPSR_CMD_REM) {
-            int lport = 0;
-            int len = strlen(portname);
+	int ret = 0;
+	int nsize = 0;
+	int *pend = 0;
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	do {
+		if (cmd == SPSR_CMD_ADD) {
+			SP_SERIAL_GENERIC_ST *obj = 0;
+			nsize = sizeof(SP_SERIAL_GENERIC_ST);
 
-            SP_SERIAL_GENERIC_ST *obj = 0;
-            lport = len + 1;            
-            nsize = sizeof(SP_SERIAL_GENERIC_ST) + lport;
-            spllog(0, "SPSR_CMD_REM, nsize: %d, portname: %s", nsize, portname);
-            if (t->cmd_buff->range > t->cmd_buff->pl + nsize) {
-                obj = (SP_SERIAL_GENERIC_ST *) (t->cmd_buff->data + t->cmd_buff->pl);
-                memset(obj, 0, nsize);
-                obj->total = nsize;
-                obj->type = cmd;
-                obj->range = lport;
-                memcpy(obj->data, portname, lport);
-                obj->data[len] = 0;
-                obj->pl = lport;
-                t->cmd_buff->pl += nsize;
-                pend = (int*)(t->cmd_buff->data + t->cmd_buff->pl);
-                *pend = 0;
-            }
-            break;
-        }
-        if (cmd == SPSR_CMD_WRITE) {
-            int lport = 0;
-            int len = strlen(portname);
+			if (t->cmd_buff->range > t->cmd_buff->pl + sizeof(obj)) {
+				obj = (SP_SERIAL_GENERIC_ST *)(t->cmd_buff->data + t->cmd_buff->pl);
+				memset(obj, 0, nsize);
+				obj->total = nsize;
+				obj->type = cmd;
 
-            SP_SERIAL_GENERIC_ST *obj = 0;
-            lport = (len + 1) + datasz;            
-            nsize = sizeof(SP_SERIAL_GENERIC_ST) + lport;
-            spllog(0, "SPSR_CMD_WRITE, nsize: %d, portname: %s", nsize, portname);
-            if (t->cmd_buff->range > t->cmd_buff->pl + nsize) {
-                obj = (SP_SERIAL_GENERIC_ST *) (t->cmd_buff->data + t->cmd_buff->pl);
-                memset(obj, 0, nsize);
-                obj->total = nsize;
-                obj->type = cmd;
-                obj->range = lport;
-                memcpy(obj->data, portname, len);
-                obj->data[len] = 0;
-                obj->pc = len + 1;
-                memcpy(obj->data + obj->pc, (char*) data, datasz);
-                obj->pl = lport;
-                t->cmd_buff->pl += nsize;
-                pend = (int*)(t->cmd_buff->data + t->cmd_buff->pl);
-                *pend = 0;
-            }
-            break;            
-        }
-    } while (0);
-    spserial_rel_sem(t->sem);
-    return ret;
+				t->cmd_buff->pl += nsize;
+				pend = (int *)(t->cmd_buff->data + t->cmd_buff->pl);
+				*pend = 0;
+				spllog(0, "cmd type SPSR_CMD_ADD: %d, size: %d", obj->type, obj->total);
+			}
+			break;
+		}
+		if (cmd == SPSR_CMD_REM) {
+			int lport = 0;
+			int len = strlen(portname);
+
+			SP_SERIAL_GENERIC_ST *obj = 0;
+			lport = len + 1;
+			nsize = sizeof(SP_SERIAL_GENERIC_ST) + lport;
+			spllog(0, "SPSR_CMD_REM, nsize: %d, portname: %s", nsize, portname);
+			if (t->cmd_buff->range > t->cmd_buff->pl + nsize) {
+				obj = (SP_SERIAL_GENERIC_ST *)(t->cmd_buff->data + t->cmd_buff->pl);
+				memset(obj, 0, nsize);
+				obj->total = nsize;
+				obj->type = cmd;
+				obj->range = lport;
+				memcpy(obj->data, portname, lport);
+				obj->data[len] = 0;
+				obj->pl = lport;
+				t->cmd_buff->pl += nsize;
+				pend = (int *)(t->cmd_buff->data + t->cmd_buff->pl);
+				*pend = 0;
+			}
+			break;
+		}
+		if (cmd == SPSR_CMD_WRITE) {
+			int lport = 0;
+			int len = strlen(portname);
+
+			SP_SERIAL_GENERIC_ST *obj = 0;
+			lport = (len + 1) + datasz;
+			nsize = sizeof(SP_SERIAL_GENERIC_ST) + lport;
+			spllog(0, "SPSR_CMD_WRITE, nsize: %d, portname: %s", nsize, portname);
+			if (t->cmd_buff->range < t->cmd_buff->pl + nsize) {
+				int total = 0;
+				int adding = 2 * nsize;
+				total = t->cmd_buff->total;
+				total += adding;
+				t->cmd_buff = realloc(t->cmd_buff, total);
+				if (!t->cmd_buff) {
+					spllog(SPL_LOG_ERROR, "SPSR_MEM_NULL");
+					sleep(1);
+					exit(1);
+				}
+				t->cmd_buff->total += adding;
+				t->cmd_buff->range += adding;
+			}
+			obj = (SP_SERIAL_GENERIC_ST *)(t->cmd_buff->data + t->cmd_buff->pl);
+			memset(obj, 0, nsize);
+			obj->total = nsize;
+			obj->type = cmd;
+			obj->range = lport;
+			memcpy(obj->data, portname, len);
+			obj->data[len] = 0;
+			obj->pc = len + 1;
+			memcpy(obj->data + obj->pc, (char *)data, datasz);
+			obj->pl = lport;
+			t->cmd_buff->pl += nsize;
+			pend = (int *)(t->cmd_buff->data + t->cmd_buff->pl);
+			*pend = 0;
+			break;
+		}
+	} while (0);
+	spsr_rel_sem(t->sem);
+	return ret;
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -1776,196 +1993,191 @@ int spsr_send_cmd(int cmd, char *portname, void* data, int datasz)
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spserial_verify_info(SP_SERIAL_INPUT_ST* p ) 
+int
+spsr_verify_info(SP_SERIAL_INPUT_ST *p)
 {
-    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-    int ret = 0;
-    SP_SERIAL_INFO_ST* item = 0;
-    SPSERIAL_ARR_LIST_LINED* node = 0;
-    spllog(SPL_LOG_DEBUG, "spserial_verify_info:");
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	int ret = 0;
+	SP_SERIAL_INFO_ST *item = 0;
+	SPSR_ARR_LIST_LINED *node = 0;
+	spllog(SPL_LOG_DEBUG, "spsr_verify_info:");
 #ifndef UNIX_LINUX
-    HANDLE hSerial = 0;
+	HANDLE hSerial = 0;
 #else
-    int fd = 0;
+	int fd = 0;
 #endif
-    do {
-        if (!p) {
-            ret = SPSERIAL_PORT_INPUT_NULL;
-			spllog(SPL_LOG_ERROR, "SPSERIAL_PORT_INPUT_NULL.");
-            break;
-        }
-        if (p->baudrate < 1) {
-            ret = SPSERIAL_PORT_BAUDRATE_ERROR;
-			spllog(SPL_LOG_ERROR, "SPSERIAL_PORT_BAUDRATE_ERROR.");
-            break;
-        }
-        if (!p->port_name[0]) {
-            spllog(SPL_LOG_DEBUG, "port_name empty.");
-            ret = SPSERIAL_PORT_NAME_ERROR;
-            break;
-        }
-        if (t->init_node) 
-        {
-            SPSERIAL_ARR_LIST_LINED* tmp = 0;
-            tmp = t->init_node;
-            while (tmp) 
-            {
-                if (strcmp(tmp->item->port_name, p->port_name) == 0) {
-                    spllog(SPL_LOG_DEBUG, "did existed port_name: \"%s\".", p->port_name);
-                    ret = SPSERIAL_PORTNAME_EXISTED;
-                    break;
-                }
-                tmp = tmp->next;
-            }
-        }
-        if (ret) 
-        {
-            break;
-        }
+	do {
+		if (!p) {
+			ret = SPSR_PORT_INPUT_NULL;
+			spllog(SPL_LOG_ERROR, "SPSR_PORT_INPUT_NULL.");
+			break;
+		}
+		if (p->baudrate < 1) {
+			ret = SPSR_PORT_BAUDRATE_ERROR;
+			spllog(SPL_LOG_ERROR, "SPSR_PORT_BAUDRATE_ERROR.");
+			break;
+		}
+		if (!p->port_name[0]) {
+			spllog(SPL_LOG_DEBUG, "port_name empty.");
+			ret = SPSR_PORT_NAME_ERROR;
+			break;
+		}
+		if (t->init_node) {
+			SPSR_ARR_LIST_LINED *tmp = 0;
+			tmp = t->init_node;
+			while (tmp) {
+				if (strcmp(tmp->item->port_name, p->port_name) == 0) {
+					spllog(SPL_LOG_DEBUG, "did existed port_name: \"%s\".", p->port_name);
+					ret = SPSR_PORTNAME_EXISTED;
+					break;
+				}
+				tmp = tmp->next;
+			}
+		}
+		if (ret) {
+			break;
+		}
 
 #ifndef UNIX_LINUX
-        /* Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation */
-        /* https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea */
-        hSerial = CreateFile(p->port_name,
-            GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED , 0);
+		/* Open the serial port with FILE_FLAG_OVERLAPPED for asynchronous operation */
+		/* https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea */
+		hSerial =
+		    CreateFile(p->port_name, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
 
-        if (hSerial == INVALID_HANDLE_VALUE) {
-            DWORD dwError = GetLastError();
-            spllog(SPL_LOG_ERROR, "Open port errcode: %lu", dwError);
-            ret = SPSERIAL_PORT_OPEN;
-            break;
-        }
-        else {
-            spllog(SPL_LOG_DEBUG, "Create hSerial: 0x%p.", hSerial);
-            SPSERIAL_CloseHandle(hSerial);
-        }
+		if (hSerial == INVALID_HANDLE_VALUE) {
+			DWORD dwError = GetLastError();
+			spllog(SPL_LOG_ERROR, "Open port errcode: %lu", dwError);
+			ret = SPSR_PORT_OPEN;
+			break;
+		} else {
+			spllog(SPL_LOG_DEBUG, "Create hSerial: 0x%p.", hSerial);
+			SPSR_CloseHandle(hSerial);
+		}
 #else
-        fd = open(p->port_name, O_RDWR | O_NOCTTY | O_NDELAY);
-        if (fd == -1) {
-            ret = SPSERIAL_PORT_OPEN_UNIX;
-            spllog(SPL_LOG_ERROR, "open port: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-            break;
-        }
-        spllog(SPL_LOG_DEBUG, "open portname: %s, fd: %d.", p->port_name,fd);
-        ret = close(fd);
-        if (ret) {
-            ret = SPSERIAL_PORT_CLOSE_UNIX;
-            spllog(SPL_LOG_ERROR, "close port fd: %d, ret: %d, errno: %d, text: %s.", fd, ret, errno, strerror(errno));
-            break;
-        }
+		fd = open(p->port_name, O_RDWR | O_NOCTTY | O_NDELAY);
+		if (fd == -1) {
+			ret = SPSR_PORT_OPEN_UNIX;
+			spllog(SPL_LOG_ERROR, "open port: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
+			break;
+		}
+		spllog(SPL_LOG_DEBUG, "open portname: %s, fd: %d.", p->port_name, fd);
+		ret = close(fd);
+		if (ret) {
+			ret = SPSR_PORT_CLOSE_UNIX;
+			spllog(SPL_LOG_ERROR, "close port fd: %d, ret: %d, errno: %d, text: %s.", fd, ret, errno,
+			    strerror(errno));
+			break;
+		}
 #endif
 
-        spserial_malloc(sizeof(SPSERIAL_ARR_LIST_LINED), node, SPSERIAL_ARR_LIST_LINED);
-        if (!node) {
-            ret = SPSERIAL_MEM_NULL;
-            spllog(SPL_LOG_ERROR, "SPSERIAL_MEM_NULL");
-            break;
-        }
-        spserial_malloc(sizeof(SP_SERIAL_INFO_ST), item, SP_SERIAL_INFO_ST);
-        if (!item) {
-            ret = SPSERIAL_MEM_NULL;
-            spllog(SPL_LOG_ERROR, "SPSERIAL_MEM_NULL");
-            break;
-        }
-        
-        /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+		spsr_malloc(sizeof(SPSR_ARR_LIST_LINED), node, SPSR_ARR_LIST_LINED);
+		if (!node) {
+			ret = SPSR_MEM_NULL;
+			spllog(SPL_LOG_ERROR, "SPSR_MEM_NULL");
+			break;
+		}
+		spsr_malloc(sizeof(SP_SERIAL_INFO_ST), item, SP_SERIAL_INFO_ST);
+		if (!item) {
+			ret = SPSR_MEM_NULL;
+			spllog(SPL_LOG_ERROR, "SPSR_MEM_NULL");
+			break;
+		}
 
-        snprintf(item->port_name, SPSERIAL_PORT_LEN, "%s", p->port_name);
-        item->baudrate = p->baudrate;
-        item->cb_evt_fn = p->cb_evt_fn;
-        item->cb_obj = p->cb_obj;
-        item->t_delay = p->t_delay;
-        node->item = item;
+		/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-        /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+		snprintf(item->port_name, SPSR_PORT_LEN, "%s", p->port_name);
+		item->baudrate = p->baudrate;
+		item->cb_evt_fn = p->cb_evt_fn;
+		item->cb_obj = p->cb_obj;
+		item->t_delay = p->t_delay;
+		node->item = item;
 
-        if (!t->init_node) {
-            t->init_node = node;
-            t->last_node = node;
-        }
-        else {
-            t->last_node->next = node;
-            t->last_node = node;
-        }
-        t->count++;
+		/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+		if (!t->init_node) {
+			t->init_node = node;
+			t->last_node = node;
+		} else {
+			t->last_node->next = node;
+			t->last_node = node;
+		}
+		t->count++;
 #ifndef UNIX_LINUX
-        ret = spserial_create_thread(spserial_thread_operating_routine, node);
+		ret = spsr_create_thread(spsr_thread_operating_routine, node);
 #else
-        item->handle = -1;
-        spllog(SPL_LOG_DEBUG, "Check t->init_node: 0x%p", t->init_node);
+		item->handle = -1;
+		spllog(SPL_LOG_DEBUG, "Check t->init_node: 0x%p", t->init_node);
 
 #endif
 
+	} while (0);
 
-    } while (0);
+	if (ret) {
+		if (item) {
+			spsr_free(item);
+		}
+		if (node) {
+			spsr_free(node);
+		}
+	}
 
-    if (ret) {
-        if (item) {
-            spserial_free(item);
-        }
-        if (node) {
-            spserial_free(node);
-        }
-    }
-
-    return ret;
+	return ret;
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spsr_clear_all() {
-    int ret = 0;
-    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
+int
+spsr_clear_all()
+{
+	int ret = 0;
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
 #ifndef UNIX_LINUX
-    int count = 0;
-    do  {
-        char port[64];
-        memset(port, 0, 64);
-        spserial_mutex_lock(t->mutex);
-            count = t->count; 
-            if(t->init_node) {
-                memcpy(port, t->init_node->item->port_name, strlen(t->init_node->item->port_name));
-            } else {
-                count = 0;
-            }
-        spserial_mutex_unlock(t->mutex);
-        if(port[0]) {
-            ret = spsr_inst_close(port);
-            if(ret) {
-                spllog(SPL_LOG_ERROR, "spsr_inst_close: ret: %d, port: %s.", ret, port);
-            }
-        }
-    } while(count);
+	int count = 0;
+	do {
+		char port[64];
+		memset(port, 0, 64);
+		spsr_mutex_lock(t->mutex);
+		count = t->count;
+		if (t->init_node) {
+			memcpy(port, t->init_node->item->port_name, strlen(t->init_node->item->port_name));
+		} else {
+			count = 0;
+		}
+		spsr_mutex_unlock(t->mutex);
+		if (port[0]) {
+			ret = spsr_inst_close(port);
+			if (ret) {
+				spllog(SPL_LOG_ERROR, "spsr_inst_close: ret: %d, port: %s.", ret, port);
+			}
+		}
+	} while (count);
 #else
 
-    SPSERIAL_ARR_LIST_LINED* tnode = 0, *temp = 0;
-    temp = t->init_node; 
-    while (temp) 
-	{
-        tnode = temp;
-        temp = temp->next;
-        if(tnode->item) 
-		{
-            if(tnode->item->handle >= 0) 
-			{
-                int fd = tnode->item->handle;
-                ret = close(fd);
-                if(ret) {
-                    spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno, strerror(errno));
-                } else {
-                    spllog(SPL_LOG_DEBUG, "close fd: %d.", fd);
-                }
-            }
-            spserial_free(tnode->item);
-        }
-        spserial_free(tnode);
-    }
-    t->init_node = t->last_node = 0;
-    spserial_free(t->cmd_buff);
-#endif        
-    return ret;
+	SPSR_ARR_LIST_LINED *tnode = 0, *temp = 0;
+	temp = t->init_node;
+	while (temp) {
+		tnode = temp;
+		temp = temp->next;
+		if (tnode->item) {
+			if (tnode->item->handle >= 0) {
+				int fd = tnode->item->handle;
+				ret = close(fd);
+				if (ret) {
+					spllog(SPL_LOG_ERROR, "close: ret: %d, errno: %d, text: %s.", ret, errno,
+					    strerror(errno));
+				} else {
+					spllog(SPL_LOG_DEBUG, "close fd: %d.", fd);
+				}
+			}
+			spsr_free(tnode->item);
+		}
+		spsr_free(tnode);
+	}
+	t->init_node = t->last_node = 0;
+	spsr_free(t->cmd_buff);
+#endif
+	return ret;
 }
-
 
 #ifndef UNIX_LINUX
 #else
@@ -1985,348 +2197,538 @@ int spsr_clear_all() {
 */
 
 #ifndef __SPSR_EPOLL__
-    int spsr_fmt_name(char *input, char *output) {
-        SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-        int ret = 0;
-        if(input) {
-            snprintf(output, SPSERIAL_KEY_LEN,"%s_%s", t->sem_key, input );
-        } else {
-            snprintf(output, SPSERIAL_KEY_LEN, "%s_%s", t->sem_key, "");
-        }        
-        return ret;
-    }
+int
+spsr_fmt_name(char *input, char *output)
+{
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	int ret = 0;
+	if (input) {
+		snprintf(output, SPSR_KEY_LEN, "%s_%s", t->sem_key, input);
+	} else {
+		snprintf(output, SPSR_KEY_LEN, "%s_%s", t->sem_key, "");
+	}
+	return ret;
+}
 #else
 #endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spsr_clear_hash() 
+int
+spsr_clear_hash()
 {
-    int ret = 0;
-    int i = 0;
-    SPSR_HASH_FD_NAME *tmp = 0, *obj = 0;
-    for(i = 0; i < SPSR_MAX_NUMBER_OF_PORT; ++i){
-        obj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[i];
-        if(!obj) {
-            continue;
-        }
-        while(obj) 
-		{
-            tmp = obj;
-            obj = obj->next;
-            spllog(0, "fd: %d, name: %s", tmp->fd, tmp->port_name);
-            spserial_free(tmp);
-        }
-        spsr_hash_fd_arr[i] = 0;
-    }
-    return ret;
+	int ret = 0;
+	int i = 0;
+	SPSR_HASH_FD_NAME *tmp = 0, *obj = 0;
+	for (i = 0; i < SPSR_MAX_NUMBER_OF_PORT; ++i) {
+		obj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[i];
+		if (!obj) {
+			continue;
+		}
+		while (obj) {
+			tmp = obj;
+			obj = obj->next;
+			spllog(0, "fd: %d, name: %s", tmp->fd, tmp->port_name);
+			spsr_free(tmp);
+		}
+		spsr_hash_fd_arr[i] = 0;
+	}
+	return ret;
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spsr_open_fd(char *port_name, int baudrate, int *outfd) {
-    int ret = 0;
-    int fd = -1;
-    struct termios options = {0};
-    int rerr = 0;
-    do {
-        fd = open(port_name, O_RDWR | O_NOCTTY | O_NONBLOCK  | O_SYNC);
-        if (fd == -1) {
-            spllog(SPL_LOG_ERROR, "open port error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-            ret = SPSERIAL_UNIX_OPEN_PORT;
-            break;
-        }		
-        spllog(0, "fd: %d, portname: %s", fd, port_name);
-        memset(&options, 0, sizeof(options));
-        rerr = tcgetattr(fd, &options);
-        if ( rerr < 0) {
-            spllog(SPL_LOG_ERROR, "tcgetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-            ret = SPSERIAL_UNIX_GET_ATTR;
-            break;
-        }
+int
+spsr_open_fd(char *port_name, int baudrate, int *outfd)
+{
+	int ret = 0;
+	int fd = -1;
+	struct termios options = {0};
+	int rerr = 0;
+	do {
+		fd = open(port_name, O_RDWR | O_NOCTTY | O_NONBLOCK | O_SYNC);
+		if (fd == -1) {
+			spllog(SPL_LOG_ERROR, "open port error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+			ret = SPSR_UNIX_OPEN_PORT;
+			break;
+		}
+		spllog(0, "fd: %d, portname: %s", fd, port_name);
+		memset(&options, 0, sizeof(options));
+		rerr = tcgetattr(fd, &options);
+		if (rerr < 0) {
+			spllog(SPL_LOG_ERROR, "tcgetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+			ret = SPSR_UNIX_GET_ATTR;
+			break;
+		}
 
-        spllog(0, "fd: %d, portname: %s, rate: %d", fd, port_name, baudrate);
-        cfsetispeed(&options, baudrate);
-        cfsetospeed(&options, baudrate);			
+		spllog(0, "fd: %d, portname: %s, rate: %d", fd, port_name, baudrate);
+		cfsetispeed(&options, baudrate);
+		cfsetospeed(&options, baudrate);
 
-        options.c_cflag &= ~PARENB;    
-        options.c_cflag &= ~CSTOPB;    
-        options.c_cflag &= ~CSIZE;
-        options.c_cflag |= CS8;        
-        /* //options.c_cflag &= ~CRTSCTS;   */
-        options.c_cflag |= CRTSCTS; /* Enable RTS/CTS hardware flow control */
-        options.c_iflag = IGNPAR;
-        options.c_cflag |= CREAD | CLOCAL; 	
-        options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); 
-        /* options.c_iflag &= ~(IXON | IXOFF | IXANY);  */
-        options.c_iflag |= (IXON | IXOFF | IXANY);    /* Enable XON/XOFF software flow control */
-        options.c_oflag &= ~OPOST;      
+		options.c_cflag &= ~PARENB;
+		options.c_cflag &= ~CSTOPB;
+		options.c_cflag &= ~CSIZE;
+		options.c_cflag |= CS8;
+		/* //options.c_cflag &= ~CRTSCTS;   */
+		options.c_cflag |= CRTSCTS; /* Enable RTS/CTS hardware flow control */
+		options.c_iflag = IGNPAR;
+		options.c_cflag |= CREAD | CLOCAL;
+		options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+		/* options.c_iflag &= ~(IXON | IXOFF | IXANY);  */
+		options.c_iflag |= (IXON | IXOFF | IXANY); /* Enable XON/XOFF software flow control */
+		options.c_oflag &= ~OPOST;
 
-        /*
-        options.c_cc[VMIN]= 1;      
-        options.c_cc[VTIME]= 0;      
-        */
-    
-        rerr = tcsetattr(fd, TCSANOW, &options);
-        if (rerr < 0) {
-            spllog(SPL_LOG_ERROR, "tcsetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-            ret = SPSERIAL_UNIX_SET_ATTR;
-            break;
-        }
-        else {
-            spllog(0, "tcsetattr: DONE.")
-        }   
-        *outfd = fd;
-    } while(0);
+		/*
+		options.c_cc[VMIN]= 1;
+		options.c_cc[VTIME]= 0;
+		*/
 
-    return ret;
+		rerr = tcsetattr(fd, TCSANOW, &options);
+		if (rerr < 0) {
+			spllog(SPL_LOG_ERROR, "tcsetattr error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+			ret = SPSR_UNIX_SET_ATTR;
+			break;
+		} else {
+			spllog(0, "tcsetattr: DONE.")
+		}
+		*outfd = fd;
+	} while (0);
+
+	return ret;
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spsr_read_fd(int fd, char *buffer, int n, char *chk_delay) {
-    int ret = 0;
-    int didread = 0;
-    int comfd = fd;   
-    struct timespec nap_time = {0};
-    spllog(0, "Read with fd: %d", fd);
-    SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0;
-    int t_wait = 0;
-    do {
-        do {
-            int hasdid = SPSR_HASH_FD(comfd);
-            
-            hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hasdid];
-            if(!hashobj) {
-                spllog(SPL_LOG_ERROR, "Cannot find obj in reading.");
-                ret = SPSERIAL_HASH_NOTFOUND;
-                break;
-            }
-            temp = hashobj;
-            while(temp)  {
-                if(temp->fd == comfd) {
-                    t_wait = temp->t_delay;
-                    break;
-                }
-                temp = temp->next;
-            }
+int
+spsr_read_fd(int fd, SP_SERIAL_GENERIC_ST *pevtcb, char *chk_delay)
+{
+	int ret = 0;
+	int didread = 0;
+	int comfd = fd;
+	struct timespec nap_time = {0};
 
-            /*-+-+ -+-+ -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-            memset(buffer, 0, n);
-            if(!chk_delay[0]) {
-                nap_time.tv_nsec = t_wait * SPSR_MILLION;
-                nanosleep(&nap_time, 0);       
-                chk_delay[0] = 1;
-            }                     
-            /* while(1) { */
-                didread = (int)read(comfd, buffer, n -1);
-                if(didread < 1) {
-                    spllog(SPL_LOG_ERROR, "read error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
-                    break;
-                }
-            /* } */
-            buffer[didread] = 0;
+	SPSR_HASH_FD_NAME *hashobj = 0, *temp = 0;
+	int t_wait = 0;
+	int range = 0;
+	SP_SERIAL_GENERIC_ST *evtcb = 0;
+	char *buffer = 0;
+	do {
+		if (!pevtcb) {
+			ret = SPSR_MEM_NULL;
+			spllog(SPL_LOG_ERROR, "pevtcb NULL");
+			break;
+		}
+		evtcb = pevtcb;
+		if (!evtcb) {
+			ret = SPSR_MEM_NULL;
+			spllog(SPL_LOG_ERROR, "evtcb NULL");
+			break;
+		}
+		buffer = evtcb->data + evtcb->pc;
+		do {
+			int hasdid = SPSR_HASH_FD(comfd);
 
-            spllog(0, "Didread: %d, data: \"%s\", fd: %d, temp->t_delay/timeout: %d", 
-                didread, buffer, fd, t_wait);        
-  
-            if(!temp) {
-                ret = SPSERIAL_HASH_NOTFOUND;
-                spllog(SPL_LOG_ERROR, "Didsee Cannot find obj in reading.");                
-                break;
-            }  
-            if(!temp->cb_evt_fn) {
-                spllog(SPL_LOG_DEBUG, "cb_evt_fn, cb_evt_fn null.");
-                break;
-            }
+			hashobj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hasdid];
+			if (!hashobj) {
+				spllog(SPL_LOG_ERROR, "Cannot find obj in reading.");
+				ret = SPSR_HASH_NOTFOUND;
+				break;
+			}
+			temp = hashobj;
+			while (temp) {
+				if (temp->fd == comfd) {
+					t_wait = temp->t_delay;
+					break;
+				}
+				temp = temp->next;
+			}
 
-            ret = spsr_invoke_cb(SPSERIAL_EVENT_READ_BUF, temp->cb_evt_fn, temp->cb_obj, buffer, didread);
+			/*-+-+ -+-+
+			 * -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+			// memset(buffer, 0, n);
+			if (!chk_delay[0]) {
+				nap_time.tv_nsec = t_wait * SPSR_MILLION;
+				nanosleep(&nap_time, 0);
+				chk_delay[0] = 1;
+			}
+			/* while(1) { */
+			range = evtcb->range;
+			didread = (int)read(comfd, buffer, range);
+			if (didread < 1) {
+				spllog(
+				    SPL_LOG_ERROR, "read error, fd: %d, errno: %d, text: %s.", fd, errno, strerror(errno));
+				break;
+			}
+			/* } */
+			buffer[didread] = 0;
 
-        } while(0);
+			spllog(
+			    0, "Didread: %d, data: \"%s\", fd: %d, temp->t_delay/timeout: %d", didread, buffer, fd, t_wait);
 
-    } while(0); 
-    return ret;
+			if (!temp) {
+				ret = SPSR_HASH_NOTFOUND;
+				spllog(SPL_LOG_ERROR, "Didsee Cannot find obj in reading.");
+				break;
+			}
+			if (!temp->cb_evt_fn) {
+				spllog(SPL_LOG_DEBUG, "cb_evt_fn, cb_evt_fn null.");
+				break;
+			}
+
+			ret = spsr_invoke_1cb(SPSR_EVENT_READ_BUF, temp->cb_evt_fn, temp->cb_obj, evtcb, didread);
+
+		} while (0);
+
+	} while (0);
+	return ret;
 }
 
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+#if 0
+#ifndef __SPSR_EPOLL__
+int spsr_ctrl_1sock(
+	void *fds, 
+	int *mx_number, 
+	int sockfd, 
+	SP_SERIAL_GENERIC_ST *pevt_callback, 
+	int *chk_off)
+#else
+int spsr_ctrl_1sock(
+	int epollfd, 
+	int sockfd, 
+	SP_SERIAL_GENERIC_ST *pevt_callback, 
+	int *chk_off)
+#endif
+{
+	int ret = 0;
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+
+	// char* p = 0;
+	int lp = 0;
+	struct sockaddr_in client_addr = {0};
+	ssize_t lenmsg = 0;
+	socklen_t client_len = 0;
+	int isoff = 0;
+	char *tbuffer = 0;
+	SP_SERIAL_GENERIC_ST *evt_callback = pevt_callback;
+	
+	do {
+		if(!evt_callback) {
+			break;
+		}
+		tbuffer = evt_callback->data + evt_callback->pc;
+		while (1) {
+			memset(&client_addr, 0, sizeof(client_addr));
+			client_len = sizeof(client_addr);
+			lenmsg = (int)recvfrom(
+				sockfd, tbuffer, 
+				evt_callback->range, 0, 
+				(struct sockaddr *)&client_addr, &client_len);
+			if (lenmsg < 1) {
+				/* 11: Have no data in Linux */
+				/* 35: Have no data in Linux */
+#ifndef __SPSR_EPOLL__
+				if (errno == 35) {
+					break;
+				}
+#else
+				if (errno == 11) {
+					break;
+				}
+#endif
+				spllog(SPL_LOG_ERROR, "mach recvfrom, lenmsg: %d, errno: %d, text: %s.", (int)lenmsg, errno,
+				    strerror(errno));
+				break;
+			}
+
+			tbuffer[lenmsg] = 0;
+			spllog(SPL_LOG_DEBUG, "buffer: %s", tbuffer);
+			if (strcmp(tbuffer, SPSR_MSG_OFF) == 0) {
+				spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
+				isoff = 1;
+				break;
+			}
+			if (isoff) {
+				break;
+			}
+			lp = 0;
+			// spsr_malloc(SPSR_BUFFER_SIZE, p, char);
+			spsr_mutex_lock(t->mutex);
+			do {
+				if (t->cmd_buff) {
+					lp = t->cmd_buff->pl;
+					if (lp < 1) {
+						break;
+					}
+					if (evt_callback->pl >= lp + evt_callback->pc) {
+						memcpy(tbuffer, t->cmd_buff->data, lp);
+					} else {
+						int total = evt_callback->total;
+						total += lp;
+						evt_callback = realloc(evt_callback, total);
+						if (!evt_callback) {
+							spllog(SPL_LOG_FATAL, "realloc error.");
+							sleep(1);
+							exit(1);
+						}
+						pevt_callback = evt_callback;
+						evt_callback->total += lp;
+						evt_callback->range += lp;
+					}
+					t->cmd_buff->pl = t->cmd_buff->pc = 0;
+				}
+			} while (0);
+			spsr_mutex_unlock(t->mutex);
+#ifndef __SPSR_EPOLL__
+			ret = spsr_fetch_commands(fds, mx_number, buffer, lp);
+			spllog(0, "MACH POLL --->>> Size of buffer of command : %d", lp);
+#else
+			ret = spsr_fetch_commands(epollfd, tbuffer, lp);
+			spllog(0, "LINUX EPOLL --->>> Size of buffer of command : %d", lp);
+#endif
+
+			// spsr_free(p);
+		}
+	} while (0);
+
+	if (isoff) {
+		if (chk_off) {
+			*chk_off = isoff;
+		}
+	}
+
+	return ret;
+}
+#endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef __SPSR_EPOLL__
-    int spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, char *buffer, int lenbuffer, int *chk_off) 
-#else   
-    int spsr_ctrl_sock(int epollfd, int sockfd, char *buffer, int lenbuffer, int *chk_off) 
+int
+spsr_ctrl_sock(void *fds, int *mx_number, int sockfd, SP_SERIAL_GENERIC_ST *evt, int *chk_off)
+#else
+int
+spsr_ctrl_sock(int epollfd, int sockfd, SP_SERIAL_GENERIC_ST *evt, int *chk_off)
 #endif
 {
-    SPSERIAL_ROOT_TYPE* t = &spserial_root_node;
-    int ret = 0;
-    char *p = 0;
-    int lp = 0;
-    struct sockaddr_in client_addr;
-    ssize_t lenmsg = 0;
-    socklen_t client_len = 0;    
-    int isoff = 0;
-    do 
-    {     
-        while(1) 
-        {        
-            memset(&client_addr, 0, sizeof(client_addr));
-            client_len = sizeof(client_addr);
-            memset(buffer, 0, lenbuffer);
-            lenmsg = (int) recvfrom(sockfd, buffer, lenbuffer, 0,
-                (struct sockaddr*)&client_addr, &client_len);
-            if (lenmsg < 1) { 
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	int ret = 0;
+	char *p = 0;
+	int lp = 0;
+	struct sockaddr_in client_addr;
+	ssize_t lenmsg = 0;
+	socklen_t client_len = 0;
+	int isoff = 0;
+	char *buffer = evt->data + evt->pc;
+	do {
+		if (!evt) {
+			ret = SPSR_PARAM_NULL;
+			break;
+		}
+		while (1) {
+			memset(&client_addr, 0, sizeof(client_addr));
+			client_len = sizeof(client_addr);
+			lenmsg = (int)recvfrom(sockfd, buffer, evt->range, 0, (struct sockaddr *)&client_addr, &client_len);
+			if (lenmsg < 1) {
 				/* 11: Have no data in Linux */
 				/* 35: Have no data in Linux */
-            #ifndef __SPSR_EPOLL__
-                if(errno == 35) {
-                    break;
-                }   
-            #else 
-                if(errno == 11) {
-                    break;
-                }            
-            #endif
-                spllog(SPL_LOG_ERROR, "mach recvfrom, lenmsg: %d, errno: %d, text: %s.",
-                    (int)lenmsg, errno, strerror(errno));
-                break;
-            }
-            
-            buffer[lenmsg] = 0;
-            spllog(SPL_LOG_DEBUG, "buffer: %s", buffer);
-            if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
-                spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
-                isoff = 1;
-                break;
-            }
-            if(isoff) {
-                break;
-            }
-            lp = 0;
-            spserial_malloc(SPSERIAL_BUFFER_SIZE, p, char);
-            spserial_mutex_lock(t->mutex);
-                do 
-				{
-                    if(t->cmd_buff){
-                        lp = t->cmd_buff->pl;
-                        if(lp) {
-                            if(lp > SPSERIAL_BUFFER_SIZE) {
-                                p = realloc(p, lp);
-                            }
-                            if(!p) {
-                                break;
-                            }
-                            memcpy(p, t->cmd_buff->data, lp);
-                            t->cmd_buff->pl = 0;
-                        }
-                    }
-                } while (0);
+#ifndef __SPSR_EPOLL__
+				if (errno == 35) {
+					break;
+				}
+#else
+				if (errno == 11) {
+					break;
+				}
+#endif
+				spllog(SPL_LOG_ERROR, "mach recvfrom, lenmsg: %d, errno: %d, text: %s.", (int)lenmsg, errno,
+				    strerror(errno));
+				break;
+			}
 
-            spserial_mutex_unlock(t->mutex);	
-        #ifndef __SPSR_EPOLL__
-            ret = spserial_fetch_commands(fds, mx_number, p, lp);
-            spllog(0, "MACH POLL --->>> Size of buffer of command : %d", lp);
-        #else
-            ret = spserial_fetch_commands(epollfd, p, lp);
-            spllog(0, "LINUX EPOLL --->>> Size of buffer of command : %d", lp);
-        #endif
-           
-            spserial_free(p);
-        }		
-    } while(0);
+			buffer[lenmsg] = 0;
+			spllog(SPL_LOG_DEBUG, "buffer: %s", buffer);
+			if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
+				spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
+				isoff = 1;
+				break;
+			}
+			if (isoff) {
+				break;
+			}
+			lp = 0;
+			spsr_malloc(SPSR_BUFFER_SIZE, p, char);
+			spsr_mutex_lock(t->mutex);
+			do {
+				if (t->cmd_buff) {
+					lp = t->cmd_buff->pl;
+					if (lp) {
+						if (lp > SPSR_BUFFER_SIZE) {
+							p = realloc(p, lp);
+						}
+						if (!p) {
+							break;
+						}
+						memcpy(p, t->cmd_buff->data, lp);
+						t->cmd_buff->pl = 0;
+					}
+				}
+			} while (0);
 
-    if(isoff) {
-        if(chk_off) {
-            *chk_off = isoff;
-        }
-    }
+			spsr_mutex_unlock(t->mutex);
+#ifndef __SPSR_EPOLL__
+			ret = spsr_fetch_commands(fds, mx_number, p, lp, evt);
+			spllog(0, "MACH POLL --->>> Size of buffer of command : %d", lp);
+#else
+			ret = spsr_fetch_commands(epollfd, p, lp, evt);
+			spllog(0, "LINUX EPOLL --->>> Size of buffer of command : %d", lp);
+#endif
 
-    return ret;
+			spsr_free(p);
+		}
+	} while (0);
+
+	if (isoff) {
+		if (chk_off) {
+			*chk_off = isoff;
+		}
+	}
+
+	return ret;
 }
 #endif
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int spsr_invoke_cb(int evttype, SPSERIAL_module_cb fn_cb, void *obj, char *data, int len) {
+int
+spsr_invoke_cb(int evttype, SPSR_module_cb fn_cb, void *obj, char *data, int len)
+{
 	int ret = 0;
-    SP_SERIAL_GENERIC_ST* evt = 0;
-    int n = 0;
+	SP_SERIAL_GENERIC_ST *evt = 0;
+	int n = 0;
+#ifdef SPSR_SHOW_CONSOLE
+	spllog(0, "Enter call callback.");
+#endif
 	do {
-		n = 1 + sizeof(SP_SERIAL_GENERIC_ST) + len + sizeof(void*);
-        spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
-        if (!evt) {
-            spllog(SPL_LOG_ERROR, "spserial_malloc, SPSERIAL_MEM_NULL.");
-            ret = SPSERIAL_MEM_NULL;
-            break;
-        }
-        evt->total = n;
-        evt->type = evttype;
+		if (!fn_cb) {
+			ret = SPSR_CALLBACK_NULL;
+			break;
+		}
+		n = 1 + sizeof(SP_SERIAL_GENERIC_ST) + len + sizeof(void *);
 
-        evt->pc = sizeof(void*);
-        if (sizeof(void*) == sizeof(unsigned int)) {
-            unsigned int* pt = (unsigned int*) evt->data;
-            *pt = (unsigned int)obj;
-            spllog(SPL_LOG_DEBUG, "With 32 bit.");
-        }
-        else  if (sizeof(void*) == sizeof(unsigned long long int)) {
-            unsigned long long int* pt = (unsigned long long int*) evt->data;
-            spllog(SPL_LOG_DEBUG, "With 64 bit.");
-            *pt = (unsigned long long int)obj;
-        }
-        if (data) {
-            memcpy(evt->data + evt->pc, data, len);
-            evt->pl = evt->pc + len;
-        }
-        fn_cb(evt);
-        spserial_free(evt);
-	} while(0);
+		spsr_malloc(n, evt, SP_SERIAL_GENERIC_ST);
+		if (!evt) {
+			spllog(SPL_LOG_ERROR, "spsr_malloc, "
+					      "SPSR_MEM_NULL.");
+			ret = SPSR_MEM_NULL;
+			break;
+		}
+		evt->total = n;
+		evt->type = evttype;
+
+		evt->pc = sizeof(void *);
+		if (sizeof(void *) == sizeof(SPSR_UNIT)) {
+			SPSR_UNIT *pt = (SPSR_UNIT *)evt->data;
+			*pt = (SPSR_UNIT)obj;
+			spllog(SPL_LOG_DEBUG, "With 32 bit.");
+		} else if (sizeof(void *) == sizeof(SPSR_LLU)) {
+			SPSR_LLU *pt = (SPSR_LLU *)evt->data;
+			spllog(SPL_LOG_DEBUG, "With 64 bit.");
+			*pt = (SPSR_LLU)obj;
+		}
+		if (data) {
+			memcpy(evt->data + evt->pc, data, len);
+			evt->pl = evt->pc + len;
+		}
+		fn_cb(evt);
+		spsr_free(evt);
+	} while (0);
 	return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_mutex_delete(void *mtx) {
-    int ret = 0;
-    do {
-    #ifndef UNIX_LINUX
-        SPSERIAL_CloseHandle( mtx);
-    #else
-        ret = pthread_mutex_destroy((pthread_mutex_t *) mtx);
-        spllog(0, "Delete 0x%p", mtx);
-        spserial_free(mtx);
-    #endif
-    } while(0); 
-    return ret;
+int
+spsr_mutex_delete(void *mtx)
+{
+	int ret = 0;
+	do {
+#ifndef UNIX_LINUX
+		SPSR_CloseHandle(mtx);
+#else
+		ret = pthread_mutex_destroy((pthread_mutex_t *)mtx);
+		spllog(0, "Delete 0x%p", mtx);
+		spsr_free(mtx);
+#endif
+	} while (0);
+	return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spserial_sem_delete(void *sem, char *sem_name) {
-    int ret = 0;
-    do {
-    #ifndef UNIX_LINUX
-        SPSERIAL_CloseHandle( sem);
-    #else
-        #ifndef __SPSR_EPOLL__
-            char name[SPSERIAL_KEY_LEN];
-            int err = 0;
-            spsr_fmt_name(sem_name, name);
-            err = sem_close((sem_t *) sem);
-            if(err == -1) {
-                ret = SPSERIAL_SEM_CLOSE;
-                spllog(SPL_LOG_ERROR, "mach sem_close, err: %d, errno: %d, text: %s.",
-                    (int)err, errno, strerror(errno));                
-            }
+int
+spsr_sem_delete(void *sem, char *sem_name)
+{
+	int ret = 0;
+	do {
+#ifndef UNIX_LINUX
+		SPSR_CloseHandle(sem);
+#else
+#ifndef __SPSR_EPOLL__
+		char name[SPSR_KEY_LEN];
+		int err = 0;
+		spsr_fmt_name(sem_name, name);
+		err = sem_close((sem_t *)sem);
+		if (err == -1) {
+			ret = SPSR_SEM_CLOSE;
+			spllog(SPL_LOG_ERROR, "mach sem_close, err: %d, errno: %d, text: %s.", (int)err, errno,
+			    strerror(errno));
+		}
 
-            spllog(0, "Sem Delete 0x%p,  sem_name: %s", sem, sem_name);
-            err = sem_unlink(name);
-            if(err) {
-                ret = SPSERIAL_SEM_UNLINK;
-                spllog(SPL_LOG_ERROR, "mach sem_unlink, err: %d, errno: %d, text: %s.",
-                    (int)err, errno, strerror(errno));
-            }
-            /* spserial_free(sem); */
-        #else
-            ret = sem_destroy((sem_t *) sem);
-            spllog(0, "Delete 0x%p", sem);
-            spserial_free(sem);            
-        #endif        
-    #endif
-    } while(0); 
-    return ret;
+		spllog(0, "Sem Delete 0x%p,  sem_name: %s", sem, sem_name);
+		err = sem_unlink(name);
+		if (err) {
+			ret = SPSR_SEM_UNLINK;
+			spllog(SPL_LOG_ERROR, "mach sem_unlink, err: %d, errno: %d, text: %s.", (int)err, errno,
+			    strerror(errno));
+		}
+		/* spsr_free(sem); */
+#else
+		ret = sem_destroy((sem_t *)sem);
+		spllog(0, "Delete 0x%p", sem);
+		spsr_free(sem);
+#endif
+#endif
+	} while (0);
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int
+spsr_invoke_1cb(int evttype, SPSR_module_cb fn_cb, void *obj_cb, SP_SERIAL_GENERIC_ST *evt, int lendata)
+{
+	int ret = 0;
+#ifdef SPSR_SHOW_CONSOLE
+	spllog(0, "Enter call callback.");
+#endif
+	do {
+		if (!fn_cb) {
+			ret = SPSR_CALLBACK_NULL;
+			break;
+		}
+		evt->type = evttype;
+		evt->pc = sizeof(void *);
+
+		if (sizeof(void *) == sizeof(unsigned int)) {
+			unsigned int *pt = (unsigned int *)evt->data;
+			*pt = (unsigned int)obj_cb;
+			spllog(SPL_LOG_DEBUG, "With 32 bit.");
+		} else if (sizeof(void *) == sizeof(unsigned long long int)) {
+			unsigned long long int *pt = (unsigned long long int *)evt->data;
+			spllog(SPL_LOG_DEBUG, "With 64 bit.");
+			*pt = (unsigned long long int)obj_cb;
+		}
+		evt->pl = evt->pc + lendata;
+		evt->data[evt->pl] = 0;
+		fn_cb(evt);
+		evt->pl = evt->pc;
+	} while (0);
+	return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
