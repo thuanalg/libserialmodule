@@ -8,7 +8,7 @@
 #pragma once
 using namespace std;
 
-#define WM_SPSERIAL_CUSTOM_MESSAGE		(WM_USER + 107)
+#define WM_SPSR_CUSTOM_MESSAGE		(WM_USER + 107)
 
 
 // CtestSerialPortDlg dialog

@@ -29,7 +29,7 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
     SP_SERIAL_INFO_ST *obj1 = 0;
     const char *portname = gtk_entry_get_text(GTK_ENTRY(entries[0])); 
     spllog(0, "Button %s clicked, text: %s!\n", (char *)data, portname);
-    spserial_malloc(sizeof(SP_SERIAL_INPUT_ST), obj, SP_SERIAL_INPUT_ST);
+    spsr_malloc(sizeof(SP_SERIAL_INPUT_ST), obj, SP_SERIAL_INPUT_ST);
     if(!obj) {
         exit(1);
     }
@@ -39,7 +39,7 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
             break;
         }
     }
-	snprintf(obj->port_name, SPSERIAL_PORT_LEN, "%s", portname);
+	snprintf(obj->port_name, SPSR_PORT_LEN, "%s", portname);
 	/*obj.baudrate = 115200;*/
 	obj->baudrate = baudrate; 
     //obj->cb_evt_fn = spsr_call_back_read;
@@ -51,9 +51,9 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
         obj->baudrate, obj->port_name);
     ret = spsr_inst_open(obj);
     if(ret) {
-        spllog(0, "spserial_inst_create:=========================> %d", ret);
+        spllog(0, "spsr_inst_create:=========================> %d", ret);
     }
-    spserial_free(obj);   
+    spsr_free(obj);   
 }
 void on_button_clicked_01(GtkWidget *widget, gpointer data) {
     int ret = 0;
@@ -67,7 +67,7 @@ void on_button_clicked_02(GtkWidget *widget, gpointer data) {
     char *datawrtite = (char*)gtk_entry_get_text(GTK_ENTRY(entries[3])); 
     char *portname = (char*)gtk_entry_get_text(GTK_ENTRY(entries[2])); 
     spllog(0, "Button %s clicked, portname: %s, data: %s!\n", (char *)data, portname, datawrtite);
-    //ret = spserial_inst_del((char*)portname);
+    //ret = spsr_inst_del((char*)portname);
     n = strlen(datawrtite);
     if(myusleep > 0) {
         for(i = 0; i < n; ++i) 
@@ -200,7 +200,7 @@ int spsr_call_back_read(void *data) {
     n = evt->total;
     spllog(SPL_LOG_DEBUG, "evt->total: %d, evt->pc: %d, evt->pl: %d, data: %s", 
         evt->total,  evt->pc, evt->pl, evt->data + evt->pc);
-    spserial_malloc(n, evt, SP_SERIAL_GENERIC_ST);
+    spsr_malloc(n, evt, SP_SERIAL_GENERIC_ST);
     memcpy(evt, data, n);
     g_idle_add(update_ui, (void*)evt);
     return 0;
@@ -220,9 +220,9 @@ int spsr_test_callback(void *data) {
     /* Data is borrowed from background thread, you should make a copy to use and delete. */
     SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*)data;
     /*char *realdata: from evt->pc to evt->pl.*/
-    /* SPSERIAL_MODULE_EVENT evt->type */
+    /* SPSR_MODULE_EVENT evt->type */
     total = evt->total;
-    spserial_malloc(total, evt, SP_SERIAL_GENERIC_ST); /* Clone evt memory. */
+    spsr_malloc(total, evt, SP_SERIAL_GENERIC_ST); /* Clone evt memory. */
     if (!evt) {
         exit(1);
     }
@@ -242,42 +242,42 @@ int spsr_test_callback(void *data) {
     do {
         datalen = evt->pl - evt->pc; /*datalen.*/
         realdata = evt->data + evt->pc; /*char *realdata: from evt->pc to evt->pl.*/
-        if (evt->type == SPSERIAL_EVENT_READ_BUF) {
+        if (evt->type == SPSR_EVENT_READ_BUF) {
             /* Read data.*/
-            spllog(0, "SPSERIAL_EVENT_READ_BUF, realdata: %s, datalen: %d", realdata, datalen);
+            spllog(0, "SPSR_EVENT_READ_BUF, realdata: %s, datalen: %d", realdata, datalen);
             break;
         }
-        if (evt->type == SPSERIAL_EVENT_WRITE_OK) {
+        if (evt->type == SPSR_EVENT_WRITE_OK) {
             /* Port name .*/
-            spllog(0, "SPSERIAL_EVENT_WRITE_OK, realdata: %s, datalen: %d", realdata, datalen);
+            spllog(0, "SPSR_EVENT_WRITE_OK, realdata: %s, datalen: %d", realdata, datalen);
             break;
         }
-        if (evt->type == SPSERIAL_EVENT_WRITE_ERROR) {
+        if (evt->type == SPSR_EVENT_WRITE_ERROR) {
             /* Port name .*/
-            spllog(0, "SPSERIAL_EVENT_WRITE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+            spllog(0, "SPSR_EVENT_WRITE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
             break;
         }
-        if (evt->type == SPSERIAL_EVENT_OPEN_DEVICE_OK) {
+        if (evt->type == SPSR_EVENT_OPEN_DEVICE_OK) {
             /* Port name .*/
-            spllog(0, "SPSERIAL_EVENT_OPEN_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
+            spllog(0, "SPSR_EVENT_OPEN_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
             break;
         }
-        if (evt->type == SPSERIAL_EVENT_OPEN_DEVICE_ERROR) {
+        if (evt->type == SPSR_EVENT_OPEN_DEVICE_ERROR) {
             /* Port name .*/
-            spllog(0, "SPSERIAL_EVENT_OPEN_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+            spllog(0, "SPSR_EVENT_OPEN_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
             break;
         }         
-        if (evt->type == SPSERIAL_EVENT_CLOSE_DEVICE_OK) {
+        if (evt->type == SPSR_EVENT_CLOSE_DEVICE_OK) {
             /* Port name .*/
-            spllog(0, "SPSERIAL_EVENT_CLOSE_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
+            spllog(0, "SPSR_EVENT_CLOSE_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
             break;
         }      
-        if (evt->type == SPSERIAL_EVENT_CLOSE_DEVICE_ERROR) {
+        if (evt->type == SPSR_EVENT_CLOSE_DEVICE_ERROR) {
             /* Port name .*/
-            spllog(0, "SPSERIAL_EVENT_CLOSE_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+            spllog(0, "SPSR_EVENT_CLOSE_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
             break;
         }               
     } while (0);
-    spserial_free(evt);
+    spsr_free(evt);
     return 0;
 }
