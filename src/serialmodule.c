@@ -1809,19 +1809,14 @@ int spsr_fetch_commands(int epollfd,
 #endif
 {
 	int ret = 0;
-	SPSR_ROOT_TYPE *t = &spsr_root_node;
-	SPSR_ARR_LIST_LINED *temp = 0;
-	SPSR_ARR_LIST_LINED *prev = 0;
 	SP_SERIAL_GENERIC_ST *item = 0;
-	SP_SERIAL_INFO_ST *input = 0;
+
+	
 	int fd = 0;
 
 #ifndef __SPSR_EPOLL__
-	int i = 0;
 	struct pollfd *fds = (struct pollfd *)mp;
 #else
-	struct epoll_event event = {0};
-	int rerr = 0;
 #endif
 	int step = 0;
 	spllog(0, "Enter fetching command, n: %d", n);
@@ -1935,7 +1930,6 @@ int spsr_px_add(
 	SPSR_ROOT_TYPE *t = &spsr_root_node;
 	SPSR_ARR_LIST_LINED *temp = 0;
 	char tmp_port[SPSR_PORT_LEN + 1] = {0};
-	int found = 0;
 	int fd = -1;
 	SP_SERIAL_INFO_ST *input = 0;
 	int l = 0;
