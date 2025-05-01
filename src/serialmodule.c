@@ -1211,22 +1211,25 @@ int spsr_get_obj(
 				node->item->port_name) == 0) 
 			{
 				*obj = node;
-				if (takeoff) {
-					if (prev) {
-						prev->next = node->next;
-						if (!prev->next) {
-							t->last_node = prev;
-						}
-					} else {
-						t->init_node = t->init_node->next;
-					}
-					t->count--;
-					if (t->count < 1) {
-						t->init_node = 0;
-						t->last_node = 0;
-					}
-				}
 				found = 1;
+				if(!takeoff) {
+					break;
+				}
+				
+				if (prev) {
+					prev->next = node->next;
+					if (!prev->next) {
+						t->last_node = prev;
+					}
+				} else {
+					t->init_node = t->init_node->next;
+				}
+				t->count--;
+				if (t->count < 1) {
+					t->init_node = 0;
+					t->last_node = 0;
+				}
+				
 				break;
 			}
 			prev = node;
