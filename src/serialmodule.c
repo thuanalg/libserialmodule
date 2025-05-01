@@ -1,4 +1,4 @@
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* Email:
 *		<nguyenthaithuanalg@gmail.com> - Nguyễn Thái Thuận
 * Mobile:
@@ -10,11 +10,14 @@
 * The lasted modified date:
 		<2025-Mar-27>
 		<2025-Apr-29>
+		<2025-Apr-30>
+		<2025-May-01>
 * Decription:
-*		The (only) main header file to export 5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
+*		The (only) main header file to export 
+		5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
 spsr_inst_close, spsr_inst_write].
 */
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #include "serialmodule.h"
 #include <stdio.h>
@@ -48,7 +51,7 @@ spsr_inst_close, spsr_inst_write].
 /* https://gist.github.com/reterVision/8300781 */
 #endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #define SPSR_CloseHandle(__o0bj__)                                                                                          \
 	{                                                                                                                   \
@@ -69,12 +72,12 @@ spsr_inst_close, spsr_inst_write].
 		}                                                                                                           \
 	}
 #else
-#define SPSR_MAXLINE               2048
+
 #define SPSR_PORT_TRIGGER          (10024 + 1)
 #define SPSR_PORT_CARTRIDGE        (SPSR_PORT_TRIGGER + 10)
 #endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #define SPSR_MAX_AB(__a__, __b__) ((__a__) > (__b__)) ? (__a__) : (__b__)
 #define SPSR_STEP_MEM              2048
@@ -103,8 +106,37 @@ spsr_get_obj(char *portname, void **obj, int takeoff);
 #else
 
 typedef void *(*SP_SERIAL_THREAD_ROUTINE)(void *);
-static int
-spsr_init_trigger(void *);
+static int spsr_init_trigger(void *);
+
+static int spsr_px_write(
+	SP_SERIAL_GENERIC_ST *item, 
+	SP_SERIAL_GENERIC_ST *evt);
+
+#ifndef __SPSR_EPOLL__
+int spsr_px_rem(
+	SP_SERIAL_GENERIC_ST *item, 
+	SP_SERIAL_GENERIC_ST *evt, int *prange, struct pollfd *fds);
+#else
+
+int spsr_px_rem(
+	SP_SERIAL_GENERIC_ST *item, 
+	SP_SERIAL_GENERIC_ST *evt, int epollfd);
+#endif
+
+#ifndef __SPSR_EPOLL__
+int spsr_px_add(
+	SP_SERIAL_GENERIC_ST *item, 
+	SP_SERIAL_GENERIC_ST *evt, int *prange, struct pollfd *fds);
+#else
+
+int spsr_px_add(
+	SP_SERIAL_GENERIC_ST *item, 
+	SP_SERIAL_GENERIC_ST *evt, int epollfd);
+#endif	
+
+int spsr_px_hash_add(
+	SPSR_ARR_LIST_LINED *temp,
+	SP_SERIAL_GENERIC_ST *evt) ;
 
 #ifndef __SPSR_EPOLL__
 #define SPSR_LOG_UNIX__SHARED_MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
@@ -114,27 +146,26 @@ spsr_init_trigger(void *);
 
 #define SPSR_SENDSK_FLAG           0
 
-static int
-spsr_fetch_commands(void *, 
+static int spsr_fetch_commands(void *, 
 	int *, char *, int n, 
 	SP_SERIAL_GENERIC_ST *evt);
 
-static int
-spsr_ctrl_sock(void *fds, 
+static int spsr_ctrl_sock(void *fds, 
 	int *mx_number, int sockfd, 
 	SP_SERIAL_GENERIC_ST *evt, int *chk_off);
 
-
-static int
-spsr_fmt_name(char *input, char *output, int);
+static int spsr_fmt_name(
+	char *input, char *output, int);
 #else
 #define SPSR_SENDSK_FLAG           MSG_CONFIRM
-static int
-spsr_fetch_commands(int, char *, 
-	int n, SP_SERIAL_GENERIC_ST *evt);
-static int
-spsr_ctrl_sock(int epollfd, 
-	int sockfd, SP_SERIAL_GENERIC_ST *evt, int *chk_off);
+static int spsr_fetch_commands(
+	int, char *, 
+	int n, 
+	SP_SERIAL_GENERIC_ST *evt);
+static int spsr_ctrl_sock(
+	int epollfd, 
+	int sockfd, 
+	SP_SERIAL_GENERIC_ST *evt, int *chk_off);
 
 #endif
 
@@ -144,7 +175,8 @@ static void *
 spsr_init_cartridge_routine(void *);
 static int
 spsr_send_cmd(int cmd, 
-	char *portname, void *data, int lendata);
+	char *portname, 
+	void *data, int lendata);
 
 #define SPSR_MAX_NUMBER_OF_PORT    10
 
@@ -165,54 +197,44 @@ typedef struct __SPSR_HASH_FD_NAME__ {
 
 /* static int spsr_hash_port(char* port, int len); */
 
-static int
-spsr_clear_hash();
-static int
-spsr_open_fd(char *port_name, int brate, int *);
+static int spsr_clear_hash();
+static int spsr_open_fd(
+	char *port_name, int brate, int *);
 
-static int
-spsr_read_fd(int fd, 
-	SP_SERIAL_GENERIC_ST *pevt, char *chk_delay);
+static int spsr_read_fd(int fd, 
+	SP_SERIAL_GENERIC_ST *pevt, 
+	char *chk_delay);
 
 #endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 static SPSR_ROOT_TYPE spsr_root_node;
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-static int
-spsr_clear_all();
-static int
-spsr_verify_info(SP_SERIAL_INPUT_ST *obj);
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+static int spsr_clear_all();
+static int spsr_verify_info(
+	SP_SERIAL_INPUT_ST *obj);
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* Group of sync tool. */
-static void *
-spsr_mutex_create();
-static int
-spsr_mutex_delete(void *);
-static void *
-spsr_sem_create(char *);
-static int
-spsr_sem_delete(void *, char *);
-static int
-spsr_mutex_lock(void *obj);
-static int
-spsr_mutex_unlock(void *obj);
-static int
-spsr_rel_sem(void *sem);
-static int
-spsr_wait_sem(void *sem);
+static void *spsr_mutex_create();
+static int spsr_mutex_delete(void *);
+static void *spsr_sem_create(char *);
+static int spsr_sem_delete(void *, char *);
+static int spsr_mutex_lock(void *obj);
+static int spsr_mutex_unlock(void *obj);
+static int spsr_rel_sem(void *sem);
+static int spsr_wait_sem(void *sem);
 
 static int spsr_invoke_1cb(int evttype, 
 	SPSR_module_cb fn_cb, 
 	void *obj_cb, 
 	SP_SERIAL_GENERIC_ST *evt, int lendata);
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-int
-spsr_inst_open(SP_SERIAL_INPUT_ST *p)
+int spsr_inst_open(
+	SP_SERIAL_INPUT_ST *p)
 {
 	int ret = 0;
 	SPSR_ROOT_TYPE *t = &spsr_root_node;
@@ -242,8 +264,7 @@ spsr_inst_open(SP_SERIAL_INPUT_ST *p)
 	return ret;
 }
 
-int
-spsr_inst_close(char *portname)
+int spsr_inst_close(char *portname)
 {
 	int ret = 0;
 	spllog(0, "Delete port: %s.", portname);
@@ -273,13 +294,13 @@ spsr_inst_close(char *portname)
 	return ret;
 }
 
-int
-spsr_module_openport(void *obj)
+int spsr_module_openport(void *obj)
 {
 	int ret = 0;
 	SP_SERIAL_INFO_ST *p = (SP_SERIAL_INFO_ST *)obj;
 
-	/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+	/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+	
 	do {
 #ifndef UNIX_LINUX
 		DCB dcb = {0};
@@ -404,7 +425,7 @@ spsr_module_openport(void *obj)
 #else
 #endif
 	} while (0);
-	/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+	/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 	if (ret && p) {
 #ifndef UNIX_LINUX
 		if (p->handle) {
@@ -413,10 +434,10 @@ spsr_module_openport(void *obj)
 #else
 #endif
 	}
-	/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+	/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void *
 spsr_sem_create(char *name_key)
 {
@@ -485,7 +506,7 @@ spsr_sem_create(char *name_key)
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 void *
 spsr_mutex_create()
@@ -508,7 +529,7 @@ spsr_mutex_create()
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int spsr_module_isoff(SP_SERIAL_INFO_ST *obj)
 {
@@ -519,7 +540,7 @@ int spsr_module_isoff(SP_SERIAL_INFO_ST *obj)
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 DWORD WINAPI spsr_thread_operating_routine(
 	LPVOID arg)
@@ -596,7 +617,8 @@ DWORD WINAPI spsr_thread_operating_routine(
 			if (isoff) {
 				break;
 			}
-			memset(&olReadWrite, 0, sizeof(olReadWrite));
+			memset(&olReadWrite, 
+				0, sizeof(olReadWrite));
 			olReadWrite.hEvent = p->hEvent;
 			wrs = TRUE;
 			spsr_mutex_lock(p->mtx_off);
@@ -608,7 +630,8 @@ DWORD WINAPI spsr_thread_operating_routine(
 					break;
 				}
 				buf->pl = p->buff->pl;
-				memcpy(buf->data, p->buff->data, buf->pl);
+				memcpy(buf->data, 
+					p->buff->data, buf->pl);
 				p->buff->pl = 0;
 
 			} while (0);
@@ -616,7 +639,8 @@ DWORD WINAPI spsr_thread_operating_routine(
 			while (buf->pl > 0) {
 				int wroteRes = 0;
 				bytesWrite = 0;
-				memset(&olReadWrite, 0, sizeof(olReadWrite));
+				memset(&olReadWrite, 
+					0, sizeof(olReadWrite));
 				olReadWrite.hEvent = p->hEvent;
 				wrs = WriteFile(
 					p->handle, 
@@ -634,11 +658,15 @@ DWORD WINAPI spsr_thread_operating_routine(
 							p->hEvent, INFINITE);
 						if (dwWaitResult == WAIT_OBJECT_0) 
 						{
+							BOOL rsOverlap = TRUE;
 							bytesWrite = 0;
-							if (GetOverlappedResult(
+
+							rsOverlap = GetOverlappedResult(
 								p->handle, 
 								&olReadWrite, 
-								&bytesWrite, TRUE)) {
+								&bytesWrite, TRUE);
+
+							if (rsOverlap) {
 								if (buf->pl == (int)bytesWrite) 
 								{
 									spllog(SPL_LOG_DEBUG, 
@@ -680,25 +708,14 @@ DWORD WINAPI spsr_thread_operating_routine(
 					SPSR_EVENT_WRITE_OK : 
 					SPSR_EVENT_WRITE_ERROR;
 				tbuffer[portlen] = 0;
-				memcpy(tbuffer, p->port_name, portlen);
+				memcpy(tbuffer, 
+					p->port_name, portlen);
+
 				spsr_invoke_1cb(evtcode, 
 					p->cb_evt_fn, 
 					p->cb_obj, 
 					evt_callback, 
 					portlen);
-
-				#if 0
-				if (wroteRes) {
-					memcpy(tbuffer, p->port_name, portlen);
-					tbuffer[portlen] = 0;
-					spsr_invoke_1cb(SPSR_EVENT_WRITE_OK, p->cb_evt_fn, p->cb_obj, evt_callback, portlen);
-				} else {
-					memcpy(tbuffer, p->port_name, portlen);
-					tbuffer[portlen] = 0;
-					spsr_invoke_1cb(
-					    SPSR_EVENT_WRITE_ERROR, p->cb_evt_fn, p->cb_obj, evt_callback, portlen);
-				}
-				#endif
 			}
 
 			rs = SetCommMask(p->handle, flags);
@@ -711,23 +728,29 @@ DWORD WINAPI spsr_thread_operating_routine(
 				&dwEvtMask, &olReadWrite);
 			if (!rs) {
 				DWORD dwRet = GetLastError();
-				if (ERROR_IO_PENDING != dwRet) {
+				if (ERROR_IO_PENDING != dwRet) 
+				{
 					++count;
 				}
 				if (count > 3) {
 					break;
 				}
 			} else {
-				spllog(SPL_LOG_DEBUG, "WaitCommEvent OK");
+				spllog(SPL_LOG_DEBUG, 
+					"WaitCommEvent OK");
 			}
 			memset(&csta, 0, sizeof(csta));
-			ClearCommError(p->handle, &dwError, &csta);
+			ClearCommError(p->handle, 
+				&dwError, &csta);
 			cbInQue = csta.cbInQue;
 			if (!cbInQue) {
 				BOOL rsOverlap = TRUE;
-				WaitForSingleObject(p->hEvent, INFINITE);
+				WaitForSingleObject(
+					p->hEvent, INFINITE);
 				rsOverlap = GetOverlappedResult(
-					p->handle, &olReadWrite, &bytesRead, TRUE);
+					p->handle, 
+					&olReadWrite, 
+					&bytesRead, TRUE);
 				if (rsOverlap) {
 				} else {
 					PurgeComm(p->handle, 
@@ -828,7 +851,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 #else
 
 #endif
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_module_init()
 {
@@ -909,7 +932,7 @@ spsr_module_init()
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_module_finish()
 {
@@ -961,9 +984,8 @@ spsr_module_finish()
 	return 0;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int
-spsr_mutex_lock(void *obj)
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spsr_mutex_lock(void *obj)
 {
 	int ret = 0;
 #ifndef UNIX_LINUX
@@ -995,9 +1017,8 @@ spsr_mutex_lock(void *obj)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int
-spsr_mutex_unlock(void *obj)
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spsr_mutex_unlock(void *obj)
 {
 	int ret = 0;
 #ifndef UNIX_LINUX
@@ -1033,9 +1054,10 @@ spsr_mutex_unlock(void *obj)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int
-spsr_rel_sem(void *sem)
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+int spsr_rel_sem(void *sem)
 {
 	int ret = 0;
 #ifndef UNIX_LINUX
@@ -1061,7 +1083,7 @@ spsr_rel_sem(void *sem)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_wait_sem(void *sem)
 {
@@ -1087,7 +1109,7 @@ spsr_wait_sem(void *sem)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 int spsr_get_obj(
 	char *portname, 
@@ -1144,7 +1166,7 @@ int spsr_get_obj(
 #else
 #endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef UNIX_LINUX
 int spsr_create_thread(
@@ -1165,7 +1187,7 @@ int spsr_create_thread(
 }
 #else
 #endif
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 int
 spsr_clear_node(SPSR_ARR_LIST_LINED *node)
@@ -1227,7 +1249,7 @@ spsr_clear_node(SPSR_ARR_LIST_LINED *node)
 	return ret;
 }
 #endif
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spsr_inst_write(
 	char *portname, char *data, int sz)
 {
@@ -1315,7 +1337,7 @@ int spsr_inst_write(
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #else
 #define SPSR_SIZE_CARTRIDGE        10
@@ -1323,14 +1345,14 @@ int spsr_inst_write(
 #define SPSR_SIZE_MAX_EVENTS       10
 #define SPSR_MSG_OFF               "SPSR_MSG_OFF"
 #define SPSR_MILLION               1000000
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void *
 spsr_init_trigger_routine(void *obj)
 {
 	spsr_init_trigger(obj);
 	return 0;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 void *spsr_init_cartridge_routine(void *obj)
 {
@@ -1339,9 +1361,7 @@ void *spsr_init_cartridge_routine(void *obj)
 	int sockfd = 0;
 	int isoff = 0;
 	int flags = 0;
-	/*
-	char buffer[SPSR_MAXLINE + 1] = {0};
-	*/
+
 	struct sockaddr_in cartridge_addr = {0};
 	int k = 0;
 	char chk_delay = 0;
@@ -1356,15 +1376,7 @@ void *spsr_init_cartridge_routine(void *obj)
 	evt_callback->pl = evt_callback->pc = sizeof(void *);
 	tbuffer = evt_callback->data + evt_callback->pc;
 #endif
-	/*
-	SP_SERIAL_GENERIC_ST* evt_callback = 0;
-	char rwbuff[SPSR_MAXLINE + 1 + sizeof(SP_SERIAL_GENERIC_ST) + sizeof(void*)] = {0};
 
-	evt_callback = (SP_SERIAL_GENERIC_ST*)rwbuff;
-	evt_callback->total = SPSR_MAXLINE + 1 + sizeof(SP_SERIAL_GENERIC_ST) + sizeof(void*);
-	evt_callback->range = evt_callback->total - (sizeof(SP_SERIAL_GENERIC_ST) + sizeof(void*));
-	evt_callback->pc = sizeof(void*);
-	*/
 
 #ifndef __SPSR_EPOLL__
 	int n = 0;
@@ -1448,7 +1460,7 @@ void *spsr_init_cartridge_routine(void *obj)
 			if (isoff) {
 				break;
 			}
-			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef __SPSR_EPOLL__
 
@@ -1481,7 +1493,9 @@ void *spsr_init_cartridge_routine(void *obj)
 						spsr_ctrl_sock(
 							fds, 
 							&mx_number, 
-							sockfd, evt_callback, &isoff);
+							sockfd, 
+							evt_callback, 
+							&isoff);
 						continue;
 					}
 					if (fds[k].fd >= 0) {
@@ -1536,12 +1550,12 @@ void *spsr_init_cartridge_routine(void *obj)
 							events[i].data.fd, 
 							evt_callback, &chk_delay);
 					}
-					/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+					/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 				}
-				/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+				/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 			}
 #endif
-			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 		}
 	} while (0);
 	spsr_mutex_lock(t->mutex);
@@ -1576,7 +1590,7 @@ void *spsr_init_cartridge_routine(void *obj)
 	return 0;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int spsr_init_trigger(void *obj)
 {
@@ -1680,7 +1694,7 @@ int spsr_init_trigger(void *obj)
 					len);
 			}
 			had_cmd = 0;
-			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 		}
 
 		ret = close(sockfd);
@@ -1699,7 +1713,7 @@ int spsr_init_trigger(void *obj)
 	} while (0);
 	return 0;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef __SPSR_EPOLL__
 int spsr_fetch_commands(void *mp, 
@@ -1713,12 +1727,11 @@ int spsr_fetch_commands(int epollfd,
 {
 	int ret = 0;
 	SPSR_ROOT_TYPE *t = &spsr_root_node;
-	SPSR_ARR_LIST_LINED *temp = 0, *prev = 0;
+	SPSR_ARR_LIST_LINED *temp = 0;
+	SPSR_ARR_LIST_LINED *prev = 0;
 	SP_SERIAL_GENERIC_ST *item = 0;
-	;
 	SP_SERIAL_INFO_ST *input = 0;
 	int fd = 0;
-	char tmp_buff[256];
 
 #ifndef __SPSR_EPOLL__
 	int i = 0;
@@ -1729,413 +1742,41 @@ int spsr_fetch_commands(int epollfd,
 #endif
 	int step = 0;
 	spllog(0, "Enter fetching command, n: %d", n);
-	do {
-		for (step = 0; step < n;) {
-			item = (SP_SERIAL_GENERIC_ST *)(info + step);
-			step += item->total;
-			spllog(0, "\tCMD: %d", item->type);
-			if (item->type == SPSR_CMD_ADD) {
-				SPSR_module_cb callback_fn = 0;
-				void *callback_obj = 0;
-				char tmp_port[SPSR_PORT_LEN] = {0};
 
-				spsr_mutex_lock(t->mutex);
-				do {
-					temp = t->init_node;
-					spllog(0, "\tSPSR_CMD_ADD");
-					while (temp) {
-						if (temp->item->handle > -1) {
-							temp = temp->next;
-							continue;
-						}
-						memset(tmp_port, 0, sizeof(tmp_port));
-						input = temp->item;
-						fd = -1;
-						ret = spsr_open_fd(
-							input->port_name, 
-							input->baudrate, &fd);
-						memcpy(tmp_port, 
-							input->port_name, 
-							strlen(input->port_name));
-						callback_fn = input->cb_evt_fn;
-						callback_obj = input->cb_obj;
-
-						if (ret) {
-							if (callback_fn) {
-								ret = spsr_invoke_1cb(
-									SPSR_EVENT_OPEN_DEVICE_ERROR,
-								    callback_fn, 
-									callback_obj, 
-									evt, strlen(tmp_port));
-							}
-							break;
-						}
-
-#ifndef __SPSR_EPOLL__
-						spllog(0, 
-							"Range of hashtable before adding, "
-							"*prange: %d,  DONE.", *prange);
-						for (i = 0; i < (*prange + 1); ++i) {
-							spllog(0, "*prange: %d , "
-								"fds[%d].fd: %d .", 
-								*prange, i, fds[i].fd);
-							if (fds[i].fd < 0) {
-								fds[i].fd = fd;
-								fds[i].events = POLLIN;
-								(*prange)++;
-								spllog(0, "Add to poll list, "
-									"index: %d, fd: %d, range: %d",
-								    i, fd, (*prange));
-								break;
-							}
-						}
-						spllog(0, 
-							"Range of hashtable after adding, "
-							"*prange: %d,  DONE.", *prange);
-#else
-						memset(&event, 0, sizeof(event));
-						event.events = EPOLLIN | EPOLLET;
-						event.data.fd = fd;
-						rerr = epoll_ctl(epollfd, 
-							EPOLL_CTL_ADD, fd, &event);
-						if (rerr == -1) {
-							spllog(SPL_LOG_ERROR,
-							    "epoll_ctl error, fd: %d, "
-								"errno: %d, text: %s.", fd, errno,
-							    strerror(errno));
-							ret = SPSR_UNIX_EPOLL_CTL;
-							break;
-						}
-#endif
-						do {
-							SPSR_HASH_FD_NAME *hashobj = 0, *hashitem = 0;
-							int hashid = 0;
-							spsr_malloc(
-							    sizeof(SPSR_HASH_FD_NAME), 
-								hashobj, SPSR_HASH_FD_NAME);
-							if (!hashobj) {
-								break;
-							}
-							hashobj->fd = fd;
-							memcpy(hashobj->port_name, temp->item->port_name,
-							    strlen(temp->item->port_name));
-							hashobj->cb_evt_fn = temp->item->cb_evt_fn;
-							hashobj->cb_obj = temp->item->cb_obj;
-							hashobj->t_delay = temp->item->t_delay;
-							hashid = SPSR_HASH_FD(fd);
-							hashitem = (SPSR_HASH_FD_NAME *)
-								spsr_hash_fd_arr[hashid];
-							if (!hashitem) {
-								spsr_hash_fd_arr[hashid] = (void *)hashobj;
-							} else {
-								SPSR_HASH_FD_NAME *temp = 0;
-								temp = hashobj;
-								while (!temp->next) {
-									temp = temp->next;
-								}
-								temp->next = hashitem;
-							}
-
-							if (callback_fn) {
-								ret = spsr_invoke_1cb(
-									SPSR_EVENT_OPEN_DEVICE_OK, 
-									callback_fn,
-								    callback_obj, 
-									evt, strlen(tmp_port));
-							}
-						} while (0);
-
-						temp->item->handle = fd;
-						temp = temp->next;
-					}
-				} while (0);
-				spsr_mutex_unlock(t->mutex);
-
-				continue;
-			}
-			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-			if (item->type == SPSR_CMD_REM) {
-				char *portname = 0;
-				SPSR_module_cb callback_fn = 0;
-				void *callback_obj = 0;
-				int callback_evt = 0;
-				char tmp_port[SPSR_PORT_LEN] = {0};
-				portname = item->data;
-				snprintf(tmp_port, 
-					SPSR_PORT_LEN, "%s", item->data);
-				spllog(0, "port: %s", tmp_port);
-				spsr_mutex_lock(t->mutex);
-				do {
-					temp = t->init_node;
-					spllog(0,
-					    "SPSR_CMD_REM command, "
-					    "pl: %d, "
-					    "portname: %s, "
-					    "total: %d, "
-					    "initnode: 0x%p",
-					    item->pl, portname, item->total, temp);
-					while (temp) {
-						spllog(0, 
-							"portname: %s", 
-							temp->item->port_name);
-						if (strcmp(temp->item->port_name, 
-							portname) == 0) 
-						{
-							if (temp->item->handle >= 0) 
-							{
-								int fd = temp->item->handle;
-								int errr = 0;
-								spllog(0, "Did catch handle: %d", fd);
-								/* Remove fd out of epoll*/
-#ifndef __SPSR_EPOLL__
-								for (i = 1; i < *prange; ++i) {
-									if (fds[i].fd == fd) 
-									{
-										int j = 0;
-										for (j = i; j < (*prange - 1); ++j) 
-										{
-											fds[j].fd = fds[j + 1].fd;
-										}
-
-										fds[(*prange - 1)].fd = -1;
-
-										(*prange)--;
-										spllog(SPL_LOG_DEBUG,
-										    "EPOLL_CTL_DEL, "
-										    "fd: %d DONE",
-										    fd);
-										break;
-									}
-								}
-#else
-								errr = epoll_ctl(
-									epollfd, 
-									EPOLL_CTL_DEL, fd, 0);
-								if (errr == -1) {
-									spllog(SPL_LOG_ERROR,
-									    "epoll_ctl error, fd: %d, "
-									    "errno: %d, text: %s.",
-									    fd, errno, strerror(errno));
-								} else {
-									spllog(SPL_LOG_DEBUG,
-									    "EPOLL_CTL_DEL, "
-									    "fd: %d DONE",
-									    fd);
-								}
-#endif
-								/* Close handle*/
-								do {
-									SPSR_HASH_FD_NAME
-									*hashobj = 0, *temp = 0, *prev = 0;
-									int hashid = SPSR_HASH_FD(fd);
-									hashobj =
-									    (SPSR_HASH_FD_NAME *)
-										spsr_hash_fd_arr[hashid];
-									if (!hashobj) {
-										spllog(
-											SPL_LOG_ERROR, 
-											"Cannot find object.");
-										break;
-									}
-									temp = hashobj;
-									while (temp) {
-										if (temp->fd == fd) {
-											callback_fn = temp->cb_evt_fn;
-											callback_obj = temp->cb_obj;
-											if (prev) {
-												prev->next = temp->next;
-											} else {
-												spsr_hash_fd_arr[hashid] =
-												    temp->next;
-											}
-											spllog(SPL_LOG_DEBUG,
-											    "Clear from spsr_hash_fd_arr, "
-											    "hashid:%d, fd: %d.",
-											    hashid, fd);
-											spsr_free(temp);
-											break;
-										}
-										prev = temp;
-										temp = temp->next;
-									}
-								} while (0);
-								/* Close handle*/
-								errr = close(fd);
-								if (errr) {
-									callback_evt = 
-										SPSR_EVENT_CLOSE_DEVICE_ERROR;
-									spllog(SPL_LOG_ERROR,
-									    "close error, "
-									    "fd: %d, "
-									    "errno: %d, text: %s.",
-									    fd, errno, strerror(errno));
-								} else {
-									callback_evt = 
-										SPSR_EVENT_CLOSE_DEVICE_OK;
-									spllog(
-										SPL_LOG_DEBUG, 
-										"close, fd: %d, DONE", fd);
-								}
-								/* Remove out of root list*/
-								if (t->count < 2) {
-									t->init_node = 0;
-									t->last_node = 0;
-								} else {
-									if (prev) {
-										prev->next = temp->next;
-										if (!prev->next) {
-											t->last_node = prev;
-										}
-									} else {
-										t->init_node = temp->next;
-									}
-								}
-								spsr_free(temp->item);
-								spsr_free(temp);
-								t->count--;
-								spllog(
-									SPL_LOG_DEBUG, 
-									"t->count: %d", 
-									t->count);
-							}
-							break;
-						}
-						prev = temp;
-						temp = temp->next;
-					}
-				} while (0);
-				spsr_mutex_unlock(t->mutex);
-
-				if (callback_fn) {
-					memcpy(
-						evt->data + evt->pc, 
-						tmp_port, 
-						strlen(tmp_port));
-
-					ret = spsr_invoke_1cb(
-							callback_evt, 
-							callback_fn, 
-							callback_obj, 
-							evt, 
-							strlen(tmp_port));
-				}
-				continue;
-			}
-			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-			if (item->type == SPSR_CMD_WRITE) {
-				char *portname = 0;
-
-				fd = -1;
-				portname = item->data;
-				spsr_mutex_lock(t->mutex);
-				do {
-					temp = t->init_node;
-					spllog(0,
-					    "SPSR_CMD_WRITE, "
-					    "pl: %d, "
-					    "portname: %s, "
-					    "total: %d, "
-					    "initnode: 0x%p",
-					    item->pl, portname, 
-						item->total, temp);
-					while (temp) {
-						spllog(0, 
-							"portname: %s", 
-							temp->item->port_name);
-						if (strcmp(temp->item->port_name, 
-							portname) == 0) 
-						{
-							if (temp->item->handle >= 0) {
-								fd = temp->item->handle;
-							}
-							break;
-						}
-						temp = temp->next;
-					}
-				} while (0);
-				spsr_mutex_unlock(t->mutex);
-
-				if (fd >= 0) {
-					SPSR_HASH_FD_NAME *hashobj = 0;
-					int hashid = SPSR_HASH_FD(fd);
-					int nwrote = 0, wlen = 0;
-					;
-					char *p = 0;
-					p = item->data + item->pc;
-					wlen = item->pl - item->pc;
-					hashobj = (SPSR_HASH_FD_NAME *)
-						spsr_hash_fd_arr[hashid];
-					if (tcflush(fd, TCIOFLUSH) == -1) {
-						spllog(SPL_LOG_ERROR, 
-							"Error flushing the "
-							"serial port buffer");
-					} else {
-						spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
-					}
-
-					nwrote = write(fd, p, wlen);
-
-					if (nwrote == wlen) {
-						snprintf(tmp_buff, 
-							(wlen + 1) < 256 ? (wlen + 1) : 256, "%s", p);
-						spllog(SPL_LOG_DEBUG,
-						    "write DONE, fd: %d, "
-						    "nwrote: %d, "
-						    "p: \"[%s]\", "
-						    "wlen: %d.",
-						    fd, nwrote, tmp_buff, wlen);
-
-						if (hashobj) {
-							if (hashobj->cb_evt_fn) {
-
-#if 1
-								memcpy(evt->data + evt->pc, 
-									hashobj->port_name,
-								    strlen(hashobj->port_name));
-								ret =
-								    spsr_invoke_1cb(
-										SPSR_EVENT_WRITE_OK, 
-										hashobj->cb_evt_fn,
-									hashobj->cb_obj, evt, 
-									strlen(hashobj->port_name));
-#endif
-							}
-						}
-					} else if (nwrote < 0) {
-						spllog(SPL_LOG_ERROR,
-						    "write error, fd: %d, "
-						    "errno: %d, text: %s.",
-						    fd, errno, strerror(errno));
-
-						if (hashobj) {
-							if (hashobj->cb_evt_fn) {
-								memcpy(evt->data + evt->pc, 
-									hashobj->port_name,
-								    strlen(hashobj->port_name));
-								ret = spsr_invoke_1cb(
-									SPSR_EVENT_WRITE_ERROR,
-								    hashobj->cb_evt_fn, 
-									hashobj->cb_obj, evt,
-								    strlen(hashobj->port_name));
-							}
-						}
-					}
-
-					if (tcdrain(fd) == -1) {
-						spllog(SPL_LOG_ERROR, "Error flushing the "
-								      "serial port buffer");
-
-					} else {
-						spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
-					}
-				}
-				continue;
-			}
-			if (ret) {
-				break;
-			}
+	for (step = 0; step < n;) {
+		item = (SP_SERIAL_GENERIC_ST *)(info + step);
+		step += item->total;
+		
+		if (item->type == SPSR_CMD_ADD) 
+		{
+			spllog(0, "\t SPSR_CMD_ADD: %d", item->type);
+		#ifndef __SPSR_EPOLL__
+			ret = spsr_px_add(item, evt, prange, fds);
+		#else
+			ret = spsr_px_add(item, evt, epollfd);
+		#endif	
+			continue;
 		}
-	} while (0);
+		/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+		if (item->type == SPSR_CMD_REM) {
+			spllog(0, "\t SPSR_CMD_REM: %d", item->type);
+		#ifndef __SPSR_EPOLL__
+				ret = spsr_px_rem(item, evt, prange, fds);
+		#else
+				ret = spsr_px_rem(item, evt, epollfd);
+		#endif				
+			continue;
+		}
+		/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+		if (item->type == SPSR_CMD_WRITE) {
+			spllog(0, "\t SPSR_CMD_WRITE: %d", item->type);
+			ret = spsr_px_write(item, evt);
+			continue;
+		}
+		if (ret) {
+			break;
+		}
+	}
 
 	if (ret) {
 		if (fd >= 0) {
@@ -2145,9 +1786,604 @@ int spsr_fetch_commands(int epollfd,
 
 	return ret;
 }
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*SPSR_CMD_ADD*/
+int spsr_px_hash_add( SPSR_ARR_LIST_LINED *temp, 
+	SP_SERIAL_GENERIC_ST *evt) 
+{
+	int ret = 0;
+	int fd = -1;
+	do {
+		SPSR_HASH_FD_NAME *hashobj = 0, *hashitem = 0;
+		int hashid = 0;
+		fd = temp->item->handle;
+		spsr_malloc(
+			sizeof(SPSR_HASH_FD_NAME), 
+			hashobj, SPSR_HASH_FD_NAME);
+		if (!hashobj) {
+			ret = SPSR_MALLOC_ERROR;
+			spllog(SPL_LOG_ERROR, "hashobj null");
+			break;
+		}
+		hashobj->fd = fd;
+		memcpy(hashobj->port_name, temp->item->port_name,
+			strlen(temp->item->port_name));
+		hashobj->cb_evt_fn = temp->item->cb_evt_fn;
+		hashobj->cb_obj = temp->item->cb_obj;
+		hashobj->t_delay = temp->item->t_delay;
+		hashid = SPSR_HASH_FD(fd);
+		hashitem = (SPSR_HASH_FD_NAME *)
+			spsr_hash_fd_arr[hashid];
+		if (!hashitem) {
+			spsr_hash_fd_arr[hashid] = (void *)hashobj;
+		} else {
+			SPSR_HASH_FD_NAME *temp = 0;
+			temp = hashobj;
+			while (!temp->next) {
+				temp = temp->next;
+			}
+			temp->next = hashitem;
+		}
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+		if (hashobj->cb_evt_fn) {
+			ret = spsr_invoke_1cb(
+				SPSR_EVENT_OPEN_DEVICE_OK, 
+				hashobj->cb_evt_fn,
+				hashobj->cb_obj, 
+				evt, strlen(hashobj->port_name));
+		}
+	} while (0);	
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*SPSR_CMD_ADD*/
+#ifndef __SPSR_EPOLL__
+int spsr_px_add(
+	SP_SERIAL_GENERIC_ST *item, 
+	SP_SERIAL_GENERIC_ST *evt, int *prange, struct pollfd *fds)
+#else
 
+int spsr_px_add(
+	SP_SERIAL_GENERIC_ST *item, 
+	SP_SERIAL_GENERIC_ST *evt, int epollfd)
+#endif
+{
+	int ret = 0;
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	SPSR_ARR_LIST_LINED *temp = 0;
+	char tmp_port[SPSR_PORT_LEN + 1] = {0};
+	int found = 0;
+	int fd = -1;
+	SP_SERIAL_INFO_ST *input = 0;
+	int l = 0;
+	#ifndef __SPSR_EPOLL__
+	int i = 0;
+#else
+	struct epoll_event event = {0};
+	int rerr = 0;
+#endif
+	spsr_mutex_lock(t->mutex);
+	do 
+	{
+		temp = t->init_node;
+		while (temp) {
+			if (temp->item->handle > -1) {
+				temp = temp->next;
+				continue;
+			}
+			memset(tmp_port, 0, sizeof(tmp_port));
+			input = temp->item;
+			fd = -1;
+			l = strlen(input->port_name);
+			ret = spsr_open_fd( 
+				input->port_name,  
+				input->baudrate, &fd);
+
+			if (ret) {
+				if (input->cb_evt_fn) {
+					ret = spsr_invoke_1cb(
+						SPSR_EVENT_OPEN_DEVICE_ERROR,
+						input->cb_evt_fn, 
+						input->cb_obj, evt, l);
+				}
+				break;
+			}
+			memcpy(tmp_port, input->port_name, l);
+			temp->item->handle = fd;
+#ifndef __SPSR_EPOLL__
+			spllog(0, "Range of hashtable before adding, "
+				"*prange: %d,  DONE.", *prange);
+			if(!prange) {
+				spllog(SPL_LOG_ERROR, "prange NULL");
+				ret = SPSR_PX_PRANGE_NULL;
+				break;
+			}				
+			for (i = 0; i < (*prange + 1); ++i) {
+				spllog(0, "*prange: %d , "
+					"fds[%d].fd: %d .", 
+					*prange, i, fds[i].fd);
+				if (fds[i].fd < 0) {
+					fds[i].fd = fd;
+					fds[i].events = POLLIN;
+					(*prange)++;
+					spllog(0, "Add to poll list, "
+						"index: %d, fd: %d, range: %d",
+						i, fd, (*prange));
+					break;
+				}
+			}
+			spllog(0, "Range of hashtable after adding, "
+				"*prange: %d,  DONE.", *prange);
+#else
+			memset(&event, 0, sizeof(event));
+			event.events = EPOLLIN | EPOLLET;
+			event.data.fd = fd;
+			rerr = epoll_ctl(epollfd, 
+				EPOLL_CTL_ADD, fd, &event);
+			if (rerr == -1) {
+				spllog(SPL_LOG_ERROR,
+					"epoll_ctl error, fd: %d, "
+					"errno: %d, text: %s.", fd, errno,
+					strerror(errno));
+				ret = SPSR_UNIX_EPOLL_CTL;
+				break;
+			}
+#endif
+			ret = spsr_px_hash_add(temp, evt);
+
+			
+			temp = temp->next;
+		}
+	} 
+	while (0);
+	spsr_mutex_unlock(t->mutex);
+	//}
+	//while(0);
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*SPSR_CMD_REM*/
+static
+#ifndef __SPSR_EPOLL__
+int spsr_px_off_poll(int fd, 
+	struct pollfd *fds, 
+	int *prange )
+#else
+int spsr_px_off_poll(int fd, int epollfd)
+#endif
+{
+	int ret = SPSR_PX_POLL_NOT_FOUND;
+#ifndef __SPSR_EPOLL__
+	int i = 0;
+	spllog(0, "Did catch handle: %d", fd);
+	if(!prange) {
+		spllog(SPL_LOG_ERROR, "prange NULL");
+		return ret;
+	}
+	for (i = 1; i < *prange; ++i) {
+		if (fds[i].fd == fd) 
+		{
+			int j = 0;
+			for (j = i; j < (*prange - 1); ++j) 
+			{
+				fds[j].fd = fds[j + 1].fd;
+			}
+
+			fds[(*prange - 1)].fd = -1;
+
+			(*prange)--;
+			spllog(SPL_LOG_DEBUG, 
+				"EPOLL_CTL_DEL, " "fd: %d DONE", fd);
+			ret = 0;
+			break;
+		}
+	}
+#else
+	int errr = 0;
+	spllog(0, "Did catch handle: %d", fd);
+	errr = epoll_ctl( epollfd, EPOLL_CTL_DEL, fd, 0);
+	if (errr == -1) {
+		spllog(SPL_LOG_ERROR,
+			"epoll_ctl error, fd: %d, "
+			"errno: %d, text: %s.",
+			fd, errno, strerror(errno));
+		ret = SPSR_PX_EPOLL_DEL;
+	} else {
+		spllog(SPL_LOG_DEBUG,
+			"EPOLL_CTL_DEL, "
+			"fd: %d DONE",
+			fd);
+		ret = 0;
+	}
+#endif
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+static int spsr_px_off_hash(int fd) 
+{
+	int ret = 0;
+	SPSR_HASH_FD_NAME *hashobj = 0;
+	SPSR_HASH_FD_NAME *temp = 0;
+	SPSR_HASH_FD_NAME *prev = 0;
+	int hashid = 0;
+	char found = 0;
+	do {
+
+		hashid = SPSR_HASH_FD(fd);
+		hashobj = (SPSR_HASH_FD_NAME *) spsr_hash_fd_arr[hashid];
+		if (!hashobj) {
+			spllog( SPL_LOG_ERROR, 
+				"SPSR_PX_MAL_HASH_FD Cannot find object.");
+			ret = SPSR_PX_MAL_HASH_FD;
+			break;
+		}
+		temp = hashobj;
+		while (temp) {
+			if(temp->fd != fd) {
+				prev = temp;
+				temp = temp->next;				
+				continue;
+			}
+			/*Found fd.*/
+			found = 1;
+			break;
+		}
+		if(!found) {
+			ret = SPSR_HASH_NOT_FOUND;
+			break;
+		}
+		if (prev) {
+			prev->next = temp->next;
+		} else {
+			spsr_hash_fd_arr[hashid] = temp->next;
+		}
+		spllog(SPL_LOG_DEBUG,
+			"Clear from spsr_hash_fd_arr, "
+			"hashid:%d, fd: %d.", hashid, fd);
+		spsr_free(temp);
+		break;		
+	} while (0);	
+	if(ret) {
+		spllog(SPL_LOG_ERROR, 
+			"SPSR_HASH_NOT_FOUND Cannot find object.");		
+	}
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*SPSR_CMD_REM*/
+#ifndef __SPSR_EPOLL__
+int spsr_px_rem(
+	SP_SERIAL_GENERIC_ST *item, 
+	SP_SERIAL_GENERIC_ST *evt, 
+	int *prange, 
+	struct pollfd *fds)	
+#else
+int spsr_px_rem(
+	SP_SERIAL_GENERIC_ST *item, 
+	SP_SERIAL_GENERIC_ST *evt, int epollfd)	
+#endif
+
+{
+	int ret = 0;
+	char *portname = 0;
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	int fd = -1;
+	int l = 0;
+	SPSR_ARR_LIST_LINED *temp = 0;
+	SPSR_ARR_LIST_LINED *prev = 0;
+	SPSR_module_cb callback_fn = 0;
+	void *callback_obj = 0;
+	int callback_evt = 0;
+	int errr = 0;
+	char found = 0;
+	do {
+		if(!item) {
+			ret = SPSR_PX_ITEM_NULL;
+			break;
+		}
+		if(!evt) {
+			ret = SPSR_PX_CB_NULL;
+			break;
+		}	
+	#ifndef __SPSR_EPOLL__
+		if(!prange) {
+			ret = SPSR_PX_PRANGE_NULL;
+			break;
+		}	
+		if(!fds) {
+			ret = SPSR_PX_POLLFD_NULL;
+			break;
+		}			
+	#else
+	#endif
+		portname = item->data;
+		l = strlen(portname);
+		spllog(0, "port: %s", item->data);
+		spsr_mutex_lock(t->mutex);
+
+		do {
+			temp = t->init_node;
+			spllog(0,
+				"SPSR_CMD_REM command, "
+				"pl: %d, "
+				"portname: %s, "
+				"total: %d, "
+				"initnode: 0x%p",
+				item->pl, portname, item->total, temp);
+			while (temp) 
+			{
+				spllog(0, "portname: %s", temp->item->port_name);
+				if(strcmp(temp->item->port_name, portname)) {
+					prev = temp;
+					temp = temp->next;					
+					continue;
+				}
+				found = 1;
+				break;
+			}
+			if(!found) {
+				ret = SPSR_REM_NOT_FOUND;
+				spllog( SPL_LOG_ERROR, 
+					"SPSR_REM_NOT_FOUND, port: %s.", portname);
+				break;
+			}
+			fd = temp->item->handle;
+			if(fd < 0) {
+				ret = SPSR_PX_MALINFO_FD;
+				break;
+			}
+			callback_fn = temp->item->cb_evt_fn;
+			callback_obj = temp->item->cb_obj;
+			/* Remove fd out of epoll*/
+#ifndef __SPSR_EPOLL__
+			ret = spsr_px_off_poll(fd, fds, prange);
+#else
+			ret = spsr_px_off_poll(fd, epollfd);
+#endif
+			if(ret) {
+				spllog( SPL_LOG_ERROR, 
+					"spsr_px_off_poll, ret: %d.", ret);
+			}
+			ret = spsr_px_off_hash(fd);
+			/* Close handle*/
+			errr = close(fd);
+			if (errr) {
+				callback_evt = 
+					SPSR_EVENT_CLOSE_DEVICE_ERROR;
+				spllog(SPL_LOG_ERROR,
+					"close error, "
+					"fd: %d, "
+					"errno: %d, text: %s.",
+					fd, errno, strerror(errno));
+			} else {
+				callback_evt = 
+					SPSR_EVENT_CLOSE_DEVICE_OK;
+				spllog(
+					SPL_LOG_DEBUG, "close, fd: %d, DONE", fd);
+			}
+			/* Remove out of root list*/
+			if (t->count < 2) {
+				t->init_node = 0;
+				t->last_node = 0;
+			} else {
+				if (prev) {
+					prev->next = temp->next;
+					if (!prev->next) {
+						t->last_node = prev;
+					}
+				} else {
+					t->init_node = temp->next;
+				}
+			}
+			spsr_free(temp->item);
+			spsr_free(temp);
+			t->count--;
+			spllog( SPL_LOG_DEBUG, "t->count: %d", t->count);
+			break;			
+		} while (0);
+		spsr_mutex_unlock(t->mutex);
+
+		if (!callback_fn) {
+			break;
+		}
+
+		memcpy( evt->data + evt->pc,  portname, l);
+
+		ret = spsr_invoke_1cb( callback_evt,  
+				callback_fn, callback_obj, evt, l);
+				
+	} while(0);
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/* SPSR_CMD_WRITE */
+int spsr_px_write(
+	SP_SERIAL_GENERIC_ST *item, 
+	SP_SERIAL_GENERIC_ST *evt) 
+{
+	int ret = 0;
+	char *portname = 0;
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	int fd = -1;
+	SPSR_ARR_LIST_LINED *temp = 0;
+	//SPSR_ARR_LIST_LINED *prev = 0;
+	int kcmp = 0;
+	int nwrote = 0, wlen = 0;
+	char *p = 0;
+	SPSR_HASH_FD_NAME *hashobj = 0;
+	int hashid = 0;
+
+	do {
+		if(!item) {
+			ret = SPSR_PX_ITEM_NULL;
+			break;
+		}
+		if(!evt) {
+			ret = SPSR_PX_CB_NULL;
+			break;
+		}		
+		portname = item->data;
+		spsr_mutex_lock(t->mutex);
+		/*do { */
+			temp = t->init_node;
+			spllog(0, "SPSR_CMD_WRITE, pl: %d, "
+				"portname: %s, total: %d, initnode: 0x%p",
+				item->pl, portname, item->total, temp);
+			while (temp) {
+				spllog(0, 
+					"portname: %s", 
+					temp->item->port_name);
+				kcmp = strcmp(temp->item->port_name, portname) 
+					? 0 : 1;
+				if (kcmp) 
+				{
+					if (temp->item->handle >= 0) 
+					{
+						fd = temp->item->handle;
+					}
+					break;
+				}
+				temp = temp->next;
+			}
+		/*} while (0);*/
+		spsr_mutex_unlock(t->mutex);
+
+		if(fd < 0) {
+			ret = 1;
+			break;
+		}
+
+
+		
+		hashid = SPSR_HASH_FD(fd);
+
+		p = item->data + item->pc;
+		wlen = item->pl - item->pc;
+
+		hashobj = (SPSR_HASH_FD_NAME *)
+			spsr_hash_fd_arr[hashid];
+
+		if (tcflush(fd, TCIOFLUSH) == -1) 
+		{
+			spllog(SPL_LOG_ERROR, 
+				"Error flushing the serial port buffer");
+		} 
+		else {
+			spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
+		}
+
+		nwrote = write(fd, p, wlen);
+
+		if (nwrote == wlen) 
+		{
+			spllog(SPL_LOG_DEBUG, 
+				"write DONE, fd: %d, nwrote: %d, wlen: %d.",
+				fd, nwrote, wlen);
+
+			if(!hashobj) {
+				break;
+			}
+			if(! (hashobj->cb_evt_fn)) {
+				break;
+			}	
+
+			memcpy(evt->data + evt->pc, 
+				hashobj->port_name,
+				strlen(hashobj->port_name));
+			
+			ret = spsr_invoke_1cb(
+				SPSR_EVENT_WRITE_OK, 
+				hashobj->cb_evt_fn,
+				hashobj->cb_obj, evt, 
+				strlen(hashobj->port_name));
+
+#if 0							
+			if (hashobj) 
+			{
+				if (hashobj->cb_evt_fn) 
+				{
+					memcpy(evt->data + evt->pc, 
+						hashobj->port_name,
+						strlen(hashobj->port_name));
+					
+					ret = spsr_invoke_1cb(
+						SPSR_EVENT_WRITE_OK, 
+						hashobj->cb_evt_fn,
+						hashobj->cb_obj, evt, 
+						strlen(hashobj->port_name));
+
+				}
+			}
+#endif
+		} 
+		else if (nwrote < 0) 
+		{
+			spllog(SPL_LOG_ERROR,
+				"write error, fd: %d, "
+				"errno: %d, text: %s.",
+				fd, errno, strerror(errno));
+
+			if(!hashobj) {
+				break;
+			}
+			if(! (hashobj->cb_evt_fn)) {
+				break;
+			}	
+
+			memcpy(evt->data + evt->pc, 
+				hashobj->port_name,
+				strlen(hashobj->port_name));
+			
+			ret = spsr_invoke_1cb(
+				SPSR_EVENT_WRITE_ERROR,
+				hashobj->cb_evt_fn, 
+				hashobj->cb_obj, evt,
+				strlen(hashobj->port_name));				
+#if 0				
+			if (hashobj) 
+			{
+				if (hashobj->cb_evt_fn) 
+				{
+					memcpy(evt->data + evt->pc, 
+						hashobj->port_name,
+						strlen(hashobj->port_name));
+					
+					ret = spsr_invoke_1cb(
+						SPSR_EVENT_WRITE_ERROR,
+						hashobj->cb_evt_fn, 
+						hashobj->cb_obj, evt,
+						strlen(hashobj->port_name));
+				}
+			}
+#endif
+		}
+#if 0
+		if (tcdrain(fd) == -1) 
+		{
+			spllog(SPL_LOG_ERROR, 
+				"Error flushing the serial port buffer");
+
+		} else 
+		{
+			spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
+		}
+#endif	
+	} while(0);	
+
+	if(!ret && fd >= 0) {
+		if (tcdrain(fd) == -1) 
+		{
+			spllog(SPL_LOG_ERROR, 
+				"Error flushing the serial port buffer");
+
+		} else {
+			spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
+		}		
+	}
+
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spsr_send_cmd(
 	int cmd, 
 	char *portname, void *data, int datasz)
@@ -2250,10 +2486,10 @@ int spsr_send_cmd(
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int spsr_verify_info(SP_SERIAL_INPUT_ST *p)
 {
@@ -2409,7 +2645,7 @@ int spsr_verify_info(SP_SERIAL_INPUT_ST *p)
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int
 spsr_clear_all()
@@ -2505,7 +2741,7 @@ spsr_fmt_name(char *input, char *output, int l)
 }
 #else
 #endif
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int
 spsr_clear_hash()
@@ -2530,7 +2766,7 @@ spsr_clear_hash()
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int spsr_open_fd(
 	char *port_name, 
@@ -2609,7 +2845,7 @@ int spsr_open_fd(
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int spsr_read_fd(
 	int fd, 
@@ -2642,7 +2878,8 @@ int spsr_read_fd(
 		do {
 			int hasdid = SPSR_HASH_FD(comfd);
 
-			hashobj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hasdid];
+			hashobj = (SPSR_HASH_FD_NAME *)
+				spsr_hash_fd_arr[hasdid];
 			if (!hashobj) {
 				spllog(SPL_LOG_ERROR, 
 					"Cannot find obj in reading.");
@@ -2658,8 +2895,7 @@ int spsr_read_fd(
 				temp = temp->next;
 			}
 
-			/*-+-+ -+-+
-			 * -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-*/
 			if (!chk_delay[0]) {
 				nap_time.tv_nsec = t_wait * SPSR_MILLION;
 				nanosleep(&nap_time, 0);
@@ -2708,7 +2944,7 @@ int spsr_read_fd(
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef __SPSR_EPOLL__
 int spsr_ctrl_sock(
@@ -2802,13 +3038,11 @@ spsr_ctrl_sock(
 #ifndef __SPSR_EPOLL__
 			ret = spsr_fetch_commands(
 				fds, mx_number, p, lp, evt);
-			spllog(0, 
-				"MACH POLL --->>> "
+			spllog(0, "MACH POLL --->>> "
 				"Size of buffer of command : %d", lp);
 #else
 			ret = spsr_fetch_commands(epollfd, p, lp, evt);
-			spllog(0, 
-				"LINUX EPOLL --->>> "
+			spllog(0, "LINUX EPOLL --->>> "
 				"Size of buffer of command : %d", lp);
 #endif
 
@@ -2826,7 +3060,7 @@ spsr_ctrl_sock(
 }
 #endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_mutex_delete(void *mtx)
 {
@@ -2842,7 +3076,7 @@ spsr_mutex_delete(void *mtx)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spsr_sem_delete(void *sem, char *sem_name)
 {
 	int ret = 0;
@@ -2884,7 +3118,7 @@ int spsr_sem_delete(void *sem, char *sem_name)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int spsr_invoke_1cb(
 	int evttype, 
 	SPSR_module_cb fn_cb, 
@@ -2922,7 +3156,7 @@ int spsr_invoke_1cb(
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef UNIX_LINUX
 #else

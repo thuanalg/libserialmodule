@@ -10,7 +10,8 @@
 * The lasted modified date:
 		<2025-Mar-27>
 		<2025-Apr-29>
-
+		<2025-Apr-30>
+		<2025-May-01>
 * Decription:
 *		The (only) main header file to export 5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
 spsr_inst_close, spsr_inst_write].
@@ -141,6 +142,7 @@ extern "C" {
 #ifndef SPSR_UNIT
 #define SPSR_UNIT                 unsigned int
 #endif
+
 typedef enum {
 	SPSR_CMD_STORAGE_INPUT_INFO_ARR,
 	SPSR_CMD_ADD,
@@ -151,6 +153,8 @@ typedef enum {
 } SPSR_CMD_TYPE;
 
 typedef int (*SPSR_module_cb)(void *);
+
+
 
 typedef enum {
 	SPSR_PORT_OK,
@@ -187,7 +191,6 @@ typedef enum {
 	SPSR_INFO_NULL,
 	SPSR_PARAM_NULL,
 	SPSR_ITEM_NOT_FOUND,
-
 	SPSR_CREATE_THREAD_ERROR,
 	SPSR_SHUTDOWN_SOCK,
 	SPSR_CLOSE_SOCK,
@@ -204,6 +207,16 @@ typedef enum {
 	SPSR_PORTNAME_EXISTED,
 	SPSR_HASH_NOTFOUND,
 	SPSR_CALLBACK_NULL,
+	SPSR_PX_ITEM_NULL,
+	SPSR_PX_CB_NULL,
+	SPSR_PX_POLLFD_NULL,
+	SPSR_PX_PRANGE_NULL,
+	SPSR_PX_EPOLL_DEL,
+	SPSR_PX_POLL_NOT_FOUND,
+	SPSR_PX_MALINFO_FD,
+	SPSR_PX_MAL_HASH_FD,
+	SPSR_HASH_NOT_FOUND,
+	SPSR_REM_NOT_FOUND,
 
 	SPSR_PORT_PEAK,
 } SPSR_PORT_ERR;
