@@ -103,6 +103,17 @@ static int
 spsr_create_thread(SP_SERIAL_THREAD_ROUTINE f, void *arg);
 static int
 spsr_get_obj(char *portname, void **obj, int takeoff);
+static int
+spsr_win32_write(
+	SP_SERIAL_INFO_ST *p, 
+	SP_SERIAL_GENERIC_ST *buf, 
+	DWORD *bytesWrite, 
+	OVERLAPPED *olReadWrite,
+    SP_SERIAL_GENERIC_ST *evt_callback);
+static int
+spsr_win32_read(SP_SERIAL_INFO_ST *p, 
+	DWORD *bytesWrite, OVERLAPPED *olReadWrite,
+    SP_SERIAL_GENERIC_ST *evt_callback);
 #else
 
 typedef void *(*SP_SERIAL_THREAD_ROUTINE)(void *);
@@ -540,8 +551,218 @@ int spsr_module_isoff(SP_SERIAL_INFO_ST *obj)
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+
 #ifndef UNIX_LINUX
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int
+spsr_win32_read(
+	SP_SERIAL_INFO_ST *p, 
+	DWORD *pbytesRead, 
+	OVERLAPPED *polReadWrite,
+    SP_SERIAL_GENERIC_ST *evt_callback)
+{
+	char *tbuffer = 0;
+	int ret = 0;
+	BOOL rs = FALSE;
+	COMSTAT csta = {0};
+	DWORD dwError = 0;
+	DWORD readErr = 0;
+	do {
+		tbuffer = evt_callback->data + sizeof(void *);
+		rs = ReadFile(
+			p->handle, tbuffer, 
+			SPSR_BUFFER_SIZE, 
+			pbytesRead, polReadWrite);
+
+		spllog(SPL_LOG_DEBUG,
+		    "olRead.InternalHigh: %d, "
+		    "olRead.Internal: %d, rs : %s!!!",
+		    (int)polReadWrite->InternalHigh, 
+			(int)polReadWrite->Internal, 
+			rs ? "true" : "false");
+
+		if (rs) {
+			spllog(SPL_LOG_INFO, "Read OK");
+			break;
+		}
+		readErr = GetLastError();
+		if (readErr != ERROR_IO_PENDING) {
+			ret = SPSR_WIN32_NOT_PENDING;
+			spllog(SPL_LOG_ERROR, "Read error readErr: %d", (int)readErr);
+			break;
+		}
+		*pbytesRead = 0;
+		if (p->t_delay > 0) {
+			Sleep(p->t_delay);
+		}
+		WaitForSingleObject(p->hEvent, INFINITE);
+
+		rs = GetOverlappedResult(p->handle, 
+			polReadWrite, pbytesRead, 1);
+
+		if (!rs) {
+			spllog(SPL_LOG_ERROR, 
+				"PurgeComm: %d", 
+				(int)GetLastError());
+			PurgeComm(p->handle, 
+				PURGE_RXCLEAR | 
+				PURGE_TXCLEAR);
+			ret = SPSR_WIN32_OVERLAP_ERR;
+			break;
+		}
+		spllog(SPL_LOG_DEBUG, 
+			"bRead: %d", (int)*pbytesRead);
+	} while (0);
+
+	if (ret) {
+		return ret;
+	}
+
+	memset(&csta, 0, sizeof(csta));
+	ClearCommError(p->handle, &dwError, &csta);
+
+	if (csta.cbInQue > 0) {
+		spllog(SPL_LOG_ERROR, 
+			"Read Com not finished!!!");
+	} 
+	else if (*pbytesRead > 0) 
+	{
+		tbuffer[*pbytesRead] = 0;
+		spllog(0, "[tbuffer: %s]!", tbuffer);
+		spsr_invoke_1cb(
+			SPSR_EVENT_READ_BUF, 
+			p->cb_evt_fn,
+			p->cb_obj, 
+			evt_callback, 
+			*pbytesRead);
+	}
+
+	return ret;
+}
+    /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int
+spsr_win32_write(SP_SERIAL_INFO_ST *p, 
+	SP_SERIAL_GENERIC_ST *buf, 
+	DWORD *pbytesWrite, OVERLAPPED *polReadWrite,
+    SP_SERIAL_GENERIC_ST *evt_callback)
+{
+	int ret = 0;
+	BOOL wrs = FALSE;
+	char *tbuffer = 0;
+	int evtcode = 0;
+	int portlen = 0;
+	DWORD wErr = 0;
+	DWORD dwWaitResult = 0;
+	int wroteRes = 0;
+	BOOL rsOverlap = TRUE;
+
+	do {
+		if (!p) {
+			ret = SPSR_WIN32_OBJ_NULL;
+			break;
+		}
+		if (!buf) {
+			ret = SPSR_WIN32_BUF_NULL;
+			break;
+		}
+		if (buf->pl < 1) {
+			break;
+		}
+		if (!pbytesWrite) {
+			ret = SPSR_WIN32_BWRITE_NULL;
+			break;
+		}
+		if (!polReadWrite) {
+			ret = SPSR_WIN32_OVERLAP_NULL;
+			break;
+		}
+		if (!evt_callback) {
+			ret = SPSR_WIN32_EVTCB_NULL;
+			break;
+		}
+		tbuffer = evt_callback->data + sizeof(void *);
+		while (buf->pl > 0) {	
+			*pbytesWrite = 0;
+			memset(polReadWrite, 0, sizeof(OVERLAPPED));
+			polReadWrite->hEvent = p->hEvent;
+
+			wrs = WriteFile(
+				p->handle, 
+				buf->data, buf->pl, 
+				pbytesWrite, polReadWrite);
+			if (wrs) {
+				if (buf->pl == (int)(*pbytesWrite)) {
+					spllog(SPL_LOG_DEBUG, 
+						"Write DONE, %d.", buf->pl);
+					wroteRes = 1;
+					buf->pl = 0;
+				} else {
+					spllog(SPL_LOG_ERROR, 
+						"Write Error, %d.", buf->pl);
+				}
+				break;
+			}
+
+			wErr = GetLastError();
+			spllog(SPL_LOG_DEBUG, 
+				"WriteFile: %d", (int)wErr);
+			if (wErr != ERROR_IO_PENDING) {
+				spllog(SPL_LOG_ERROR, 
+					"Write Error, %d.", buf->pl);
+				break;
+			}
+
+			dwWaitResult = WaitForSingleObject(
+				p->hEvent, INFINITE);
+			if (dwWaitResult != WAIT_OBJECT_0) {
+				spllog(SPL_LOG_ERROR, 
+					"Write Error, WaitForSingleObject, %d.",
+					buf->pl);
+				break;
+			}
+			*pbytesWrite = 0;
+
+			rsOverlap = GetOverlappedResult(p->handle, 
+				polReadWrite, pbytesWrite, TRUE);
+
+			if (!rsOverlap) {
+				spllog(SPL_LOG_ERROR, 
+					"Write Error code, %d.", buf->pl);
+				break;
+			}
+			if (buf->pl != (int)(*pbytesWrite)) {
+				spllog(SPL_LOG_ERROR, 
+					"Write Error, %d.", buf->pl);
+				break;
+			}
+			spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
+			wroteRes = 1;
+			buf->pl = 0;
+			break;
+		}
+
+		buf->pl = 0;
+
+		evtcode = wroteRes ? 
+			SPSR_EVENT_WRITE_OK : 
+			SPSR_EVENT_WRITE_ERROR;
+
+		portlen = (int)strlen(p->port_name);
+		tbuffer[portlen] = 0;
+
+		memcpy(tbuffer, 
+			p->port_name, portlen);
+
+		spsr_invoke_1cb(evtcode, 
+			p->cb_evt_fn, 
+			p->cb_obj, 
+			evt_callback, portlen);
+
+	} while (0);
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 DWORD WINAPI spsr_thread_operating_routine(
 	LPVOID arg)
 {
@@ -588,7 +809,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 			break;
 		}
 		ret = spsr_module_openport(p);
-		portlen = strlen(p->port_name);
+		portlen = (int)strlen(p->port_name);
 		do {
 			int eventcb = 0;
 			memcpy(tbuffer, 
@@ -600,8 +821,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 				SPSR_EVENT_OPEN_DEVICE_ERROR : 
 				SPSR_EVENT_OPEN_DEVICE_OK;
 
-			spsr_invoke_1cb(
-				SPSR_EVENT_WRITE_OK, 
+			spsr_invoke_1cb(eventcb, 
 				p->cb_evt_fn, 
 				p->cb_obj, 
 				evt_callback, portlen);
@@ -636,86 +856,11 @@ DWORD WINAPI spsr_thread_operating_routine(
 
 			} while (0);
 			spsr_mutex_unlock(p->mtx_off);
-			while (buf->pl > 0) {
-				int wroteRes = 0;
-				bytesWrite = 0;
-				memset(&olReadWrite, 
-					0, sizeof(olReadWrite));
-				olReadWrite.hEvent = p->hEvent;
-				wrs = WriteFile(
-					p->handle, 
-					buf->data, buf->pl, 
-					&bytesWrite, &olReadWrite);
 
-				if (!wrs) {
-					DWORD wErr = 0;
-					DWORD dwWaitResult = 0;
-					wErr = GetLastError();
-					spllog(SPL_LOG_DEBUG, 
-						"WriteFile: %d", (int)wErr);
-					if (wErr == ERROR_IO_PENDING) {
-						dwWaitResult = WaitForSingleObject(
-							p->hEvent, INFINITE);
-						if (dwWaitResult == WAIT_OBJECT_0) 
-						{
-							BOOL rsOverlap = TRUE;
-							bytesWrite = 0;
-
-							rsOverlap = GetOverlappedResult(
-								p->handle, 
-								&olReadWrite, 
-								&bytesWrite, TRUE);
-
-							if (rsOverlap) {
-								if (buf->pl == (int)bytesWrite) 
-								{
-									spllog(SPL_LOG_DEBUG, 
-										"Write DONE, %d.", 
-										buf->pl);
-									wroteRes = 1;
-								} else 
-								{
-									spllog(SPL_LOG_ERROR, 
-										"Write Error, %d.", 
-										buf->pl);
-								}
-							} else {
-								spllog(SPL_LOG_ERROR, 
-									"Write Error code, %d.", 
-									buf->pl);
-							}
-						} else {
-							spllog(
-								SPL_LOG_ERROR, 
-								"Write Error, %d.", buf->pl);
-						}
-					} else {
-						spllog(SPL_LOG_ERROR, 
-							"Write Error, %d.", buf->pl);
-					}
-				} else {
-					if (buf->pl == (int)bytesWrite) {
-						spllog(SPL_LOG_DEBUG, 
-							"Write DONE, %d.", buf->pl);
-						wroteRes = 1;
-					} else {
-						spllog(SPL_LOG_ERROR, 
-							"Write Error, %d.", buf->pl);
-					}
-				}
-				buf->pl = 0;
-				evtcode = wroteRes ? 
-					SPSR_EVENT_WRITE_OK : 
-					SPSR_EVENT_WRITE_ERROR;
-				tbuffer[portlen] = 0;
-				memcpy(tbuffer, 
-					p->port_name, portlen);
-
-				spsr_invoke_1cb(evtcode, 
-					p->cb_evt_fn, 
-					p->cb_obj, 
-					evt_callback, 
-					portlen);
+			if (buf->pl > 0) {
+				ret = spsr_win32_write(p, 
+					buf, &bytesWrite, 
+					&olReadWrite, evt_callback);
 			}
 
 			rs = SetCommMask(p->handle, flags);
@@ -752,88 +897,23 @@ DWORD WINAPI spsr_thread_operating_routine(
 					&olReadWrite, 
 					&bytesRead, TRUE);
 				if (rsOverlap) {
-				} else {
-					PurgeComm(p->handle, 
-						PURGE_RXCLEAR | PURGE_TXCLEAR);
-				}
+					continue;
+				} 
+				PurgeComm(
+					p->handle, 
+					PURGE_RXCLEAR | 
+					PURGE_TXCLEAR);
+				
 				continue;
 			}
 
 			bytesRead = 0;
-			
-			do {
-				rs = ReadFile(
-					p->handle, 
-					tbuffer, 
-					SPSR_BUFFER_SIZE, 
-					&bytesRead, &olReadWrite);
-				
-				spllog(SPL_LOG_DEBUG, 
-					"olRead.InternalHigh: %d, "
-					"olRead.Internal: %d, rs : %s!!!",
-				    (int)olReadWrite.InternalHigh, 
-					(int)olReadWrite.Internal, 
-					rs ? "true" : "false");
-
-				if (!rs) {
-					BOOL rs1 = FALSE;
-					DWORD readErr = GetLastError();
-					if (readErr == ERROR_IO_PENDING) {
-						bytesRead = 0;
-						if (p->t_delay > 0) {
-							Sleep(p->t_delay);
-						}
-						WaitForSingleObject(
-							p->hEvent, INFINITE);
-						rs1 = GetOverlappedResult(
-							p->handle, 
-							&olReadWrite, 
-							&bytesRead, 1);
-
-						if (rs1) {
-							spllog(SPL_LOG_DEBUG, 
-								"bRead: %d", (int)bytesRead);
-						} else {
-							spllog(SPL_LOG_ERROR, 
-								"PurgeComm: %d", (
-									int)GetLastError());
-							PurgeComm(
-								p->handle, 
-								PURGE_RXCLEAR | PURGE_TXCLEAR);
-						}
-						if (!bytesRead) {
-							/* PurgeComm(p->handle, 
-							PURGE_RXCLEAR | 
-							PURGE_TXCLEAR) ; */
-						}
-					} else {
-						spllog(SPL_LOG_ERROR, 
-							"Read error readErr: %d", 
-							(int)readErr);
-					}
-				} else {
-					spllog(SPL_LOG_INFO, "Read OK");
-				}
-			} while (0);
-			memset(&csta, 0, sizeof(csta));
-			ClearCommError(p->handle, &dwError, &csta);
-
-			if (csta.cbInQue > 0) {
-				spllog(SPL_LOG_ERROR, 
-					"Read Com not finished!!!");
-			} else if (bytesRead > 0) /*else start*/
-			{
-				tbuffer[bytesRead] = 0;
-				spllog(SPL_LOG_DEBUG, 
-					" [[[ %s, cbInQue: %d, bRead: %d ]]]", 
-					tbuffer, cbInQue, bytesRead);
-				spsr_invoke_1cb(
-					SPSR_EVENT_READ_BUF, 
-					p->cb_evt_fn, 
-					p->cb_obj, 
-					evt_callback, bytesRead);
-				/*p->cb end*/
-			}
+			ret = spsr_win32_read(p, 
+				&bytesRead, 
+				&olReadWrite, evt_callback);
+			spllog(SPL_LOG_DEBUG, 
+				" [[[ cbInQue: %d, bRead: %d ]]]", 
+				cbInQue, bytesRead);
 			bytesRead = 0;
 		}
 
@@ -1233,7 +1313,7 @@ spsr_clear_node(SPSR_ARR_LIST_LINED *node)
 			eventcb = node->item->handle ? 
 				SPSR_EVENT_CLOSE_DEVICE_ERROR : 
 				SPSR_EVENT_CLOSE_DEVICE_OK;
-			l = strlen(node->item->port_name);
+			l = (int)strlen(node->item->port_name);
 
 			memcpy(tbuffer, node->item->port_name, l);
 			ret = spsr_invoke_1cb(
@@ -2664,7 +2744,7 @@ spsr_clear_all()
 		count = t->count;
 		if (t->init_node) {
 			p = t->init_node->item->port_name;
-			l = strlen(p);
+			l = (int)strlen(p);
 			memcpy(port, p, l);
 		} else {
 			count = 0;
