@@ -1,0 +1,93 @@
+diff --git a/src/serialmodule.c b/src/serialmodule.c
+index 67bad19..f99a12b 100644
+--- a/src/serialmodule.c
++++ b/src/serialmodule.c
+@@ -2654,53 +2654,59 @@ spsr_clear_all()
+ 	SPSR_ROOT_TYPE *t = &spsr_root_node;
+ #ifndef UNIX_LINUX
+ 	int count = 0;
++	char port[64];
++	int l = 0;
++	char *p = 0;	
+ 	do {
+-		char port[64];
+-		memset(port, 0, 64);
++
++		memset(port, 0, sizeof(port));
+ 		spsr_mutex_lock(t->mutex);
+ 		count = t->count;
+ 		if (t->init_node) {
+-			memcpy(port, 
+-				t->init_node->item->port_name, 
+-				strlen(t->init_node->item->port_name));
++			p = t->init_node->item->port_name;
++			l = strlen(p);
++			memcpy(port, p, l);
+ 		} else {
+ 			count = 0;
+ 		}
+ 		spsr_mutex_unlock(t->mutex);
+-		if (port[0]) {
+-			ret = spsr_inst_close(port);
+-			if (ret) {
+-				spllog(SPL_LOG_ERROR, 					
+-					"spsr_inst_close: ret: %d, port: %s.", 
+-					ret, port);
+-			}
++		if(!port[0]) {
++			continue;
+ 		}
++		ret = spsr_inst_close(port);
++		if(!ret) {
++			continue;
++		}
++		spllog(SPL_LOG_ERROR,
++			"spsr_inst_close: ret: %d, port: %s.",
++			ret, port);
+ 	} while (count);
+ #else
+ 
+ 	SPSR_ARR_LIST_LINED *tnode = 0, *temp = 0;
+ 	temp = t->init_node;
+ 	while (temp) {
++		int fd = -1;
+ 		tnode = temp;
+ 		temp = temp->next;
+-		if (tnode->item) {
+-			if (tnode->item->handle >= 0) {
+-				int fd = tnode->item->handle;
+-				ret = close(fd);
+-				if (ret) {
+-					spllog(SPL_LOG_ERROR, 
+-						"close: ret: %d, "
+-						"errno: %d, text: %s.", 
+-						ret, errno,
+-					    strerror(errno));
+-				} else {
+-					spllog(
+-						SPL_LOG_DEBUG, 
+-						"close fd: %d.", fd);
+-				}
+-			}
+-			spsr_free(tnode->item);
++		if(!tnode->item) {
++			spsr_free(tnode);
++			continue;
++		}
++		if(tnode->item->handle < 0) {
++			spsr_free(tnode);
++			continue;			
++		}
++		fd = tnode->item->handle;
++		ret = close(fd);
++		if (ret) {
++			spllog(SPL_LOG_ERROR, 
++				"close: ret: %d, errno: %d, text: %s.", 
++				ret, errno, strerror(errno));
++		} else {
++			spllog( SPL_LOG_DEBUG,"closed fd: %d.", fd);
+ 		}
++		spsr_free(tnode->item);
+ 		spsr_free(tnode);
+ 	}
+ 	t->init_node = t->last_node = 0;
