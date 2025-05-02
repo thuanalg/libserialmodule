@@ -20,7 +20,9 @@ This library provides a multi-threaded, cross-platform solution for managing mul
 - Windows: [simplelog-topic](https://github.com/thuanalg/simplelog-topic)  
 - Unix-Like(Linux/MacOSX): [simplelog-topic](https://github.com/thuanalg/simplelog-topic) + [BSD socket](https://linux.die.net/man/7/socket)  
 
-### [Build and Use](https://github.com/thuanalg/libserialmodule/blob/main/INSTALL.md)  
+### [INSTALL](https://github.com/thuanalg/libserialmodule/blob/main/INSTALL.md)  
+
+### [TEST](https://github.com/thuanalg/libserialmodule/blob/main/TEST.md)  
 
 
 ## Example Usage
