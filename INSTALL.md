@@ -1,5 +1,5 @@
 ### Build and Use
-1. Windows: Come to "src" and call "cmake ..."
+1. Windows: Come to "root folder" and call "cmake ..."
 	- Come to root folder, **mkdir build && cd build**
 	- 64 bit: **cmake .. -G "Visual Studio 17 2022"**
 	- 32 bit: **cmake .. -G "Visual Studio 17 2022" -A win32**
