@@ -1,6 +1,6 @@
 ### Test on Windows:  
 - After run "**cmake**", open **.sln**
-- Add subproject [testSerialPort.vcxproj](https://github.com/thuanalg/libserialmodule/blob/main/tests/testMFC/testSerialPort/testSerialPort/testSerialPort.vcxproj), and build solution (note: build libraries first).
+- Add subproject [testSerialPort.vcxproj] in **tests/testMFC/testSerialPort/testSerialPort** (https://github.com/thuanalg/libserialmodule/blob/main/tests/testMFC/testSerialPort/testSerialPort/testSerialPort.vcxproj), and build solution (note: build libraries first).
 - Run and see [windows_test](https://github.com/thuanalg/libserialmodule/blob/main/tests/images/windows_test.png)  
 ### Test on Linux: 
 - Please note baudrate of your system, example: **stty -F /dev/ttyUSB0** or set baudrate: **stty -F /dev/ttyUSB0 115200**;
