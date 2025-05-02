@@ -1924,6 +1924,9 @@ int spsr_px_hash_add( SPSR_ARR_LIST_LINED *temp,
 		}
 
 		if (hashobj->cb_evt_fn) {
+			char *tbuff = evt->data + sizeof(void*);
+			memcpy(tbuff, temp->item->port_name,
+				strlen(temp->item->port_name));			
 			ret = spsr_invoke_1cb(
 				SPSR_EVENT_OPEN_DEVICE_OK, 
 				hashobj->cb_evt_fn,

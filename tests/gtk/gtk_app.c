@@ -43,7 +43,7 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
 	obj->baudrate = baudrate; 
     //obj->cb_evt_fn = spsr_call_back_read;
     obj->cb_evt_fn = spsr_test_callback;
-    obj->cb_obj = &TEST_CALLBACK_OBJ;
+    obj->cb_obj = entries[4];
     obj->t_delay = 55;
     
     spllog(0, "baudrate:=========================++++++++++++> %d, portname: %s", 
@@ -132,7 +132,8 @@ int main(int argc, char *argv[]) {
         
         GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
         gtk_window_set_title(GTK_WINDOW(window), "GTK 7 Buttons & 7 Textboxes");
-        gtk_window_set_default_size(GTK_WINDOW(window), 400, 300);
+        //gtk_window_set_default_size(GTK_WINDOW(window), 400, 300);
+        gtk_window_maximize(GTK_WINDOW(window)); // Title bar and buttons stay visible
         g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
         
         GtkWidget *grid = gtk_grid_new();
@@ -140,9 +141,9 @@ int main(int argc, char *argv[]) {
         
         GtkWidget *buttons[7];
         
-        char labels[7][100] = {"ADD COM port", "REM COM port", "WRITE COM port", "write data", "5", "6", "7"};
+        char labels[7][100] = {"ADD COM port", "REM COM port", "WRITE COM port", "written data", "read data", "6", "7"};
         
-        for (i = 0; i < 7; i++) {
+        for (i = 0; i < 5; i++) {
             buttons[i] = gtk_button_new_with_label(labels[i]);
             if(i == 0) {
                 g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked_00), labels[i]);
@@ -170,7 +171,11 @@ int main(int argc, char *argv[]) {
 
             gtk_grid_attach(GTK_GRID(grid), buttons[i], 0, i, 1, 1);
             gtk_grid_attach(GTK_GRID(grid), entries[i], 1, i, 1, 1);
-            gtk_entry_set_text(GTK_ENTRY(entries[i]), "/dev/ttyUSB0");
+            if(i < 4) {
+                gtk_entry_set_text(GTK_ENTRY(entries[i]), "/dev/ttyUSB0");
+            } else {
+                gtk_widget_set_size_request(entries[i], 1600, 300); // Width: 300px, Height: 30px
+            }
         }
 
         gtk_widget_show_all(window);
@@ -182,12 +187,77 @@ int main(int argc, char *argv[]) {
     spl_finish_log();
     return 0;
 }
+#define GTK_TEST_BUF        1024
 gboolean update_ui(void* data) {
     //gtk_label_set_text(GTK_LABEL(label), "Updated from worker thread!");
     //Run in main thread
     SP_SERIAL_GENERIC_ST* evt = 0;
+    void *obj = 0;
     evt = (SP_SERIAL_GENERIC_ST *) data;
-    spllog(SPL_LOG_DEBUG, "evt->data: %s", evt->data + evt->pc);
+    char *realdata = 0;
+    int datalen = 0;
+    char text[GTK_TEST_BUF];
+    do {
+        spllog(SPL_LOG_DEBUG, "evt->data: %s", evt->data + evt->pc);
+        if (sizeof(void*) == sizeof(unsigned int)) {
+            /* 32 bit */
+            unsigned int* temp = (unsigned int*)evt->data;
+            obj = (void*)(*temp);
+        } 
+        else if (sizeof(void*) == sizeof(unsigned long long int)) {
+            /* 64 bit */
+            unsigned long long int* temp = (unsigned long long int*)evt->data;
+            obj = (void*)(*temp);
+        }    
+        if(!obj) {
+            break;
+        } 
+        datalen = evt->pl - evt->pc; /*datalen.*/
+        realdata = evt->data + evt->pc; /*char *realdata: from evt->pc to evt->pl.*/   
+        text[0] = 0;
+        do {
+            if (evt->type == SPSR_EVENT_READ_BUF) {
+                /* Read data.*/
+                snprintf(text, GTK_TEST_BUF,"SPSR_EVENT_READ_BUF, realdata: %s, datalen: %d", realdata, datalen);
+                break;
+            }
+            
+            if (evt->type == SPSR_EVENT_WRITE_OK) {
+                /* Port name .*/
+                snprintf(text, GTK_TEST_BUF, "SPSR_EVENT_WRITE_OK, realdata: %s, datalen: %d", realdata, datalen);
+                break;
+            }
+            if (evt->type == SPSR_EVENT_WRITE_ERROR) {
+                /* Port name .*/
+                snprintf(text, GTK_TEST_BUF, "SPSR_EVENT_WRITE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+                break;
+            }
+
+            if (evt->type == SPSR_EVENT_OPEN_DEVICE_OK) {
+                /* Port name .*/
+                snprintf(text, GTK_TEST_BUF, "SPSR_EVENT_OPEN_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
+                //g_idle_add(update_ui, (GtkWidget *)obj);
+                break;
+            }
+            if (evt->type == SPSR_EVENT_OPEN_DEVICE_ERROR) {
+                /* Port name .*/
+                snprintf(text, GTK_TEST_BUF, "SPSR_EVENT_OPEN_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+                break;
+            }         
+            if (evt->type == SPSR_EVENT_CLOSE_DEVICE_OK) {
+                /* Port name .*/
+                snprintf(text, GTK_TEST_BUF, "SPSR_EVENT_CLOSE_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
+                break;
+            }      
+            if (evt->type == SPSR_EVENT_CLOSE_DEVICE_ERROR) {
+                /* Port name .*/
+                snprintf(text, GTK_TEST_BUF, "SPSR_EVENT_CLOSE_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+                break;
+            }                   
+        }   while(0);  
+        gtk_entry_set_text( GTK_ENTRY(obj), text);
+    } while(0);
+
     spl_free(evt);
     return FALSE;  
 }
@@ -227,6 +297,8 @@ int spsr_test_callback(void *data) {
     }
     memcpy(evt, data, total);
     spllog(SPL_LOG_DEBUG, "total: %d, type: %d", evt->total, evt->type);
+    g_idle_add(update_ui, evt);
+    #if 0
     if (sizeof(void*) == sizeof(unsigned int)) {
         /* 32 bit */
         unsigned int* temp = (unsigned int*)evt->data;
@@ -237,7 +309,7 @@ int spsr_test_callback(void *data) {
         unsigned long long int* temp = (unsigned long long int*)evt->data;
         obj = (void*)(*temp);
     }
-    spllog(0, "obj: 0x%p, value: %d", obj, *((int*)obj));
+    //spllog(0, "obj: 0x%p, value: %d", obj, *((int*)obj));
     do {
         datalen = evt->pl - evt->pc; /*datalen.*/
         realdata = evt->data + evt->pc; /*char *realdata: from evt->pc to evt->pl.*/
@@ -259,6 +331,7 @@ int spsr_test_callback(void *data) {
         if (evt->type == SPSR_EVENT_OPEN_DEVICE_OK) {
             /* Port name .*/
             spllog(0, "SPSR_EVENT_OPEN_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
+            //g_idle_add(update_ui, (GtkWidget *)obj);
             break;
         }
         if (evt->type == SPSR_EVENT_OPEN_DEVICE_ERROR) {
@@ -275,8 +348,10 @@ int spsr_test_callback(void *data) {
             /* Port name .*/
             spllog(0, "SPSR_EVENT_CLOSE_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
             break;
-        }               
+        }       
+           
     } while (0);
-    spsr_free(evt);
+    #endif    
+    //spsr_free(evt);
     return 0;
 }
