@@ -6,9 +6,13 @@
 * Skype:
 *		<nguyenthaithuanalg>
 * Date:
-*		<2025-March-01>
+*		<2025-Mar-01>
 * The lasted modified date:
-		<2025-March-27>
+		<2025-Mar-27>
+		<2025-Apr-29>
+		<2025-Apr-30>
+		<2025-May-01>
+		<2025-May-02>
 * Decription:
 *		The (only) main header file to export 5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
 spsr_inst_close, spsr_inst_write].
@@ -19,7 +23,7 @@ spsr_inst_close, spsr_inst_write].
 #include <stdlib.h>
 #include <simplelog.h>
 
-#if 0
+#if 1
 #ifndef UNIX_LINUX
 #define UNIX_LINUX                
 #endif
@@ -111,10 +115,6 @@ spsr_inst_close, spsr_inst_write].
 extern "C" {
 #endif
 
-// #ifndef UNIX_LINUX
-//	#define  UNIX_LINUX
-// #endif
-
 #ifndef UNIX_LINUX
 #ifndef __SIMPLE_STATIC_SERIAL_MODULE__
 #ifdef EXPORT_DLL_API_SERIAL_MODULE
@@ -136,13 +136,14 @@ extern "C" {
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #define SPSR_PORT_LEN             32
-#define SPSR_KEY_LEN              (SPSR_PORT_LEN * 2)
+#define SPSR_KEY_LEN              (SPSR_PORT_LEN)
 #ifndef SPSR_LLU
 #define SPSR_LLU                  unsigned long long
 #endif
 #ifndef SPSR_UNIT
 #define SPSR_UNIT                 unsigned int
 #endif
+
 typedef enum {
 	SPSR_CMD_STORAGE_INPUT_INFO_ARR,
 	SPSR_CMD_ADD,
@@ -153,6 +154,8 @@ typedef enum {
 } SPSR_CMD_TYPE;
 
 typedef int (*SPSR_module_cb)(void *);
+
+
 
 typedef enum {
 	SPSR_PORT_OK,
@@ -189,7 +192,6 @@ typedef enum {
 	SPSR_INFO_NULL,
 	SPSR_PARAM_NULL,
 	SPSR_ITEM_NOT_FOUND,
-
 	SPSR_CREATE_THREAD_ERROR,
 	SPSR_SHUTDOWN_SOCK,
 	SPSR_CLOSE_SOCK,
@@ -206,6 +208,27 @@ typedef enum {
 	SPSR_PORTNAME_EXISTED,
 	SPSR_HASH_NOTFOUND,
 	SPSR_CALLBACK_NULL,
+	SPSR_PX_ITEM_NULL,
+	SPSR_PX_CB_NULL,
+	SPSR_PX_POLLFD_NULL,
+	SPSR_PX_PRANGE_NULL,
+	SPSR_PX_EPOLL_DEL,
+	SPSR_PX_POLL_NOT_FOUND,
+	SPSR_PX_MALINFO_FD,
+	SPSR_PX_MAL_HASH_FD,
+	SPSR_HASH_NOT_FOUND,
+	SPSR_REM_NOT_FOUND,
+	SPSR_WIN32_OBJ_NULL,
+	SPSR_WIN32_BUF_NULL,
+	SPSR_WIN32_BWRITE_NULL,
+	SPSR_WIN32_OVERLAP_NULL,
+	SPSR_WIN32_EVTCB_NULL,
+	SPSR_WIN32_NOT_PENDING,
+	SPSR_WIN32_OVERLAP_ERR,
+	SPSR_PORT_NULL,
+	SPSR_PORT_EMPTY,
+	SPSR_OBJ_NULL,
+	SPSR_PORTNAME_NONEXISTED,
 
 	SPSR_PORT_PEAK,
 } SPSR_PORT_ERR;
