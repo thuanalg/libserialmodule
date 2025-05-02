@@ -9,7 +9,6 @@ This library provides a multi-threaded, cross-platform solution for managing mul
 ## Features
 - **Multi-threaded (Thread-safe)**: Designed for concurrent access to multiple serial ports.
 - **Cross-platform**: Works on Windows, Linux, and macOS.
-- **Minimal dependencies**: No external libraries required.
 - **ANSI C89 to C++20 compatible**: Ensuring broad compiler support.
 - **Efficient and high-performance**: Optimized for real-time communication.
 
