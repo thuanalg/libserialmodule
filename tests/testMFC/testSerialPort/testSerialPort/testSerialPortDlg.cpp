@@ -156,6 +156,7 @@ BOOL CtestSerialPortDlg::OnInitDialog()
 	p_Cdata = (CEdit*)GetDlgItem(IDC_EDIT_TEXT);
 	p_CSent = (CEdit*)GetDlgItem(IDC_EDIT_SEND);
 	p_CWCom = (CEdit*)GetDlgItem(IDC_EDIT_WCOM);
+	pInitLog = (CButton *)GetDlgItem(IDC_BUTTON_INIT_MODULE);
 	/*-----------------------------------------------------------------------------------------------------------------------*/
 	return TRUE;
 }
@@ -322,6 +323,8 @@ void CtestSerialPortDlg::OnBnClickedButtonInitModule()
 	if (ret) {
 		exit(1);
 	}
+	pInitLog->EnableWindow(FALSE);
+	
 }
 
 
