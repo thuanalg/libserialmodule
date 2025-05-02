@@ -12,6 +12,7 @@
 		<2025-Apr-29>
 		<2025-Apr-30>
 		<2025-May-01>
+		<2025-May-02>
 * Decription:
 *		The (only) main header file to export 
 		5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
@@ -226,6 +227,7 @@ static SPSR_ROOT_TYPE spsr_root_node;
 static int spsr_clear_all();
 static int spsr_verify_info(
 	SP_SERIAL_INPUT_ST *obj);
+static int spsr_is_existed(char *port, int *);
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* Group of sync tool. */
@@ -249,29 +251,21 @@ int spsr_inst_open(
 {
 	int ret = 0;
 	SPSR_ROOT_TYPE *t = &spsr_root_node;
+
 	do {
-		/*-------------------------------------------------------------------*/
+
 		spsr_mutex_lock(t->mutex);
 		/*do {*/
-		ret = spsr_verify_info(p);
+			ret = spsr_verify_info(p);
 		/*} while (0); */
 		spsr_mutex_unlock(t->mutex);
-		/*-------------------------------------------------------------------*/
-		if (ret) {
-			spllog(SPL_LOG_ERROR, "ret error: %d.", ret);
-			break;
-		}
-		spsr_mutex_lock(t->mutex);
-#ifndef UNIX_LINUX
-#else
-		/*do {*/
-		ret = spsr_send_cmd(SPSR_CMD_ADD, 0, 0, 0);
-		/*} while (0); */
-#endif
-		spsr_mutex_unlock(t->mutex);
-		/*-------------------------------------------------------------------*/
+
 	} while (0);
 
+	if (ret) {
+		spllog(SPL_LOG_ERROR, 
+			"spsr_verify_info: %d.", ret);
+	}
 	return ret;
 }
 
@@ -295,11 +289,22 @@ int spsr_inst_close(char *portname)
 	} while (0);
 #else
 	SPSR_ROOT_TYPE *t = &spsr_root_node;
-	spllog(0, "Send cmd to delete port: %s.", portname);
+	int isExisted = 0;
 	spsr_mutex_lock(t->mutex);
-	/*do {*/
-	ret = spsr_send_cmd(SPSR_CMD_REM, portname, 0, 0);
-	/*} while (0); */
+	do {
+		ret = spsr_is_existed(portname, &isExisted);
+		if(ret) {
+			break;
+		}
+		if(!isExisted) {
+			spllog(SPL_LOG_ERROR, 
+				"port %s not exsied.", 
+				portname);
+			ret = SPSR_PORTNAME_NONEXISTED;
+			break;
+		}
+		ret = spsr_send_cmd(SPSR_CMD_REM, portname, 0, 0);
+	} while (0);
 	spsr_mutex_unlock(t->mutex);
 #endif
 	return ret;
@@ -1337,6 +1342,7 @@ int spsr_inst_write(
 	char *portname, char *data, int sz)
 {
 	int ret = 0;
+	
 	do {
 #ifndef UNIX_LINUX
 		SPSR_ARR_LIST_LINED *node = 0;
@@ -1408,9 +1414,23 @@ int spsr_inst_write(
 		SetEvent(item->hEvent);
 #else
 		SPSR_ROOT_TYPE *t = &spsr_root_node;
+		int isExisted = 0;
 		spsr_mutex_lock(t->mutex);
-		ret = spsr_send_cmd(
-			SPSR_CMD_WRITE, portname, data, sz);
+		do {
+			ret = spsr_is_existed(portname, &isExisted);
+			if(ret) {
+				break;
+			}
+			if(!isExisted) {
+				spllog(SPL_LOG_ERROR, 
+					"port %s not exsied.", 
+					portname);
+				ret = SPSR_PORTNAME_NONEXISTED;
+				break;
+			}
+			ret = spsr_send_cmd(
+				SPSR_CMD_WRITE, portname, data, sz);
+		} while(0);
 		spsr_mutex_unlock(t->mutex);
 		if (ret) {
 			spllog(SPL_LOG_ERROR, 
@@ -2567,7 +2587,50 @@ int spsr_send_cmd(
 #endif
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-
+int spsr_is_existed(char *port, int *isExisted) {
+	int ret = 0;
+	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	SPSR_ARR_LIST_LINED *tmp = 0;
+	char *p1 = 0;
+	
+	do {
+		if(!isExisted) {
+			ret = SPSR_OBJ_NULL;
+			spllog(SPL_LOG_ERROR, 
+				"SPSR_OBJ_NULL.");
+			break;
+		}		
+		*isExisted = 0;
+		if(!port) {
+			ret = SPSR_PORT_NULL;
+			spllog(SPSR_PORT_NULL, 
+				"SPSR_OBJ_NULL.");			
+			break;
+		}
+		if(!port[0]) {
+			ret = SPSR_PORT_EMPTY;
+			spllog(SPSR_PORT_EMPTY, 
+				"SPSR_OBJ_NULL.");				
+			break;
+		}		
+		if (!t->init_node) {
+			break;
+		}
+				
+		tmp = t->init_node;
+		
+		while (tmp) {
+			p1 = tmp->item->port_name;
+			if (strcmp(p1, port))  {
+				tmp = tmp->next;
+				continue;
+			}
+			*isExisted= 1;
+			break;
+		}
+	} while(0);
+	return ret;
+}
 int spsr_verify_info(SP_SERIAL_INPUT_ST *p)
 {
 	SPSR_ROOT_TYPE *t = &spsr_root_node;
@@ -2601,17 +2664,21 @@ int spsr_verify_info(SP_SERIAL_INPUT_ST *p)
 		}
 		if (t->init_node) {
 			SPSR_ARR_LIST_LINED *tmp = 0;
+			char *p1 = 0;
+			char *p2 = 0;
 			tmp = t->init_node;
+			p2 = p->port_name;
 			while (tmp) {
-				if (strcmp(tmp->item->port_name, p->port_name) == 0) 
-				{
-					spllog(SPL_LOG_DEBUG, 
-						"did existed port_name: \"%s\".", 
-						p->port_name);
-					ret = SPSR_PORTNAME_EXISTED;
-					break;
+				p1 = tmp->item->port_name;
+				if (strcmp(p1, p2))  {
+					tmp = tmp->next;
+					continue;
 				}
-				tmp = tmp->next;
+				spllog(SPL_LOG_ERROR, 
+					"SPSR_PORTNAME_EXISTED: \"%s\".", 
+					p->port_name);
+				ret = SPSR_PORTNAME_EXISTED;
+				break;
 			}
 		}
 		if (ret) {
@@ -2705,7 +2772,7 @@ int spsr_verify_info(SP_SERIAL_INPUT_ST *p)
 		item->handle = -1;
 		spllog(SPL_LOG_DEBUG, 
 			"Check t->init_node: 0x%p", t->init_node);
-
+		spsr_send_cmd(SPSR_CMD_ADD, 0, 0, 0);
 #endif
 
 	} while (0);
@@ -3072,11 +3139,11 @@ spsr_ctrl_sock(
 				/* 11: Have no data in Linux */
 				/* 35: Have no data in Linux */
 #ifndef __SPSR_EPOLL__
-				if (errno == 35) {
+				if (errno == 35 || errno == 11) {
 					break;
 				}
 #else
-				if (errno == 11) {
+				if (errno == 35 || errno == 11) {
 					break;
 				}
 #endif
