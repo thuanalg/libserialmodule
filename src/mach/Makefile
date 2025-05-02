@@ -1,9 +1,5 @@
-LIB_SUFF=so
-#LIB_SUFF=dylib
-MACOSX_FLAG=
-#MACOSX_FLAG=-D __MACH__
-target_1=libsimplelog.${LIB_SUFF}
-target_2=libspserial.${LIB_SUFF}
+target_1=libsimplelog.dylib
+target_2=libspserial.dylib
 #debugFlag=-g -fPIC -Wall -shared 
 debugFlag=-g -fPIC -shared 
 #releaseFlag=-fPIC -Wall -shared
@@ -11,24 +7,33 @@ releaseFlag=-fPIC -shared
 LIBS+=-lpthread
 LIBS_1+=-L./ -lsimplelog
 LIBS_2+=-L./ -lspserial
-src=../simplelog/simplelog.c 
+src=../simplelog.c 
 src1=../serialmodule.c 
-INC=-I../simplelog/ -I../
+INC=-I../ -I../../include
+src_console=../../tests/console/main.c
+src_gtk=../../tests/gtk/gtk_app.c
 #CFLAGS=-ansi
-CFLAGS=-std=gnu89 -D UNIX_LINUX -Wunused-variable -Wunused-function ${MACOSX_FLAG} 
+#CFLAGS=-std=gnu89 -D UNIX_LINUX -D__SPSR_EPOLL__ -Wunused-variable -Wunused-function -DSPSR_SHOW_CONSOLE -Werror=format
+CFLAGS=-std=gnu89 -D UNIX_LINUX  -Wunused-variable -Wunused-function -DSPSR_SHOW_CONSOLE -Werror=format -D__MACH__
 #CPPFLAGS=-std=c++98 
 #CPPFLAGS=-std=c++98 -D UNIX_LINUX -D __UNIX_LINUX_CPP11_AND_NEWERS
-CPPFLAGS=-D UNIX_LINUX -D __UNIX_LINUX_CPP11_AND_NEWERS__ ${MACOSX_FLAG}
+CPPFLAGS=-D UNIX_LINUX -D __UNIX_LINUX_CPP11_AND_NEWERS__ -DSPSR_SHOW_CONSOLE
 
 debug:
 	gcc ${debugFlag} -o ${target_1} ${src} ${LIBS} ${CFLAGS} ${INC}
 	gcc ${debugFlag} -o ${target_2} ${src1} ${LIBS} ${CFLAGS} ${LIBS_1} ${INC}
-	gcc -g -o test_main ../main.c ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2} ${INC}
+	gcc -g -o test_main ${src_console} ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2} ${INC}
 
 release:
 	gcc ${releaseFlag} -o ${target_1} ${src} ${LIBS} ${CFLAGS} ${INC}
 	gcc ${releaseFlag} -o ${target_2} ${src1} ${LIBS} ${CFLAGS} ${LIBS_1} ${INC}
-	gcc -g -o test_main ../main.c ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2} ${INC}
+	gcc -o test_main ${src_console} ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2} ${INC}
 
 clean:
-	rm -rf ${target_1} ${target_2} *.dylib.* *_main* *.so
+	rm -rf *.so test_main
+#Set baudrate from BASH
+#stty -F /dev/ttyUSB0 speed 115200
+#get current baudrate from BASH
+#stty -F /dev/ttyUSB0 speed
+#stty -F /dev/ttyUSB0 -a
+#stty -F /dev/ttyUSB0 115200
