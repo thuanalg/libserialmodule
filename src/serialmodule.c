@@ -13,6 +13,7 @@
 		<2025-Apr-30>
 		<2025-May-01>
 		<2025-May-02>
+		<2025-May-03>
 * Decription:
 *		The (only) main header file to export 
 		5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
@@ -84,8 +85,11 @@ spsr_inst_close, spsr_inst_write].
 #define SPSR_STEP_MEM              2048
 #define SPSR_BUFFER_SIZE           2048
 #define SPSR_DATA_RANGE            2048
+#define SPSR_CMD_BUFF              2048
 
 #define SPSR_EVT_CB_CART_LEN       (SPSR_BUFFER_SIZE + sizeof(void*) + sizeof(SP_SERIAL_GENERIC_ST) + 1)
+#define SPSR_CMD_BUFF_LEN          (SPSR_CMD_BUFF + sizeof(SP_SERIAL_GENERIC_ST) + 1)
+
 #define SPSR_EVT_CB_PORT_LEN       (SPSR_PORT_LEN + sizeof(void*) + sizeof(SP_SERIAL_GENERIC_ST) + 1)
 
 #ifndef UNIX_LINUX
@@ -164,7 +168,8 @@ static int spsr_fetch_commands(void *,
 
 static int spsr_ctrl_sock(void *fds, 
 	int *mx_number, int sockfd, 
-	SP_SERIAL_GENERIC_ST *evt, int *chk_off);
+	SP_SERIAL_GENERIC_ST *evt, int *chk_off, 
+	SP_SERIAL_GENERIC_ST **pcart_buff);
 
 static int spsr_fmt_name(
 	char *input, char *output, int);
@@ -177,7 +182,8 @@ static int spsr_fetch_commands(
 static int spsr_ctrl_sock(
 	int epollfd, 
 	int sockfd, 
-	SP_SERIAL_GENERIC_ST *evt, int *chk_off);
+	SP_SERIAL_GENERIC_ST *evt, int *chk_off, 
+	SP_SERIAL_GENERIC_ST **pcart_buff);
 
 #endif
 
@@ -240,7 +246,7 @@ static int spsr_mutex_unlock(void *obj);
 static int spsr_rel_sem(void *sem);
 static int spsr_wait_sem(void *sem);
 
-static int spsr_invoke_1cb(int evttype, 
+static int spsr_invoke_cb(int evttype, 
 	SPSR_module_cb fn_cb, 
 	void *obj_cb, 
 	SP_SERIAL_GENERIC_ST *evt, int lendata);
@@ -635,7 +641,7 @@ spsr_win32_read(
 	{
 		tbuffer[*pbytesRead] = 0;
 		spllog(0, "[tbuffer: %s]!", tbuffer);
-		spsr_invoke_1cb(
+		spsr_invoke_cb(
 			SPSR_EVENT_READ_BUF, 
 			p->cb_evt_fn,
 			p->cb_obj, 
@@ -759,7 +765,7 @@ spsr_win32_write(SP_SERIAL_INFO_ST *p,
 		memcpy(tbuffer, 
 			p->port_name, portlen);
 
-		spsr_invoke_1cb(evtcode, 
+		spsr_invoke_cb(evtcode, 
 			p->cb_evt_fn, 
 			p->cb_obj, 
 			evt_callback, portlen);
@@ -826,7 +832,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 				SPSR_EVENT_OPEN_DEVICE_ERROR : 
 				SPSR_EVENT_OPEN_DEVICE_OK;
 
-			spsr_invoke_1cb(eventcb, 
+			spsr_invoke_cb(eventcb, 
 				p->cb_evt_fn, 
 				p->cb_obj, 
 				evt_callback, portlen);
@@ -1324,7 +1330,7 @@ spsr_clear_node(SPSR_ARR_LIST_LINED *node)
 			l = (int)strlen(node->item->port_name);
 
 			memcpy(tbuffer, node->item->port_name, l);
-			ret = spsr_invoke_1cb(
+			ret = spsr_invoke_cb(
 				eventcb,
 				cb_fn, 
 				cb_obj, 
@@ -1468,6 +1474,7 @@ void *spsr_init_cartridge_routine(void *obj)
 	struct sockaddr_in cartridge_addr = {0};
 	int k = 0;
 	char chk_delay = 0;
+	SP_SERIAL_GENERIC_ST *cart_buff = 0;
 
 #if 1
 	SP_SERIAL_GENERIC_ST *evt_callback = 0;
@@ -1479,7 +1486,6 @@ void *spsr_init_cartridge_routine(void *obj)
 	evt_callback->pl = evt_callback->pc = sizeof(void *);
 	tbuffer = evt_callback->data + evt_callback->pc;
 #endif
-
 
 #ifndef __SPSR_EPOLL__
 	int n = 0;
@@ -1495,21 +1501,37 @@ void *spsr_init_cartridge_routine(void *obj)
 	int epollfd = 0;
 	;
 	int i = 0;
-	struct epoll_event event, events[SPSR_SIZE_MAX_EVENTS];
+	struct epoll_event event, 
+		events[SPSR_SIZE_MAX_EVENTS];
 #endif
 	spllog(SPL_LOG_DEBUG, "cartridge: ");
 	/* Creating socket file descriptor */
+	spsr_malloc(SPSR_CMD_BUFF_LEN, 
+		cart_buff, SP_SERIAL_GENERIC_ST);
 	do {
+		if(!cart_buff) {
+			ret = SPSR_MEM_NULL;
+			spllog(SPL_LOG_ERROR, 
+				"SPSR_MEM_NULL.");
+			break;
+		}
+		cart_buff->total = SPSR_CMD_BUFF_LEN;
+		cart_buff->range = SPSR_CMD_BUFF;
+
 		sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 		if (sockfd < 0) {
+
 			spllog(SPL_LOG_ERROR, 
 				"fcntl: ret: %d, errno: %d, "
-				"text: %s.", sockfd, errno, strerror(errno));
+				"text: %s.", sockfd, 
+				errno, strerror(errno));
+
 			ret = SPSR_CREATE_SOCK;
 			break;
 		}
 
-		memset(&cartridge_addr, 0, sizeof(cartridge_addr));
+		memset(&cartridge_addr, 0, 
+			sizeof(cartridge_addr));
 
 		/* Filling server information */
 
@@ -1533,9 +1555,12 @@ void *spsr_init_cartridge_routine(void *obj)
 		}
 		ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 		if (ret == -1) {
+
 			spllog(SPL_LOG_ERROR, 
 				"fcntl: ret: %d, errno: %d, "
-				"text: %s.", ret, errno, strerror(errno));
+				"text: %s.", ret, errno, 
+				strerror(errno));
+
 			ret = SPSR_FCNTL_SOCK;
 			break;
 		}
@@ -1547,7 +1572,8 @@ void *spsr_init_cartridge_routine(void *obj)
 		if (ret < 0) {
 			spllog(SPL_LOG_ERROR, 
 				"bind failed: ret: %d, errno: %d, "
-				"text: %s.", ret, errno, strerror(errno));
+				"text: %s.", ret, 
+				errno, strerror(errno));
 			ret = SPSR_BIND_SOCK;
 			break;
 		}
@@ -1575,9 +1601,14 @@ void *spsr_init_cartridge_routine(void *obj)
 					break;
 				}
 				chk_delay = 0;
-				ret = poll(fds, mx_number, 60 * 1000);
+
+				ret = poll(fds, mx_number, 
+					60 * 1000);
+
 				spllog(SPL_LOG_DEBUG, 
-					"poll,  mx_number: %d", mx_number);
+					"poll,  mx_number: %d", 
+					mx_number);
+
 				if (ret == -1) {
 					continue;
 				}
@@ -1593,18 +1624,23 @@ void *spsr_init_cartridge_routine(void *obj)
 					}
 
 					if (k == 0) {
+
 						spsr_ctrl_sock(
 							fds, 
 							&mx_number, 
 							sockfd, 
 							evt_callback, 
-							&isoff);
+							&isoff, 
+							&cart_buff);
+
 						continue;
 					}
 					if (fds[k].fd >= 0) {
+
 						ret = spsr_read_fd(
 							fds[k].fd, 
-							evt_callback, &chk_delay);
+							evt_callback, 
+							&chk_delay);
 					}
 				}
 			}
@@ -1640,18 +1676,31 @@ void *spsr_init_cartridge_routine(void *obj)
 					break;
 				}
 				chk_delay = 0;
-				nfds = epoll_wait(epollfd, 
-					events, SPSR_SIZE_MAX_EVENTS, -1);
+
+				nfds = epoll_wait(
+					epollfd, 
+					events, 
+					SPSR_SIZE_MAX_EVENTS, 
+					-1);
+
 				for (i = 0; i < nfds; i++) {
 					if (events[i].data.fd == sockfd) {
-						spsr_ctrl_sock(epollfd, 
-							sockfd, evt_callback, &isoff);
+
+						spsr_ctrl_sock(
+							epollfd, 
+							sockfd, 
+							evt_callback, 
+							&isoff, &cart_buff);
+
 						continue;
 					}
 					if (events[i].data.fd >= 0) {
+
 						ret = spsr_read_fd(
 							events[i].data.fd, 
-							evt_callback, &chk_delay);
+							evt_callback, 
+							&chk_delay);
+
 					}
 					/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 				}
@@ -1687,7 +1736,7 @@ void *spsr_init_cartridge_routine(void *obj)
 	if (epollfd > -1) {
 	}
 #endif
-
+	spsr_free(cart_buff);
 	spsr_rel_sem(t->sem_spsr);
 
 	return 0;
@@ -1927,7 +1976,7 @@ int spsr_px_hash_add( SPSR_ARR_LIST_LINED *temp,
 			char *tbuff = evt->data + sizeof(void*);
 			memcpy(tbuff, temp->item->port_name,
 				strlen(temp->item->port_name));			
-			ret = spsr_invoke_1cb(
+			ret = spsr_invoke_cb(
 				SPSR_EVENT_OPEN_DEVICE_OK, 
 				hashobj->cb_evt_fn,
 				hashobj->cb_obj, 
@@ -1981,7 +2030,7 @@ int spsr_px_add(
 
 			if (ret) {
 				if (input->cb_evt_fn) {
-					ret = spsr_invoke_1cb(
+					ret = spsr_invoke_cb(
 						SPSR_EVENT_OPEN_DEVICE_ERROR,
 						input->cb_evt_fn, 
 						input->cb_obj, evt, l);
@@ -2289,7 +2338,7 @@ int spsr_px_rem(
 
 		memcpy( evt->data + evt->pc,  portname, l);
 
-		ret = spsr_invoke_1cb( callback_evt,  
+		ret = spsr_invoke_cb( callback_evt,  
 				callback_fn, callback_obj, evt, l);
 				
 	} while(0);
@@ -2391,7 +2440,7 @@ int spsr_px_write(
 				hashobj->port_name,
 				strlen(hashobj->port_name));
 			
-			ret = spsr_invoke_1cb(
+			ret = spsr_invoke_cb(
 				SPSR_EVENT_WRITE_OK, 
 				hashobj->cb_evt_fn,
 				hashobj->cb_obj, evt, 
@@ -2406,7 +2455,7 @@ int spsr_px_write(
 						hashobj->port_name,
 						strlen(hashobj->port_name));
 					
-					ret = spsr_invoke_1cb(
+					ret = spsr_invoke_cb(
 						SPSR_EVENT_WRITE_OK, 
 						hashobj->cb_evt_fn,
 						hashobj->cb_obj, evt, 
@@ -2434,7 +2483,7 @@ int spsr_px_write(
 				hashobj->port_name,
 				strlen(hashobj->port_name));
 			
-			ret = spsr_invoke_1cb(
+			ret = spsr_invoke_cb(
 				SPSR_EVENT_WRITE_ERROR,
 				hashobj->cb_evt_fn, 
 				hashobj->cb_obj, evt,
@@ -2448,7 +2497,7 @@ int spsr_px_write(
 						hashobj->port_name,
 						strlen(hashobj->port_name));
 					
-					ret = spsr_invoke_1cb(
+					ret = spsr_invoke_cb(
 						SPSR_EVENT_WRITE_ERROR,
 						hashobj->cb_evt_fn, 
 						hashobj->cb_obj, evt,
@@ -3085,7 +3134,7 @@ int spsr_read_fd(
 				break;
 			}
 
-			ret = spsr_invoke_1cb(
+			ret = spsr_invoke_cb(
 				SPSR_EVENT_READ_BUF, 
 				temp->cb_evt_fn, 
 				temp->cb_obj, 
@@ -3098,6 +3147,36 @@ int spsr_read_fd(
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+static int spsr_check_resz( 
+	int lenp, 
+	SP_SERIAL_GENERIC_ST **pcart_buff) 
+{
+	int ret = 0;
+	int add = 0;
+	int total = 0;	
+	if(lenp <= (*pcart_buff)->range)
+	{
+		return ret;
+	}
+	do {
+		add = lenp - (*pcart_buff)->range + 1;
+		total = (*pcart_buff)->total + add;
+
+		(*pcart_buff) = 
+			realloc((*pcart_buff), total);
+
+		if(!(*pcart_buff)) {
+			ret = SPSR_MEM_NULL;
+			spllog(SPL_LOG_ERROR, 
+				"SPSR_MEM_NULL");
+			break;
+		}
+		(*pcart_buff)->total += add;
+		(*pcart_buff)->range += add;
+	} while(0);
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef __SPSR_EPOLL__
 int spsr_ctrl_sock(
@@ -3105,20 +3184,20 @@ int spsr_ctrl_sock(
 	int *mx_number, 
 	int sockfd, 
 	SP_SERIAL_GENERIC_ST *evt, 
-	int *chk_off)
+	int *chk_off, SP_SERIAL_GENERIC_ST **pcart_buff)
 #else
 int
 spsr_ctrl_sock(
 	int epollfd, 
 	int sockfd, 
 	SP_SERIAL_GENERIC_ST *evt, 
-	int *chk_off)
+	int *chk_off, SP_SERIAL_GENERIC_ST **pcart_buff)
 #endif
 {
 	SPSR_ROOT_TYPE *t = &spsr_root_node;
 	int ret = 0;
 	char *p = 0;
-	int lp = 0;
+	int lenp = 0;
 	struct sockaddr_in client_addr;
 	ssize_t lenmsg = 0;
 	socklen_t client_len = 0;
@@ -3129,6 +3208,10 @@ spsr_ctrl_sock(
 			ret = SPSR_PARAM_NULL;
 			break;
 		}
+		if (!pcart_buff) {
+			ret = SPSR_PARAM_NULL;
+			break;
+		}		
 		while (1) {
 			memset(&client_addr, 0, sizeof(client_addr));
 			client_len = sizeof(client_addr);
@@ -3168,38 +3251,75 @@ spsr_ctrl_sock(
 			if (isoff) {
 				break;
 			}
-			lp = 0;
+			lenp = 0;
+			#if 0
 			spsr_malloc(SPSR_BUFFER_SIZE, p, char);
+			#endif
+			p = 0;
+			(*pcart_buff)->pl = 0;
 			spsr_mutex_lock(t->mutex);
 			do {
-				if (t->cmd_buff) {
-					lp = t->cmd_buff->pl;
-					if (lp) {
-						if (lp > SPSR_BUFFER_SIZE) {
-							p = realloc(p, lp);
-						}
-						if (!p) {
-							break;
-						}
-						memcpy(p, t->cmd_buff->data, lp);
-						t->cmd_buff->pl = 0;
-					}
+				if(!t->cmd_buff) {
+					ret = SPSR_MEM_NULL;
+					spllog(SPL_LOG_ERROR, 
+						"SPSR_MEM_NULL");
+					break;
 				}
+
+				lenp = t->cmd_buff->pl;	
+
+				if(!lenp) {
+					break;
+				}
+				#if 1
+				spsr_check_resz(lenp, pcart_buff);
+				#else
+				if (lenp > (*pcart_buff)->range) 
+				{
+					int add = 0;
+					int total = 0;
+					add = lenp - (*pcart_buff)->range + 1;
+					total = (*pcart_buff)->total + add;
+
+					(*pcart_buff) = 
+						realloc((*pcart_buff), total);
+
+					if(!(*pcart_buff)) {
+						ret = SPSR_MEM_NULL;
+						spllog(SPL_LOG_ERROR, 
+							"SPSR_MEM_NULL");
+						break;
+					}
+					(*pcart_buff)->total += add;
+					(*pcart_buff)->range += add;
+				}
+				#endif
+				p = (*pcart_buff)->data;
+				memcpy(p, t->cmd_buff->data, lenp);
+				(*pcart_buff)->pl = lenp;
+				t->cmd_buff->pl = 0;
+
 			} while (0);
 
 			spsr_mutex_unlock(t->mutex);
+
+			if(!p) {
+				continue;
+			}
+
 #ifndef __SPSR_EPOLL__
 			ret = spsr_fetch_commands(
-				fds, mx_number, p, lp, evt);
+				fds, mx_number, p, lenp, evt);
 			spllog(0, "MACH POLL --->>> "
-				"Size of buffer of command : %d", lp);
+				"Size of buffer of command : %d", lenp);
 #else
-			ret = spsr_fetch_commands(epollfd, p, lp, evt);
+			ret = spsr_fetch_commands(epollfd, p, lenp, evt);
 			spllog(0, "LINUX EPOLL --->>> "
-				"Size of buffer of command : %d", lp);
+				"Size of buffer of command : %d", lenp);
 #endif
-
+			#if 0
 			spsr_free(p);
+			#endif
 		}
 	} while (0);
 
@@ -3272,7 +3392,7 @@ int spsr_sem_delete(void *sem, char *sem_name)
 	return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-int spsr_invoke_1cb(
+int spsr_invoke_cb(
 	int evttype, 
 	SPSR_module_cb fn_cb, 
 	void *obj_cb, 

@@ -258,7 +258,7 @@ gboolean update_ui(void* data) {
         gtk_entry_set_text( GTK_ENTRY(obj), text);
     } while(0);
 
-    spl_free(evt);
+    spsr_free(evt);
     return FALSE;  
 }
 
@@ -272,6 +272,7 @@ int spsr_call_back_read(void *data) {
     spsr_malloc(n, evt, SP_SERIAL_GENERIC_ST);
     memcpy(evt, data, n);
     g_idle_add(update_ui, (void*)evt);
+    //spsr_free(evt);
     return 0;
 }
 
@@ -352,6 +353,8 @@ int spsr_test_callback(void *data) {
            
     } while (0);
     #endif    
+
     //spsr_free(evt);
+
     return 0;
 }

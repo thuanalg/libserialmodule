@@ -35,6 +35,6 @@
 - **Return Value**: `0` on success, positive value on failure.
 
 ### 4. Reading Data through by callback function
-- **Reading Data**: The sample is at [spsr_test_callback](https://github.com/thuanalg/libserialmodule/tree/main/tests/console/main.c), and **SPSERIAL_MODULE_EVENT**.
-- **Status Check**: Please see error code **SPSERIAL_PORT_ERR**.
-- **Error Handling Improvements**: Please see error code **SERIAL_PORT_ERR**.
+- **Reading Data**: The sample is at [spsr_test_callback](https://github.com/thuanalg/libserialmodule/tree/main/tests/console/main.c), and **SPSR_MODULE_EVENT**.
+- **Status Check**: Please see error code **SPSR_PORT_ERR**.
+- **Error Handling Improvements**: Please see error code **SPSR_PORT_ERR**.

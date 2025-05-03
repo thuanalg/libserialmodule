@@ -13,6 +13,7 @@
 		<2025-Apr-30>
 		<2025-May-01>
 		<2025-May-02>
+		<2025-May-03>
 * Decription:
 *		The (only) main header file to export 5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
 spsr_inst_close, spsr_inst_write].
@@ -95,7 +96,7 @@ spsr_inst_close, spsr_inst_write].
 	{                                                                                                                   \
 		(__obj__) = (__type__ *)malloc(__nn__);                                                                     \
 		if (__obj__) {                                                                                              \
-			spllog(0, "Malloc: 0x%p.", (__obj__));                                                              \
+			spllog(0, "[MEM] Malloc: 0x%p.", (__obj__));                                                              \
 			memset((__obj__), 0, (__nn__));                                                                     \
 		} else {                                                                                                    \
 			spllog(0, "Malloc: error.");                                                                        \
@@ -105,7 +106,7 @@ spsr_inst_close, spsr_inst_write].
 #define spsr_free(__obj__)                                                                                              \
 	{                                                                                                                   \
 		if (__obj__) {                                                                                              \
-			spllog(0, "Free: 0x%p.", (__obj__));                                                                \
+			spllog(0, "[MEM] Free: 0x%p.", (__obj__));                                                                \
 			free(__obj__);                                                                                      \
 			(__obj__) = 0;                                                                                      \
 		}                                                                                                           \
