@@ -190,7 +190,7 @@ main(int argc, char *argv[])
 		ret = spsr_inst_open(&obj);
 
 		p = strtok(NULL, ",");
-		spl_sleep(5);
+		//spl_sleep(5);
 		++i;
 	}
 	/* Create a thread to writing. . */

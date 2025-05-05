@@ -36,6 +36,7 @@ spsr_inst_close, spsr_inst_write].
 #endif
 #endif
 
+#if 0
 #if 1
 #ifndef __ADD_SIMPLE_LOG__
 #define __ADD_SIMPLE_LOG__        
@@ -46,6 +47,7 @@ spsr_inst_close, spsr_inst_write].
 #include <simplelog.h>
 #else
 #define spllog                    spsr_console_log
+#endif
 #endif
 
 #ifndef __SP_FILLE__
