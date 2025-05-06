@@ -801,7 +801,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 	int isoff = 0;
 	int ret = 0;
 	SPSR_GENERIC_ST *buf = 0;
-	int step = sizeof(SPSR_GENERIC_ST) + SPSR_STEP_MEM;
+	int step = sizeof(SPSR_GENERIC_ST) + SPSR_STEP_MEM + 1;
 	spsr_malloc(step, buf, SPSR_GENERIC_ST);
 	buf->total = step;
 	buf->range = buf->total - sizeof(SPSR_GENERIC_ST);
@@ -888,11 +888,33 @@ DWORD WINAPI spsr_thread_operating_routine(
 			wrs = TRUE;
 			spsr_mutex_lock(p->mtx_off);
 			do {
-				if (!p->buff) {
+				if (p->buff->pl < 1) {
+					spllog(0, "No data.");
 					break;
 				}
-				if (p->buff->pl < 1) {
-					break;
+
+				spllog(0, 
+					"(pl, range): (%d, %d)",
+					p->buff->pl, buf->range);
+
+				if(p->buff->pl > buf->range)
+				{
+					int resz = 0;
+					int n = 0;
+					resz = SPL_MAX_AB(
+						p->buff->pl, 
+						SPSR_STEP_MEM);
+					n = buf->total + resz;
+					buf = realloc(buf, n);
+					if(!buf) {
+						spllog(SPL_END_ERROR, 
+							"SPSR_MEM_NULL");
+						ret = SPSR_MEM_NULL;
+						break;
+					}
+
+					buf->total = n;
+					buf->range += resz;
 				}
 				buf->pl = p->buff->pl;
 				memcpy(buf->data, 
