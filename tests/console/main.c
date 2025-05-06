@@ -30,18 +30,18 @@ spsr_test_callback(void *data)
 	char *realdata = 0;
 	int datalen = 0;
 	/* Data is borrowed from background thread, you should make a copy to use and delete. */
-	SP_SERIAL_GENERIC_ST *evt = (SP_SERIAL_GENERIC_ST *)data;
+	SPSR_GENERIC_ST *evt = (SPSR_GENERIC_ST *)data;
 	/*char *realdata: from evt->pc to evt->pl.*/
 	/* SPSR_MODULE_EVENT evt->type */
 	// total = evt->total;
-	total = evt->pl + sizeof(SP_SERIAL_GENERIC_ST) + 1;
-	spsr_malloc(total, evt, SP_SERIAL_GENERIC_ST); /* Clone evt memory. */
+	total = evt->pl + sizeof(SPSR_GENERIC_ST) + 1;
+	spsr_malloc(total, evt, SPSR_GENERIC_ST); /* Clone evt memory. */
 	if (!evt) {
 		exit(1);
 	}
 	memcpy(evt, data, total);
 	evt->total = total;
-	evt->range = total - sizeof(SP_SERIAL_GENERIC_ST);
+	evt->range = total - sizeof(SPSR_GENERIC_ST);
 
 	spllog(SPL_LOG_DEBUG, "total: %d, type: %d", evt->total, evt->type);
 	if (sizeof(void *) == sizeof(unsigned int)) {
@@ -116,7 +116,7 @@ main(int argc, char *argv[])
 {
 	int i = 0;
 	char *p = 0;
-	SP_SERIAL_INPUT_ST obj;
+	SPSR_INPUT_ST obj;
 
 	FILE *fp = 0;
 	int k = 0;

@@ -257,16 +257,16 @@ typedef enum {
 	SPSR_EVENT_PEAK,
 } SPSR_MODULE_EVENT;
 
-typedef struct __SP_SERIAL_GENERIC_ST__ {
+typedef struct __SPSR_GENERIC_ST__ {
 	int total;
 	int range;
 	int pl;
 	int pc;
 	int type;
 	char data[0];
-} SP_SERIAL_GENERIC_ST;
+} SPSR_GENERIC_ST;
 
-typedef struct __SP_SERIAL_INPUT_ST__ {
+typedef struct __SPSR_INPUT_ST__ {
 	int baudrate;
 	char port_name[SPSR_PORT_LEN];
 	SPSR_module_cb cb_evt_fn;
@@ -274,9 +274,9 @@ typedef struct __SP_SERIAL_INPUT_ST__ {
 
 	int t_delay;
 
-} SP_SERIAL_INPUT_ST;
+} SPSR_INPUT_ST;
 
-typedef struct __SP_SERIAL_INFO_ST__ {
+typedef struct __SPSR_INFO_ST__ {
 	int t_delay;
 	char isoff;
 	char is_retry;
@@ -298,18 +298,17 @@ typedef struct __SP_SERIAL_INFO_ST__ {
 #endif
 	SPSR_module_cb cb_evt_fn;
 	void *cb_obj;
-	SP_SERIAL_GENERIC_ST *buff;
+	SPSR_GENERIC_ST *buff;
 
-} SP_SERIAL_INFO_ST;
+} SPSR_INFO_ST;
 
 typedef struct __SPSR_ARR_LIST_LINED__ {
-	SP_SERIAL_INFO_ST *item;
+	SPSR_INFO_ST *item;
 	/* struct __SPSR_ARR_LIST_LINED__* prev; */
 	struct __SPSR_ARR_LIST_LINED__ *next;
 } SPSR_ARR_LIST_LINED;
 
 typedef struct __SPSR_ROOT_TYPE__ {
-	// int n;
 	int count;
 	void *mutex;
 	void *sem;
@@ -318,7 +317,7 @@ typedef struct __SPSR_ROOT_TYPE__ {
 #else
 
 	void *sem_spsr; /* Check off.*/
-	SP_SERIAL_GENERIC_ST *cmd_buff; /* Command list .*/
+	SPSR_GENERIC_ST *cmd_buff; /* Command list .*/
 #ifndef __SPSR_EPOLL__
 	char sem_key[SPSR_KEY_LEN]; /*It need to wait for UNIX_LINUX --->>> Mach.*/
 #endif
@@ -338,9 +337,9 @@ DLL_API_SERIAL_MODULE int
 spsr_module_finish();
 
 /*Open a COM port for using. Thread-safe.*/
-/*SP_SERIAL_INPUT_ST: port_name, baudrate, callback, ...*/
+/*SPSR_INPUT_ST: port_name, baudrate, callback, ...*/
 DLL_API_SERIAL_MODULE int
-spsr_inst_open(SP_SERIAL_INPUT_ST *input);
+spsr_inst_open(SPSR_INPUT_ST *input);
 
 /*Close the COM port after using. Thread-safe.*/
 DLL_API_SERIAL_MODULE int

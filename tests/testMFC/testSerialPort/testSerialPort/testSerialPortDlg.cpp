@@ -21,12 +21,12 @@ static int callback_to_GUI(void* obj) {
 		return 0;
 	}
 	void* hwm = 0;
-	SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*) obj;
+	SPSR_GENERIC_ST* evt = (SPSR_GENERIC_ST*) obj;
 	int n = evt->total;
 	//if (evt->type != SPSR_EVENT_READ_BUF) {
 	//	return 0;
 	//}
-	spsr_malloc(n, evt, SP_SERIAL_GENERIC_ST);
+	spsr_malloc(n, evt, SPSR_GENERIC_ST);
 	if (!evt) {
 		return 0;
 	}
@@ -215,10 +215,10 @@ HCURSOR CtestSerialPortDlg::OnQueryDragIcon()
 void CtestSerialPortDlg::OnBnClickedOk()
 {
 	int ret = 0;
-	SP_SERIAL_INFO_ST* item = 0;
+	SPSR_INFO_ST* item = 0;
 
 	while (m_listPort.size() > 0) {
-		item = (SP_SERIAL_INFO_ST*)m_listPort.front();
+		item = (SPSR_INFO_ST*)m_listPort.front();
 		spsr_inst_close(item->port_name);
 		m_listPort.pop_front();
 	}
@@ -233,10 +233,10 @@ void CtestSerialPortDlg::OnBnClickedOk()
 void CtestSerialPortDlg::OnBnClickedCancel()
 {
 	int ret = 0;
-	SP_SERIAL_INFO_ST* item = 0;
+	SPSR_INFO_ST* item = 0;
 
 	while (m_listPort.size() > 0) {
-		item = (SP_SERIAL_INFO_ST*)m_listPort.front();
+		item = (SPSR_INFO_ST*)m_listPort.front();
 		spsr_inst_close(item->port_name);
 		m_listPort.pop_front();
 	}
@@ -268,7 +268,7 @@ void CtestSerialPortDlg::OnBnClickedButtonmsg()
 	char portport[64] = { 0 };
 	char data[1024] = { 0 };
 	SPSR_ARR_LIST_LINED* objId = 0;
-	SP_SERIAL_INFO_ST* item = 0;
+	SPSR_INFO_ST* item = 0;
 	int comid = 0;
 	int i = 0;
 	std::list<void *>::iterator it = m_listPort.begin();
@@ -293,7 +293,7 @@ void CtestSerialPortDlg::OnBnClickedButtonmsg()
 	//for (i = 0; i < n; ++i) {
 	//	std::advance(it, i);
 	//	pcomid = *it;
-	//	item = (SP_SERIAL_INFO_ST*)pcomid;
+	//	item = (SPSR_INFO_ST*)pcomid;
 	//	if (strcmp(portport, item->port_name) == 0) {
 	//		spserial_inst_write_to_port(item, data, strlen(data));
 	//	}
@@ -346,8 +346,8 @@ void CtestSerialPortDlg::OnBnClickedButtonAdd()
 	for (i = 0; i < n; ++i) {
 		port[i] = (char)txt[i];
 	}
-	SP_SERIAL_INPUT_ST obj;
-	SP_SERIAL_INFO_ST* output = 0;;
+	SPSR_INPUT_ST obj;
+	SPSR_INFO_ST* output = 0;;
 	FILE* fp = 0;
 	int k = 0;
 
@@ -391,7 +391,7 @@ void CtestSerialPortDlg::OnBnClickedButtonRemove()
 
 
 LRESULT CtestSerialPortDlg::OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam) {
-	SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*)lParam;
+	SPSR_GENERIC_ST* evt = (SPSR_GENERIC_ST*)lParam;
 	char* p = evt->data + evt->pc;
 	if (evt->type == SPSR_EVENT_READ_BUF) {
 		

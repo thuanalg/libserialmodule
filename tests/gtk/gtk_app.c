@@ -25,10 +25,10 @@ void *arr_obj[10];
 void on_button_clicked_00(GtkWidget *widget, gpointer data) {
     int i = 0;
     int ret = 0;
-    SP_SERIAL_INPUT_ST *obj = 0;
+    SPSR_INPUT_ST *obj = 0;
     const char *portname = gtk_entry_get_text(GTK_ENTRY(entries[0])); 
     spllog(0, "Button %s clicked, text: %s!\n", (char *)data, portname);
-    spsr_malloc(sizeof(SP_SERIAL_INPUT_ST), obj, SP_SERIAL_INPUT_ST);
+    spsr_malloc(sizeof(SPSR_INPUT_ST), obj, SPSR_INPUT_ST);
     if(!obj) {
         exit(1);
     }
@@ -191,9 +191,9 @@ int main(int argc, char *argv[]) {
 gboolean update_ui(void* data) {
     //gtk_label_set_text(GTK_LABEL(label), "Updated from worker thread!");
     //Run in main thread
-    SP_SERIAL_GENERIC_ST* evt = 0;
+    SPSR_GENERIC_ST* evt = 0;
     void *obj = 0;
-    evt = (SP_SERIAL_GENERIC_ST *) data;
+    evt = (SPSR_GENERIC_ST *) data;
     char *realdata = 0;
     int datalen = 0;
     char text[GTK_TEST_BUF];
@@ -265,11 +265,11 @@ gboolean update_ui(void* data) {
 int spsr_call_back_read(void *data) {
     //Access main thread
     int n = 0;
-    SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST *)data;
+    SPSR_GENERIC_ST* evt = (SPSR_GENERIC_ST *)data;
     n = evt->total;
     spllog(SPL_LOG_DEBUG, "evt->total: %d, evt->pc: %d, evt->pl: %d, data: %s", 
         evt->total,  evt->pc, evt->pl, evt->data + evt->pc);
-    spsr_malloc(n, evt, SP_SERIAL_GENERIC_ST);
+    spsr_malloc(n, evt, SPSR_GENERIC_ST);
     memcpy(evt, data, n);
     g_idle_add(update_ui, (void*)evt);
     //spsr_free(evt);
@@ -288,11 +288,11 @@ int spsr_test_callback(void *data) {
     char* realdata = 0;
     int datalen = 0;
     /* Data is borrowed from background thread, you should make a copy to use and delete. */
-    SP_SERIAL_GENERIC_ST* evt = (SP_SERIAL_GENERIC_ST*)data;
+    SPSR_GENERIC_ST* evt = (SPSR_GENERIC_ST*)data;
     /*char *realdata: from evt->pc to evt->pl.*/
     /* SPSR_MODULE_EVENT evt->type */
     total = evt->total;
-    spsr_malloc(total, evt, SP_SERIAL_GENERIC_ST); /* Clone evt memory. */
+    spsr_malloc(total, evt, SPSR_GENERIC_ST); /* Clone evt memory. */
     if (!evt) {
         exit(1);
     }

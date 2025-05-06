@@ -10,10 +10,10 @@
 - **Return Value**: `0` on success, positive value on failure.
 
 ### 2. Open and Close Serial Ports
-#### `int spsr_inst_open(SP_SERIAL_INPUT_ST* input);`
+#### `int spsr_inst_open(SPSR_INPUT_ST* input);`
 - **Description**: Opens a COM/serial port.
 - **Parameters**:
-  - `SP_SERIAL_INPUT_ST* input`: Structure containing port name, baud rate, callback function, callback object, delayed time, and other settings.
+  - `SPSR_INPUT_ST* input`: Structure containing port name, baud rate, callback function, callback object, delayed time, and other settings.
 - **Thread-safety**: Yes.
 - **Return Value**: `0` on success, positive value on failure.
 
