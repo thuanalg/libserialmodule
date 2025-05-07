@@ -13,4 +13,4 @@
 - Same with Linux.
 
 ### Contact:
-- Mail<mailto: nguyenthaithuanalg@gmail.com>
+- [Email Me](nguyenthaithuanalg@gmail.com)
