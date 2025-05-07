@@ -1837,9 +1837,13 @@ void *spsr_init_cartridge_routine(void *obj)
 	if (epollfd > -1) {
 	}
 #endif
+	if(ret) {
+		spllog(SPL_LOG_ERROR, 
+			"ret: %d", ret);
+	}
 	spsr_free(cart_buff);
 	spsr_rel_sem(t->sem_spsr);
-
+	
 	return 0;
 }
 
