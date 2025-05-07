@@ -543,22 +543,22 @@ spsr_sem_create(char *name_key)
 void *
 spsr_mutex_create()
 {
-	void *ret = 0;
+	void *obj = 0;
 	do {
 #ifndef UNIX_LINUX
-		ret = CreateMutexA(0, 0, 0);
+		obj = CreateMutexA(0, 0, 0);
 #else
 		/*https://linux.die.net/man/3/pthread_mutex_init*/
-		spsr_malloc(sizeof(pthread_mutex_t), ret, void);
-		if (!ret) {
+		spsr_malloc(sizeof(pthread_mutex_t), obj, void);
+		if (!obj) {
 			break;
 		}
-		memset(ret, 0, sizeof(pthread_mutex_t));
-		pthread_mutex_init((pthread_mutex_t *)ret, 0);
+		memset(obj, 0, sizeof(pthread_mutex_t));
+		pthread_mutex_init((pthread_mutex_t *)obj, 0);
 #endif
 	} while (0);
-	spllog(0, "Create: 0x%p.", ret);
-	return ret;
+	spllog(0, "Create: 0x%p.", obj);
+	return obj;
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
