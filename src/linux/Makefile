@@ -13,8 +13,8 @@ INC=-I../ -I../../include
 src_console=../../tests/console/main.c
 src_gtk=../../tests/gtk/gtk_app.c
 #CFLAGS=-ansi
-#CFLAGS=-std=gnu89 -D UNIX_LINUX -D__SPSR_EPOLL__ -Wunused-variable -Wunused-function -DSPSR_SHOW_CONSOLE -Werror=format
-CFLAGS=-std=gnu89 -D UNIX_LINUX  -Wunused-variable -Wunused-function -DSPSR_SHOW_CONSOLE -Werror=format
+CFLAGS=-std=gnu89 -D UNIX_LINUX -D__SPSR_EPOLL__ -Wunused-variable -Wunused-function -DSPSR_SHOW_CONSOLE -Werror=format
+#CFLAGS=-std=gnu89 -D UNIX_LINUX  -Wunused-variable -Wunused-function -DSPSR_SHOW_CONSOLE -Werror=format
 #CPPFLAGS=-std=c++98 
 #CPPFLAGS=-std=c++98 -D UNIX_LINUX -D __UNIX_LINUX_CPP11_AND_NEWERS
 CPPFLAGS=-D UNIX_LINUX -D __UNIX_LINUX_CPP11_AND_NEWERS__ -DSPSR_SHOW_CONSOLE
