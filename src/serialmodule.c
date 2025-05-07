@@ -231,6 +231,8 @@ static int spsr_read_fd(int fd,
 static SPSR_ROOT_TYPE spsr_root_node;
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+static int spsr_resize_obj(
+	int sz, SPSR_GENERIC_ST **obj);
 static int spsr_clear_all();
 static int spsr_verify_info(
 	SPSR_INPUT_ST *obj);
@@ -801,22 +803,23 @@ DWORD WINAPI spsr_thread_operating_routine(
 	int isoff = 0;
 	int ret = 0;
 	SPSR_GENERIC_ST *buf = 0;
-	int step = sizeof(SPSR_GENERIC_ST) + SPSR_STEP_MEM + 1;
-	spsr_malloc(step, buf, SPSR_GENERIC_ST);
-	buf->total = step;
-	buf->range = buf->total - sizeof(SPSR_GENERIC_ST);
 	DWORD bytesRead = 0;
 	DWORD bytesWrite = 0;
 	SPSR_GENERIC_ST *ecb_buf = 0;
 	int portlen = 0;
 	int evtcode = 0;
 	char *tbuffer = 0;
-	char evtbytes[SPSR_EVT_CB_CART_LEN] = {0};
+	char evtbytes[SPSR_EVT_CB_CART_LEN] = {0};	
+	int step = sizeof(SPSR_GENERIC_ST) + SPSR_STEP_MEM + 1;
+
+
 	ecb_buf = (SPSR_GENERIC_ST *)evtbytes;
 	ecb_buf->total = SPSR_EVT_CB_CART_LEN;
 	ecb_buf->range = SPSR_BUFFER_SIZE;
 	ecb_buf->pc = ecb_buf->pl = sizeof(void *);
 	tbuffer = ecb_buf->data + sizeof(void *);
+
+	spsr_resize_obj(step, &buf);
 
 	while (1) {
 		DWORD dwError = 0;
@@ -826,10 +829,11 @@ DWORD WINAPI spsr_thread_operating_routine(
 		BOOL rs = FALSE;
 		BOOL wrs = FALSE;
 		int count = 0, cbInQue = 0;
-
 		COMSTAT csta = {0};
 		
 		flags = EV_RXCHAR | EV_BREAK | EV_RXFLAG | EV_DSR;
+
+
 
 		if (!buf) {
 			spllog(SPL_LOG_ERROR, "buf NULL");
@@ -888,6 +892,12 @@ DWORD WINAPI spsr_thread_operating_routine(
 			wrs = TRUE;
 			spsr_mutex_lock(p->mtx_off);
 			do {
+
+				if (!p->buff) {
+					spllog(0, "No data.");
+					break;
+				}	
+
 				if (p->buff->pl < 1) {
 					spllog(0, "No data.");
 					break;
@@ -899,22 +909,12 @@ DWORD WINAPI spsr_thread_operating_routine(
 
 				if(p->buff->pl > buf->range)
 				{
-					int resz = 0;
-					int n = 0;
-					resz = SPL_MAX_AB(
+					int rz = 0;
+					rz = SPL_MAX_AB(
 						p->buff->pl, 
 						SPSR_STEP_MEM);
-					n = buf->total + resz;
-					buf = realloc(buf, n);
-					if(!buf) {
-						spllog(SPL_END_ERROR, 
-							"SPSR_MEM_NULL");
-						ret = SPSR_MEM_NULL;
-						break;
-					}
-
-					buf->total = n;
-					buf->range += resz;
+					ret = spsr_resize_obj(
+						rz, &buf);
 				}
 				buf->pl = p->buff->pl;
 				memcpy(buf->data, 
@@ -1450,59 +1450,65 @@ int spsr_inst_write(
 		item = node->item;
 		spsr_mutex_lock(item->mtx_off);
 		do {
+			int total = 0;
+			char *tmp = 0;
+			int range = 0;
+			int pl = 0;
+
 			if (!item->buff)
 			{
 				int step = 0;
-				step = SPSR_MAX_AB(sz, SPSR_STEP_MEM);
+				step = SPSR_MAX_AB(
+					sz, SPSR_STEP_MEM);
 				step += sizeof(SPSR_GENERIC_ST);
-				spsr_malloc(step, 
-					item->buff, SPSR_GENERIC_ST);
-				if (!item->buff) {
-					ret = SPSR_MALLOC_ERROR;
+				ret = spsr_resize_obj(
+					step, &(item->buff));
+
+				if(ret) {
+					spllog(SPL_LOG_ERROR, 
+						"spsr_resize_obj.");					
 					break;
 				}
-				item->buff->total = step;
-				item->buff->range = 
-					item->buff->total - sizeof(SPSR_GENERIC_ST);
-				memcpy(item->buff->data + item->buff->pl, data, sz);
-				item->buff->pl += sz;
+				tmp = item->buff->data;
+				memcpy(tmp, data, sz);
+				item->buff->pl = sz;
+
 				break;
 			}
-			if (item->buff->range > item->buff->pl + sz) 
+			range = item->buff->range;
+			pl = item->buff->pl;
+			if (range > pl + sz) 
 			{
-				memcpy(
-					item->buff->data + item->buff->pl, 
-					data, sz);
+				tmp = item->buff->data;
+				tmp += item->buff->pl;				
+				memcpy(tmp , data, sz);
 				item->buff->pl += sz;
 				break;
-			} else {
-				int range = 0;
-				int total = 0;
-				int addition = 0;
-				SPSR_GENERIC_ST *tmp = 0;
-				addition = SPSR_MAX_AB(sz, SPSR_STEP_MEM);
-				range = item->buff->range;
-				total = item->buff->total;
-				tmp = (SPSR_GENERIC_ST *)realloc(
-					item->buff, total + addition);
-				if (!tmp) {
-					ret = SPSR_REALLOC_ERROR;
-					break;
-				}
-				item->buff = tmp;
-				item->buff->range = addition + range;
-				item->buff->total = addition + total;
+			} 
 
-				memcpy(
-					item->buff->data + item->buff->pl, 
-					data, sz);
-				item->buff->pl += sz;
+			total = item->buff->total;
+			total += SPSR_MAX_AB(
+				sz, SPSR_STEP_MEM);
+			ret = spsr_resize_obj(
+				total, &(item->buff));
+			if(ret) {
+				spllog(SPL_LOG_ERROR, 
+					"spsr_resize_obj.");					
 				break;
 			}
-			break;
-		} while (0);
-		spsr_mutex_unlock(item->mtx_off);
+			tmp = item->buff->data;
+			tmp += item->buff->pl;
+			memcpy(tmp, data, sz);
+			item->buff->pl += sz;
 
+			break;
+
+		} 
+		while (0);
+		spsr_mutex_unlock(item->mtx_off);
+		if(ret) {
+			break;
+		}
 		SetEvent(item->hEvent);
 #else
 		SPSR_ROOT_TYPE *t = &spsr_root_node;
@@ -2575,9 +2581,10 @@ int spsr_send_cmd(
 	int nsize = 0;
 	int *pend = 0;
 	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	SPSR_GENERIC_ST *obj = 0;
 	do {
 		if (cmd == SPSR_CMD_ADD) {
-			SPSR_GENERIC_ST *obj = 0;
+			
 			nsize = sizeof(SPSR_GENERIC_ST);
 
 			if (t->cmd_buff->range > 
@@ -2602,7 +2609,6 @@ int spsr_send_cmd(
 			int lport = 0;
 			int len = strlen(portname);
 
-			SPSR_GENERIC_ST *obj = 0;
 			lport = len + 1;
 			nsize = sizeof(SPSR_GENERIC_ST) + lport;
 			spllog(0, 
@@ -2626,30 +2632,35 @@ int spsr_send_cmd(
 		}
 		if (cmd == SPSR_CMD_WRITE) {
 			int lport = 0;
+			int range  = 0;
+			int pl = 0;
+			char *tmp = 0;
 			int len = strlen(portname);
 
-			SPSR_GENERIC_ST *obj = 0;
+			
 			lport = (len + 1) + datasz;
 			nsize = sizeof(SPSR_GENERIC_ST) + lport;
 			spllog(0, 
 				"SPSR_CMD_WRITE, nsize: %d, "
 				"portname: %s", nsize, portname);
-			if (t->cmd_buff->range < t->cmd_buff->pl + nsize) {
+			range = t->cmd_buff->range;
+			pl = t->cmd_buff->pl;
+			if (range < pl + nsize) 
+			{
 				int total = 0;
 				int adding = 2 * nsize;
+
 				total = t->cmd_buff->total;
 				total += adding;
-				t->cmd_buff = realloc(t->cmd_buff, total);
-				if (!t->cmd_buff) {
-					spllog(SPL_LOG_ERROR, "SPSR_MEM_NULL");
-					sleep(1);
-					exit(1);
+				ret = spsr_resize_obj(
+					total, &t->cmd_buff);
+				if(ret) {
+					break;
 				}
-				t->cmd_buff->total += adding;
-				t->cmd_buff->range += adding;
 			}
-			obj = (SPSR_GENERIC_ST *)
-				(t->cmd_buff->data + t->cmd_buff->pl);
+			tmp = t->cmd_buff->data;
+			tmp += t->cmd_buff->pl;
+			obj = (SPSR_GENERIC_ST *)tmp;;
 			memset(obj, 0, nsize);
 			obj->total = nsize;
 			obj->type = cmd;
@@ -2657,11 +2668,16 @@ int spsr_send_cmd(
 			memcpy(obj->data, portname, len);
 			obj->data[len] = 0;
 			obj->pc = len + 1;
-			memcpy(obj->data + obj->pc, (char *)data, datasz);
+			memcpy(obj->data + obj->pc, 
+				(char *)data, datasz);
 			obj->pl = lport;
 			t->cmd_buff->pl += nsize;
-			pend = (int *)(t->cmd_buff->data + t->cmd_buff->pl);
+
+			tmp = t->cmd_buff->data;
+			tmp += t->cmd_buff->pl;			
+			pend = (int *)tmp;
 			*pend = 0;
+
 			break;
 		}
 	} while (0);
@@ -3185,35 +3201,32 @@ int spsr_read_fd(
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
 static int spsr_check_resz( 
 	int lenp, 
 	SPSR_GENERIC_ST **pcart_buff) 
 {
+
 	int ret = 0;
-	int add = 0;
-	int total = 0;	
-	if(lenp <= (*pcart_buff)->range)
-	{
+
+	if(lenp <= (*pcart_buff)->range) {
 		return ret;
 	}
+
 	do {
+
+		int add = 0;
+		int total = 0;	
+
 		add = lenp - (*pcart_buff)->range + 1;
 		total = (*pcart_buff)->total + add;
+		ret = spsr_resize_obj(total, pcart_buff);
 
-		(*pcart_buff) = 
-			realloc((*pcart_buff), total);
-
-		if(!(*pcart_buff)) {
-			ret = SPSR_MEM_NULL;
-			spllog(SPL_LOG_ERROR, 
-				"SPSR_MEM_NULL");
-			break;
-		}
-		(*pcart_buff)->total += add;
-		(*pcart_buff)->range += add;
 	} while(0);
+
 	return ret;
 }
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef __SPSR_EPOLL__
@@ -3290,9 +3303,7 @@ spsr_ctrl_sock(
 				break;
 			}
 			lenp = 0;
-			#if 0
-			spsr_malloc(SPSR_BUFFER_SIZE, p, char);
-			#endif
+
 			p = 0;
 			(*pcart_buff)->pl = 0;
 			spsr_mutex_lock(t->mutex);
@@ -3309,29 +3320,9 @@ spsr_ctrl_sock(
 				if(!lenp) {
 					break;
 				}
-				#if 1
+
 				spsr_check_resz(lenp, pcart_buff);
-				#else
-				if (lenp > (*pcart_buff)->range) 
-				{
-					int add = 0;
-					int total = 0;
-					add = lenp - (*pcart_buff)->range + 1;
-					total = (*pcart_buff)->total + add;
 
-					(*pcart_buff) = 
-						realloc((*pcart_buff), total);
-
-					if(!(*pcart_buff)) {
-						ret = SPSR_MEM_NULL;
-						spllog(SPL_LOG_ERROR, 
-							"SPSR_MEM_NULL");
-						break;
-					}
-					(*pcart_buff)->total += add;
-					(*pcart_buff)->range += add;
-				}
-				#endif
 				p = (*pcart_buff)->data;
 				memcpy(p, t->cmd_buff->data, lenp);
 				(*pcart_buff)->pl = lenp;
@@ -3355,9 +3346,7 @@ spsr_ctrl_sock(
 			spllog(0, "LINUX EPOLL --->>> "
 				"Size of buffer of command : %d", lenp);
 #endif
-			#if 0
-			spsr_free(p);
-			#endif
+
 		}
 	} while (0);
 
@@ -3474,7 +3463,60 @@ int spsr_invoke_cb(
 	return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+int spsr_resize_obj(
+	int sz, SPSR_GENERIC_ST **obj) 
+{
+	int ret = 0;
+	SPSR_GENERIC_ST *p = 0;
+	int range = 0;
+	int total = 0;
+	int delta = 0;
 
+	do {
+		if(sz < (2 * sizeof(SPSR_GENERIC_ST))) 
+		{
+			ret = SPSR_MINI_SIZE;
+			spllog(SPL_LOG_ERROR, 
+				"SPSR_MINI_SIZE");			
+			break;
+		}
+		if(!obj) {
+			ret = SPSR_OBJ_NULL;
+			spllog(SPL_LOG_ERROR, 
+				"SPSR_OBJ_NULL");
+			break;
+		}
+		p = *obj;
+		if(p) {
+			total = p->total;
+			range = p->range;
+			p = (SPSR_GENERIC_ST*)
+				realloc(p, (sz + 1));
+		} else {
+			spsr_malloc(
+				(sz + 1), p, 
+				SPSR_GENERIC_ST);
+		}
+		
+		if(!p) {
+			ret = SPSR_MEM_NULL;
+			spllog(SPL_LOG_ERROR, 
+				"SPSR_MEM_NULL");			
+			break;
+		}
+		delta = sz - total;
+		p->total += delta;
+
+		p->range += range ? delta 
+			: (sz - sizeof(SPSR_GENERIC_ST));
+
+		*obj = p;
+	}
+	while(0);
+
+	return ret;
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #else
 #endif
