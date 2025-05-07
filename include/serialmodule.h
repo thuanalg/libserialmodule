@@ -25,7 +25,7 @@ spsr_inst_close, spsr_inst_write].
 #include <stdlib.h>
 #include <simplelog.h>
 
-#if 0
+#if 1
 #ifndef UNIX_LINUX
 #define UNIX_LINUX                
 #endif
