@@ -40,4 +40,4 @@ Contributions are welcome! Feel free to submit issues or pull requests to enhanc
    - My ex-colleagues: Lê Duy Cường, Bùi Khánh Duy, Nguyễn Công Đức , ... .
 
 ### Contact:
-- [Email Me](mailto:nguyenthaithuanalg@gmail.com)
+- [Email](mailto:nguyenthaithuanalg@gmail.com)
