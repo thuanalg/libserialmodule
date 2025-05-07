@@ -473,10 +473,17 @@ int spsr_module_openport(void *obj)
 void *
 spsr_sem_create(char *name_key)
 {
-	void *ret = 0;
+	void *obj = 0;
 	do {
 #ifndef UNIX_LINUX
-		ret = CreateSemaphoreA(0, 0, 1, 0);
+		obj = CreateSemaphoreA(0, 0, 1, 0);
+		if(!obj) {
+			DWORD dwError = GetLastError();
+			spllog(SPL_LOG_ERROR, 
+				"CreateSemaphoreA, %d",
+				(int)dwError);
+			break;
+		}
 #else
 #ifndef __SPSR_EPOLL__
 		int retry = 0;
@@ -484,15 +491,15 @@ spsr_sem_create(char *name_key)
 
 		spsr_fmt_name(name_key, name, SPSR_KEY_LEN * 2);
 		do {
-			ret = sem_open(
+			obj = sem_open(
 				name, 
 				SPSR_LOG_UNIX_CREATE_MODE, 
 				SPSR_LOG_UNIX__SHARED_MODE, 
 				1);
-			spllog(0, "sem_open ret: 0x%p", ret);
-			if (ret == SEM_FAILED) {
+			spllog(0, "sem_open ret: 0x%p", obj);
+			if (obj == SEM_FAILED) {
 				int err = 0;
-				ret = 0;
+				obj = 0;
 				if (retry) {
 					spllog(SPL_LOG_ERROR, 
 						"mach sem_open, errno: "
@@ -525,17 +532,17 @@ spsr_sem_create(char *name_key)
 #else
 
 		/*https://linux.die.net/man/3/sem_init*/
-		spsr_malloc(sizeof(sem_t), ret, void);
-		if (!ret) {
+		spsr_malloc(sizeof(sem_t), obj, void);
+		if (!obj) {
 			break;
 		}
-		memset(ret, 0, sizeof(sem_t));
-		sem_init((sem_t *)ret, 0, 1);
+		memset(obj, 0, sizeof(sem_t));
+		sem_init((sem_t *)obj, 0, 1);
 #endif
 #endif
 	} while (0);
-	spllog(0, "Create: 0x%p.", ret);
-	return ret;
+	spllog(0, "Create: 0x%p.", obj);
+	return obj;
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -543,33 +550,33 @@ spsr_sem_create(char *name_key)
 void *
 spsr_mutex_create()
 {
-	void *ret = 0;
+	void *obj = 0;
 	do {
 #ifndef UNIX_LINUX
-		ret = CreateMutexA(0, 0, 0);
+		obj = CreateMutexA(0, 0, 0);
 #else
 		/*https://linux.die.net/man/3/pthread_mutex_init*/
-		spsr_malloc(sizeof(pthread_mutex_t), ret, void);
-		if (!ret) {
+		spsr_malloc(sizeof(pthread_mutex_t), obj, void);
+		if (!obj) {
 			break;
 		}
-		memset(ret, 0, sizeof(pthread_mutex_t));
-		pthread_mutex_init((pthread_mutex_t *)ret, 0);
+		memset(obj, 0, sizeof(pthread_mutex_t));
+		pthread_mutex_init((pthread_mutex_t *)obj, 0);
 #endif
 	} while (0);
-	spllog(0, "Create: 0x%p.", ret);
-	return ret;
+	spllog(0, "Create: 0x%p.", obj);
+	return obj;
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int spsr_module_isoff(SPSR_INFO_ST *obj)
 {
-	int ret = 0;
+	int rs = 0;
 	spsr_mutex_lock(obj->mtx_off);
-		ret = obj->isoff;
+		rs = obj->isoff;
 	spsr_mutex_unlock(obj->mtx_off);
-	return ret;
+	return rs;
 }
 
 
@@ -1221,6 +1228,7 @@ int spsr_rel_sem(void *sem)
 	int ret = 0;
 #ifndef UNIX_LINUX
 #else
+	int err = 0;
 #endif
 	do {
 		if (!sem) {
@@ -1239,11 +1247,11 @@ int spsr_rel_sem(void *sem)
 		}		
 #else
 
-		ret = sem_post((sem_t *)sem);
-		if (ret) {
-			spllog(SPL_LOG_ERROR, "sem_post: ret: %d, "
+		err = sem_post((sem_t *)sem);
+		if (err) {
+			spllog(SPL_LOG_ERROR, "sem_post: err: %d, "
 				"errno: %d, text: %s, sem: 0x%p.", 
-				ret, errno,
+				err, errno,
 			    strerror(errno), sem);
 			ret = SPSR_PX_RL_SEM;
 		}
@@ -1256,6 +1264,10 @@ int
 spsr_wait_sem(void *sem)
 {
 	int ret = 0;
+#ifndef UNIX_LINUX
+#else
+	int err = 0;
+#endif
 	do {
 		if (!sem) {
 			ret = SPSR_SEM_NULL_ERROR;
@@ -1273,12 +1285,11 @@ spsr_wait_sem(void *sem)
 			ret = SPSR_WIN32_WAIT_SEM;
 		}
 #else
-		ret = sem_wait((sem_t *)sem);
-		if (ret) {
-			spllog(SPL_LOG_ERROR, "sem_post: ret: %d, "
+		err = sem_wait((sem_t *)sem);
+		if (err) {
+			spllog(SPL_LOG_ERROR, "sem_post: err: %d, "
 				"errno: %d, text: %s, sem: 0x%p.", 
-				ret, errno,
-			    strerror(errno), sem);
+				err, errno, strerror(errno), sem);
 			ret = SPSR_PX_WAIT_SEM;
 		}		
 #endif
@@ -1515,7 +1526,8 @@ int spsr_inst_write(
 		int isExisted = 0;
 		spsr_mutex_lock(t->mutex);
 		do {
-			ret = spsr_is_existed(portname, &isExisted);
+			ret = spsr_is_existed(
+				portname, &isExisted);
 			if(ret) {
 				break;
 			}
@@ -1562,6 +1574,7 @@ void *spsr_init_cartridge_routine(void *obj)
 	int sockfd = 0;
 	int isoff = 0;
 	int flags = 0;
+	int err = 0;
 
 	struct sockaddr_in cartridge_addr = {0};
 	int k = 0;
@@ -1641,12 +1654,12 @@ void *spsr_init_cartridge_routine(void *obj)
 			ret = SPSR_FCNTL_SOCK;
 			break;
 		}
-		ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
-		if (ret == -1) {
+		err = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+		if (err == -1) {
 
 			spllog(SPL_LOG_ERROR, 
-				"fcntl: ret: %d, errno: %d, "
-				"text: %s.", ret, errno, 
+				"fcntl: err: %d, errno: %d, "
+				"text: %s.", err, errno, 
 				strerror(errno));
 
 			ret = SPSR_FCNTL_SOCK;
@@ -1654,13 +1667,13 @@ void *spsr_init_cartridge_routine(void *obj)
 		}
 
 		/* Bind the socket with the server address */
-		ret = bind(sockfd, 
+		err = bind(sockfd, 
 			(const struct sockaddr *)&cartridge_addr, 
 			sizeof(cartridge_addr));
-		if (ret < 0) {
+		if (err < 0) {
 			spllog(SPL_LOG_ERROR, 
-				"bind failed: ret: %d, errno: %d, "
-				"text: %s.", ret, 
+				"bind failed: err: %d, errno: %d, "
+				"text: %s.", err, 
 				errno, strerror(errno));
 			ret = SPSR_BIND_SOCK;
 			break;
@@ -1690,17 +1703,17 @@ void *spsr_init_cartridge_routine(void *obj)
 				}
 				chk_delay = 0;
 
-				ret = poll(fds, mx_number, 
+				err = poll(fds, mx_number, 
 					60 * 1000);
 
 				spllog(SPL_LOG_DEBUG, 
 					"poll,  mx_number: %d", 
 					mx_number);
 
-				if (ret == -1) {
+				if (err == -1) {
 					continue;
 				}
-				if (ret == 0) {
+				if (err == 0) {
 					continue;
 				}
 				for (k = 0; k < mx_number; ++k) {
@@ -1747,14 +1760,14 @@ void *spsr_init_cartridge_routine(void *obj)
 			event.events = EPOLLIN | EPOLLET;
 			event.data.fd = sockfd;
 
-			ret = epoll_ctl(epollfd, 
+			err = epoll_ctl(epollfd, 
 				EPOLL_CTL_ADD, sockfd, &event);
-			if (ret < 0) {
+			if (err < 0) {
 				spllog(
 				    SPL_LOG_ERROR, 
-					"epoll_ctl, ret: %d, errno: %d, "
+					"epoll_ctl, err: %d, errno: %d, "
 					"text: %s.", 
-					ret, errno, strerror(errno));
+					err, errno, strerror(errno));
 				ret = SPSR_EPOLL_CTL;
 				break;
 			}
@@ -1806,12 +1819,12 @@ void *spsr_init_cartridge_routine(void *obj)
 	spsr_mutex_unlock(t->mutex);
 	spsr_clear_hash();
 	if (sockfd > 0) {
-		ret = close(sockfd);
-		if (ret) {
+		err = close(sockfd);
+		if (err) {
 			spllog(SPL_LOG_ERROR, 
-				"close: ret: %d, "
+				"close: err: %d, "
 				"errno: %d, text: %s.", 
-				ret, errno, strerror(errno));
+				err, errno, strerror(errno));
 			ret = SPSR_CLOSE_SOCK;
 		} else {
 			spllog(SPL_LOG_DEBUG, 
@@ -1824,9 +1837,13 @@ void *spsr_init_cartridge_routine(void *obj)
 	if (epollfd > -1) {
 	}
 #endif
+	if(ret) {
+		spllog(SPL_LOG_ERROR, 
+			"ret: %d", ret);
+	}
 	spsr_free(cart_buff);
 	spsr_rel_sem(t->sem_spsr);
-
+	
 	return 0;
 }
 

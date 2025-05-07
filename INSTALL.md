@@ -8,4 +8,4 @@
 3. Mac OSX : **cmake .. -DUNIX_LINUX=1 -DMACOSX=1 -DHEADER_SIMPLELOG=... -DLIB_PATH_SIMPLELOG=...**.
 4. Mac OSX/Linux : **make; sudo make install**.
 5. Note configuring file [simplelog.cfg](https://github.com/thuanalg/libserialmodule/blob/main/src/simplelog.cfg).  
-6. Please contact me <nguyenthaithuanalg@gmail.com> if you need a help.  
+6. Please contact me [Email](mailto:nguyenthaithuanalg@gmail.com) if you need a help.  
