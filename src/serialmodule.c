@@ -565,11 +565,11 @@ spsr_mutex_create()
 
 int spsr_module_isoff(SPSR_INFO_ST *obj)
 {
-	int ret = 0;
+	int rs = 0;
 	spsr_mutex_lock(obj->mtx_off);
-		ret = obj->isoff;
+		rs = obj->isoff;
 	spsr_mutex_unlock(obj->mtx_off);
-	return ret;
+	return rs;
 }
 
 
@@ -1221,6 +1221,7 @@ int spsr_rel_sem(void *sem)
 	int ret = 0;
 #ifndef UNIX_LINUX
 #else
+	int err = 0;
 #endif
 	do {
 		if (!sem) {
@@ -1239,11 +1240,11 @@ int spsr_rel_sem(void *sem)
 		}		
 #else
 
-		ret = sem_post((sem_t *)sem);
-		if (ret) {
-			spllog(SPL_LOG_ERROR, "sem_post: ret: %d, "
+		err = sem_post((sem_t *)sem);
+		if (err) {
+			spllog(SPL_LOG_ERROR, "sem_post: err: %d, "
 				"errno: %d, text: %s, sem: 0x%p.", 
-				ret, errno,
+				err, errno,
 			    strerror(errno), sem);
 			ret = SPSR_PX_RL_SEM;
 		}
