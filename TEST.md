@@ -11,3 +11,6 @@
 
 ### Test on MAC OSX:
 - Same with Linux.
+
+### Contact:
+- Mail<mailto: nguyenthaithuanalg@gmail.com>
