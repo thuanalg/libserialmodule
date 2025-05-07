@@ -1257,6 +1257,10 @@ int
 spsr_wait_sem(void *sem)
 {
 	int ret = 0;
+#ifndef UNIX_LINUX
+#else
+	int err = 0;
+#endif
 	do {
 		if (!sem) {
 			ret = SPSR_SEM_NULL_ERROR;
@@ -1274,12 +1278,11 @@ spsr_wait_sem(void *sem)
 			ret = SPSR_WIN32_WAIT_SEM;
 		}
 #else
-		ret = sem_wait((sem_t *)sem);
-		if (ret) {
-			spllog(SPL_LOG_ERROR, "sem_post: ret: %d, "
+		err = sem_wait((sem_t *)sem);
+		if (err) {
+			spllog(SPL_LOG_ERROR, "sem_post: err: %d, "
 				"errno: %d, text: %s, sem: 0x%p.", 
-				ret, errno,
-			    strerror(errno), sem);
+				err, errno, strerror(errno), sem);
 			ret = SPSR_PX_WAIT_SEM;
 		}		
 #endif
