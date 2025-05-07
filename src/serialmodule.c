@@ -473,7 +473,7 @@ int spsr_module_openport(void *obj)
 void *
 spsr_sem_create(char *name_key)
 {
-	void *ret = 0;
+	void *obj = 0;
 	do {
 #ifndef UNIX_LINUX
 		ret = CreateSemaphoreA(0, 0, 1, 0);
@@ -484,15 +484,15 @@ spsr_sem_create(char *name_key)
 
 		spsr_fmt_name(name_key, name, SPSR_KEY_LEN * 2);
 		do {
-			ret = sem_open(
+			obj = sem_open(
 				name, 
 				SPSR_LOG_UNIX_CREATE_MODE, 
 				SPSR_LOG_UNIX__SHARED_MODE, 
 				1);
 			spllog(0, "sem_open ret: 0x%p", ret);
-			if (ret == SEM_FAILED) {
+			if (obj == SEM_FAILED) {
 				int err = 0;
-				ret = 0;
+				obj = 0;
 				if (retry) {
 					spllog(SPL_LOG_ERROR, 
 						"mach sem_open, errno: "
@@ -525,17 +525,17 @@ spsr_sem_create(char *name_key)
 #else
 
 		/*https://linux.die.net/man/3/sem_init*/
-		spsr_malloc(sizeof(sem_t), ret, void);
-		if (!ret) {
+		spsr_malloc(sizeof(sem_t), obj, void);
+		if (!obj) {
 			break;
 		}
-		memset(ret, 0, sizeof(sem_t));
-		sem_init((sem_t *)ret, 0, 1);
+		memset(obj, 0, sizeof(sem_t));
+		sem_init((sem_t *)obj, 0, 1);
 #endif
 #endif
 	} while (0);
-	spllog(0, "Create: 0x%p.", ret);
-	return ret;
+	spllog(0, "Create: 0x%p.", obj);
+	return obj;
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
