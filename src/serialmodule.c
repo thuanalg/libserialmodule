@@ -476,7 +476,14 @@ spsr_sem_create(char *name_key)
 	void *obj = 0;
 	do {
 #ifndef UNIX_LINUX
-		ret = CreateSemaphoreA(0, 0, 1, 0);
+		obj = CreateSemaphoreA(0, 0, 1, 0);
+		if(!obj) {
+			DWORD dwError = GetLastError();
+			spllog(SPL_LOG_ERROR, 
+				"CreateSemaphoreA, %d",
+				(int)dwError);
+			break;
+		}
 #else
 #ifndef __SPSR_EPOLL__
 		int retry = 0;
@@ -489,7 +496,7 @@ spsr_sem_create(char *name_key)
 				SPSR_LOG_UNIX_CREATE_MODE, 
 				SPSR_LOG_UNIX__SHARED_MODE, 
 				1);
-			spllog(0, "sem_open ret: 0x%p", ret);
+			spllog(0, "sem_open ret: 0x%p", obj);
 			if (obj == SEM_FAILED) {
 				int err = 0;
 				obj = 0;
@@ -1519,7 +1526,8 @@ int spsr_inst_write(
 		int isExisted = 0;
 		spsr_mutex_lock(t->mutex);
 		do {
-			ret = spsr_is_existed(portname, &isExisted);
+			ret = spsr_is_existed(
+				portname, &isExisted);
 			if(ret) {
 				break;
 			}
@@ -1566,6 +1574,7 @@ void *spsr_init_cartridge_routine(void *obj)
 	int sockfd = 0;
 	int isoff = 0;
 	int flags = 0;
+	int err = 0;
 
 	struct sockaddr_in cartridge_addr = {0};
 	int k = 0;
@@ -1645,12 +1654,12 @@ void *spsr_init_cartridge_routine(void *obj)
 			ret = SPSR_FCNTL_SOCK;
 			break;
 		}
-		ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
-		if (ret == -1) {
+		err = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+		if (err == -1) {
 
 			spllog(SPL_LOG_ERROR, 
-				"fcntl: ret: %d, errno: %d, "
-				"text: %s.", ret, errno, 
+				"fcntl: err: %d, errno: %d, "
+				"text: %s.", err, errno, 
 				strerror(errno));
 
 			ret = SPSR_FCNTL_SOCK;
@@ -1658,13 +1667,13 @@ void *spsr_init_cartridge_routine(void *obj)
 		}
 
 		/* Bind the socket with the server address */
-		ret = bind(sockfd, 
+		err = bind(sockfd, 
 			(const struct sockaddr *)&cartridge_addr, 
 			sizeof(cartridge_addr));
-		if (ret < 0) {
+		if (err < 0) {
 			spllog(SPL_LOG_ERROR, 
-				"bind failed: ret: %d, errno: %d, "
-				"text: %s.", ret, 
+				"bind failed: err: %d, errno: %d, "
+				"text: %s.", err, 
 				errno, strerror(errno));
 			ret = SPSR_BIND_SOCK;
 			break;
@@ -1694,17 +1703,17 @@ void *spsr_init_cartridge_routine(void *obj)
 				}
 				chk_delay = 0;
 
-				ret = poll(fds, mx_number, 
+				err = poll(fds, mx_number, 
 					60 * 1000);
 
 				spllog(SPL_LOG_DEBUG, 
 					"poll,  mx_number: %d", 
 					mx_number);
 
-				if (ret == -1) {
+				if (err == -1) {
 					continue;
 				}
-				if (ret == 0) {
+				if (err == 0) {
 					continue;
 				}
 				for (k = 0; k < mx_number; ++k) {
@@ -1751,14 +1760,14 @@ void *spsr_init_cartridge_routine(void *obj)
 			event.events = EPOLLIN | EPOLLET;
 			event.data.fd = sockfd;
 
-			ret = epoll_ctl(epollfd, 
+			err = epoll_ctl(epollfd, 
 				EPOLL_CTL_ADD, sockfd, &event);
-			if (ret < 0) {
+			if (err < 0) {
 				spllog(
 				    SPL_LOG_ERROR, 
-					"epoll_ctl, ret: %d, errno: %d, "
+					"epoll_ctl, err: %d, errno: %d, "
 					"text: %s.", 
-					ret, errno, strerror(errno));
+					err, errno, strerror(errno));
 				ret = SPSR_EPOLL_CTL;
 				break;
 			}
@@ -1810,12 +1819,12 @@ void *spsr_init_cartridge_routine(void *obj)
 	spsr_mutex_unlock(t->mutex);
 	spsr_clear_hash();
 	if (sockfd > 0) {
-		ret = close(sockfd);
-		if (ret) {
+		err = close(sockfd);
+		if (err) {
 			spllog(SPL_LOG_ERROR, 
-				"close: ret: %d, "
+				"close: err: %d, "
 				"errno: %d, text: %s.", 
-				ret, errno, strerror(errno));
+				err, errno, strerror(errno));
 			ret = SPSR_CLOSE_SOCK;
 		} else {
 			spllog(SPL_LOG_DEBUG, 
