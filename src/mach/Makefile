@@ -20,12 +20,12 @@ CFLAGS=-std=gnu89 -D UNIX_LINUX  -Wunused-variable -Wunused-function -DSPSR_SHOW
 CPPFLAGS=-D UNIX_LINUX -D __UNIX_LINUX_CPP11_AND_NEWERS__ -DSPSR_SHOW_CONSOLE
 
 debug:
-	gcc ${debugFlag} -o ${target_1} ${src} ${LIBS} ${CFLAGS} ${INC}
+#	gcc ${debugFlag} -o ${target_1} ${src} ${LIBS} ${CFLAGS} ${INC}
 	gcc ${debugFlag} -o ${target_2} ${src1} ${LIBS} ${CFLAGS} ${LIBS_1} ${INC}
 	gcc -g -o test_main ${src_console} ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2} ${INC}
 
 release:
-	gcc ${releaseFlag} -o ${target_1} ${src} ${LIBS} ${CFLAGS} ${INC}
+#	gcc ${releaseFlag} -o ${target_1} ${src} ${LIBS} ${CFLAGS} ${INC}
 	gcc ${releaseFlag} -o ${target_2} ${src1} ${LIBS} ${CFLAGS} ${LIBS_1} ${INC}
 	gcc -o test_main ${src_console} ${LIBS} ${CFLAGS} ${LIBS_1} ${LIBS_2} ${INC}
 
