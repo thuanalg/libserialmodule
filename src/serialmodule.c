@@ -3635,6 +3635,12 @@ spsr_err_txt_init()
 const char *
 spsr_err_txt(int i)
 {
+	if (i < 0) {
+		return "UNKNOW - less than 0.";
+	}
+	if (i > SPSR_PORT_PEAK) {
+		return "UNKNOW - greater than SPSR_PORT_PEAK.";
+	}
 	return __spsr_err_text__[i];
 }
 #ifndef UNIX_LINUX
