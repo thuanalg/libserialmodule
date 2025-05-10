@@ -237,8 +237,8 @@ static int spsr_clear_all();
 static int spsr_verify_info(
 	SPSR_INPUT_ST *obj);
 static int spsr_is_existed(char *port, int *);
-
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+static void spsr_err_txt_init();
+    /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* Group of sync tool. */
 static void *spsr_mutex_create();
 static int spsr_mutex_delete(void *);
@@ -1017,6 +1017,7 @@ spsr_module_init()
 {
 	int ret = 0;
 	SPSR_ROOT_TYPE *t = &spsr_root_node;
+	spsr_err_txt_init();
 #ifndef UNIX_LINUX
 #else
 	pthread_t idd = 0;
@@ -3534,6 +3535,108 @@ int spsr_resize_obj(
 	return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+static const char *__spsr_err_text__[SPSR_PORT_PEAK + 1];
+
+void
+spsr_err_txt_init()
+{
+	__spsr_err_text__[SPSR_PORT_OK] = "SPSR_PORT_OK";
+	__spsr_err_text__[SPSR_PORT_INFO_NULL] = "SPSR_PORT_INFO_NULL";
+	__spsr_err_text__[SPSR_PORT_INPUT_NULL] = "SPSR_PORT_INPUT_NULL";
+	__spsr_err_text__[SPSR_IDD_NULL] = "SPSR_IDD_NULL";
+	__spsr_err_text__[SPSR_OUTPUT_NULL] = "SPSR_OUTPUT_NULL";
+	__spsr_err_text__[SPSR_PORT_OPEN] = "SPSR_PORT_OPEN";
+	__spsr_err_text__[SPSR_PORT_OPEN_UNIX] = "SPSR_PORT_OPEN_UNIX";
+	__spsr_err_text__[SPSR_PORT_CLOSE_UNIX] = "SPSR_PORT_CLOSE_UNIX";
+	__spsr_err_text__[SPSR_PORT_COMMSTATE] = "SPSR_PORT_COMMSTATE";
+	__spsr_err_text__[SPSR_PORT_GETCOMMSTATE] = "SPSR_PORT_GETCOMMSTATE";
+	__spsr_err_text__[SPSR_PORT_SETCOMMSTATE] = "SPSR_PORT_SETCOMMSTATE";
+	__spsr_err_text__[SPSR_PORT_CREATEEVENT] = "SPSR_PORT_CREATEEVENT";
+	__spsr_err_text__[SPSR_PORT_SETCOMMTIMEOUTS] = "SPSR_PORT_SETCOMMTIMEOUTS";
+	__spsr_err_text__[SPSR_PORT_SPSR_MUTEX_CREATE] = "SPSR_PORT_SPSR_MUTEX_CREATE";
+	__spsr_err_text__[SPSR_PORT_SPSR_SEM_CREATE] = "SPSR_PORT_SPSR_SEM_CREATE";
+	__spsr_err_text__[SPSR_PORT_BAUDRATE_ERROR] = "SPSR_PORT_BAUDRATE_ERROR";
+	__spsr_err_text__[SPSR_PORT_NAME_ERROR] = "SPSR_PORT_NAME_ERROR";
+	__spsr_err_text__[SPSR_MTX_CREATE] = "SPSR_MTX_CREATE";
+	__spsr_err_text__[SPSR_SEM_CREATE] = "SPSR_SEM_CREATE";
+	__spsr_err_text__[SPSR_GEN_IDD] = "SPSR_GEN_IDD";
+	__spsr_err_text__[SPSR_MEM_NULL] = "SPSR_MEM_NULL";
+	__spsr_err_text__[SPSR_MUTEX_NULL_ERROR] = "SPSR_MUTEX_NULL_ERROR";
+	__spsr_err_text__[SPSR_SEM_NULL_ERROR] = "SPSR_SEM_NULL_ERROR";
+	__spsr_err_text__[SPSR_SEM_POST_ERROR] = "SPSR_SEM_POST_ERROR";
+	__spsr_err_text__[SPSR_SEM_UNLINK] = "SPSR_SEM_UNLINK";
+	__spsr_err_text__[SPSR_SEM_CLOSE] = "SPSR_SEM_CLOSE";
+	__spsr_err_text__[SPSR_INPUT_NULL_ERROR] = "SPSR_INPUT_NULL_ERROR";
+	__spsr_err_text__[SPSR_THREAD_W32_CREATE] = "SPSR_THREAD_W32_CREATE";
+	__spsr_err_text__[SPSR_NOT_FOUND_IDD] = "SPSR_NOT_FOUND_IDD";
+	__spsr_err_text__[SPSR_REALLOC_ERROR] = "SPSR_REALLOC_ERROR";
+	__spsr_err_text__[SPSR_MALLOC_ERROR] = "SPSR_MALLOC_ERROR";
+	__spsr_err_text__[SPSR_INFO_NULL] = "SPSR_INFO_NULL";
+	__spsr_err_text__[SPSR_PARAM_NULL] = "SPSR_PARAM_NULL";
+	__spsr_err_text__[SPSR_ITEM_NOT_FOUND] = "SPSR_ITEM_NOT_FOUND";
+	__spsr_err_text__[SPSR_CREATE_THREAD_ERROR] = "SPSR_CREATE_THREAD_ERROR";
+	__spsr_err_text__[SPSR_SHUTDOWN_SOCK] = "SPSR_SHUTDOWN_SOCK";
+	__spsr_err_text__[SPSR_CLOSE_SOCK] = "SPSR_CLOSE_SOCK";
+	__spsr_err_text__[SPSR_CREATE_SOCK] = "SPSR_CREATE_SOCK";
+	__spsr_err_text__[SPSR_FCNTL_SOCK] = "SPSR_FCNTL_SOCK";
+	__spsr_err_text__[SPSR_BIND_SOCK] = "SPSR_BIND_SOCK";
+	__spsr_err_text__[SPSR_EPOLL_CREATE] = "SPSR_EPOLL_CREATE";
+	__spsr_err_text__[SPSR_EPOLL_CTL] = "SPSR_EPOLL_CTL";
+	__spsr_err_text__[SPSR_BUFF_EXCEED] = "SPSR_BUFF_EXCEED";
+	__spsr_err_text__[SPSR_UNIX_OPEN_PORT] = "SPSR_UNIX_OPEN_PORT";
+	__spsr_err_text__[SPSR_UNIX_GET_ATTR] = "SPSR_UNIX_GET_ATTR";
+	__spsr_err_text__[SPSR_UNIX_SET_ATTR] = "SPSR_UNIX_SET_ATTR";
+	__spsr_err_text__[SPSR_UNIX_EPOLL_CTL] = "SPSR_UNIX_EPOLL_CTL";
+	__spsr_err_text__[SPSR_PORTNAME_EXISTED] = "SPSR_PORTNAME_EXISTED";
+	__spsr_err_text__[SPSR_HASH_NOTFOUND] = "SPSR_HASH_NOTFOUND";
+	__spsr_err_text__[SPSR_CALLBACK_NULL] = "SPSR_CALLBACK_NULL";
+	__spsr_err_text__[SPSR_PX_ITEM_NULL] = "SPSR_PX_ITEM_NULL";
+	__spsr_err_text__[SPSR_PX_CB_NULL] = "SPSR_PX_CB_NULL";
+	__spsr_err_text__[SPSR_PX_POLLFD_NULL] = "SPSR_PX_POLLFD_NULL";
+	__spsr_err_text__[SPSR_PX_PRANGE_NULL] = "SPSR_PX_PRANGE_NULL";
+	__spsr_err_text__[SPSR_PX_EPOLL_DEL] = "SPSR_PX_EPOLL_DEL";
+	__spsr_err_text__[SPSR_PX_POLL_NOT_FOUND] = "SPSR_PX_POLL_NOT_FOUND";
+	__spsr_err_text__[SPSR_PX_MALINFO_FD] = "SPSR_PX_MALINFO_FD";
+	__spsr_err_text__[SPSR_PX_MAL_HASH_FD] = "SPSR_PX_MAL_HASH_FD";
+	__spsr_err_text__[SPSR_HASH_NOT_FOUND] = "SPSR_HASH_NOT_FOUND";
+	__spsr_err_text__[SPSR_REM_NOT_FOUND] = "SPSR_REM_NOT_FOUND";
+	__spsr_err_text__[SPSR_WIN32_OBJ_NULL] = "SPSR_WIN32_OBJ_NULL";
+	__spsr_err_text__[SPSR_WIN32_BUF_NULL] = "SPSR_WIN32_BUF_NULL";
+	__spsr_err_text__[SPSR_WIN32_BWRITE_NULL] = "SPSR_WIN32_BWRITE_NULL";
+	__spsr_err_text__[SPSR_WIN32_OVERLAP_NULL] = "SPSR_WIN32_OVERLAP_NULL";
+	__spsr_err_text__[SPSR_WIN32_EVTCB_NULL] = "SPSR_WIN32_EVTCB_NULL";
+	__spsr_err_text__[SPSR_WIN32_NOT_PENDING] = "SPSR_WIN32_NOT_PENDING";
+	__spsr_err_text__[SPSR_WIN32_OVERLAP_ERR] = "SPSR_WIN32_OVERLAP_ERR";
+	__spsr_err_text__[SPSR_PORT_NULL] = "SPSR_PORT_NULL";
+	__spsr_err_text__[SPSR_PORT_EMPTY] = "SPSR_PORT_EMPTY";
+	__spsr_err_text__[SPSR_OBJ_NULL] = "SPSR_OBJ_NULL";
+	__spsr_err_text__[SPSR_PORTNAME_NONEXISTED] = "SPSR_PORTNAME_NONEXISTED";
+	__spsr_err_text__[SPSR_PX_FD_NOT_FOUND] = "SPSR_PX_FD_NOT_FOUND";
+	__spsr_err_text__[SPSR_WIN32_RL_MTX] = "SPSR_WIN32_RL_MTX";
+	__spsr_err_text__[SPSR_WIN32_LK_MTX] = "SPSR_WIN32_LK_MTX";
+	__spsr_err_text__[SPSR_PX_LK_MTX] = "SPSR_PX_LK_MTX";
+	__spsr_err_text__[SPSR_PX_RL_MTX] = "SPSR_PX_RL_MTX";
+	__spsr_err_text__[SPSR_PX_RL_SEM] = "SPSR_PX_RL_SEM";
+	__spsr_err_text__[SPSR_PX_WAIT_SEM] = "SPSR_PX_WAIT_SEM";
+	__spsr_err_text__[SPSR_WIN32_WAIT_SEM] = "SPSR_WIN32_WAIT_SEM";
+	__spsr_err_text__[SPSR_WIN32_RL_SEM] = "SPSR_WIN32_RL_SEM";
+	__spsr_err_text__[SPSR_MINI_SIZE] = "SPSR_MINI_SIZE";
+
+
+
+
+
+
+
+
+	__spsr_err_text__[SPSR_PORT_PEAK] = "SPSR_PORT_PEAK";
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+const char *
+spsr_err_txt(int i)
+{
+	return __spsr_err_text__[i];
+}
 #ifndef UNIX_LINUX
 #else
 #endif

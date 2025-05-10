@@ -353,6 +353,9 @@ spsr_inst_close(char *portname);
 DLL_API_SERIAL_MODULE int
 spsr_inst_write(char *portname, char *data, int sz);
 
+DLL_API_SERIAL_MODULE const char *
+spsr_err_txt(int);
+
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifdef __cplusplus
 }
