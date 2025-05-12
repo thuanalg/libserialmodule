@@ -94,6 +94,20 @@ spsr_inst_close, spsr_inst_write].
 #define spsr_ftl(__fmt_____, ...) \
 	spllog(SPL_LOG_FATAL, __fmt_____, ##__VA_ARGS__)
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+#ifndef UNIX_LINUX
+#define spsr_api_err(___api__)  {\
+		spsr_err("%s, dwError: %llu.", \
+			___api__, (LLU)GetLastError());\
+	}
+#else
+#define spsr_api_err(___api__)                                                                                              \
+	\                                                                                                                   \
+	{                                                                                                                   \
+		spsr_err("%s, errno: %d: \"%s\".", \
+			___api__, errno, strerror(errno));                                              \
+	}
+#endif
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #define SPSR_MAX_AB(__a__, __b__) ((__a__) > (__b__)) ? (__a__) : (__b__)
 #define SPSR_STEP_MEM              2048
@@ -361,9 +375,12 @@ int spsr_module_openport(void *obj)
 				FILE_FLAG_OVERLAPPED, 0);
 
 		if (hSerial == INVALID_HANDLE_VALUE) {
+			/*
 			DWORD dwError = GetLastError();
 			spsr_err( 
 				"Open port errcode: %lu", dwError);
+			*/
+			spsr_api_err("CreateFile");
 			ret = SPSR_PORT_OPEN;
 			hSerial = 0;
 			break;
@@ -376,9 +393,12 @@ int spsr_module_openport(void *obj)
 		/* Set up the serial port parameters(baud rate, etc.) */
 		dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
 		if (!GetCommState(hSerial, &dcbSerialParams)) {
+			/*
 			DWORD dwError = GetLastError();
 			spsr_err( 
 				"GetCommState: %lu", dwError);
+			*/
+			spsr_api_err("GetCommState");
 			ret = SPSR_PORT_GETCOMMSTATE;
 			break;
 		}
@@ -408,9 +428,12 @@ int spsr_module_openport(void *obj)
 		/* Enable XON/XOFF output flow control */
 
 		if (!SetCommState(hSerial, &dcbSerialParams)) {
+			/*
 			DWORD dwError = GetLastError();
 			spsr_err( 
 				"SetCommState: %lu", dwError);
+			*/
+			spsr_api_err("SetCommState");
 			ret = SPSR_PORT_SETCOMMSTATE;
 			break;
 		}
@@ -418,9 +441,12 @@ int spsr_module_openport(void *obj)
 			p->hEvent = CreateEvent(0, TRUE, FALSE, 0);
 		}
 		if (!p->hEvent) {
+			/*
 			DWORD dwError = GetLastError();
 			spsr_err( 
 				"CreateEvent: %lu", dwError);
+			*/
+			spsr_api_err("CreateEvent");
 			ret = SPSR_PORT_CREATEEVENT;
 			break;
 		}
@@ -441,9 +467,12 @@ int spsr_module_openport(void *obj)
 		timeouts.WriteTotalTimeoutMultiplier = 10;
 
 		if (!SetCommTimeouts(hSerial, &timeouts)) {
+			/*
 			DWORD dwError = GetLastError();
 			spsr_err( 
 				"SetCommTimeouts: %lu", dwError);
+			*/
+			spsr_api_err("SetCommTimeouts");
 			ret = SPSR_PORT_SETCOMMTIMEOUTS;
 			break;
 		}
@@ -509,32 +538,42 @@ spsr_sem_create(char *name_key)
 				SPSR_LOG_UNIX_CREATE_MODE, 
 				SPSR_LOG_UNIX__SHARED_MODE, 
 				1);
-			spsr_all( "sem_open ret: 0x%p", obj);
+			spsr_all("sem_open ret:"
+				" 0x%p, name: %s", 
+				obj, name);
 			if (obj == SEM_FAILED) {
 				int err = 0;
 				obj = 0;
 				if (retry) {
+					/*
 					spsr_err( 
 						"mach sem_open, errno: "
 						"%d, text: %s, name: %s.", 
 						errno,
 					    strerror(errno), 
 						name);
+					*/
+					spsr_api_err("sem_open");
 					break;
 				} else {
+					/*
 					spsr_err( 
 						"mach sem_open, errno: "
 						"%d, text: %s, name: %s.", 
 						errno,
-					    strerror(errno), name);
+					    strerror(errno), name);*/
+					spsr_api_err("sem_open");
 				}
 				err = sem_unlink(name);
 				if (err) {
+					/*
 					spsr_err( 
 						"mach sem_unlink, errno: "
 						"%d, text: %s, name: %s.", 
 						errno,
 					    strerror(errno), name);
+					*/
+					spsr_api_err("sem_unlink");
 					break;
 				}
 				retry++;
