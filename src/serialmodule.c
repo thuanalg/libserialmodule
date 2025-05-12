@@ -65,10 +65,10 @@ spsr_inst_close, spsr_inst_write].
 			;                                                                                                   \
 			if (!bl) {                                                                                          \
 				;                                                                                           \
-				spllog(SPL_LOG_ERROR, "CloseHandle error: %lu", GetLastError());                            \
+				spsr_err( "CloseHandle error: %lu", GetLastError());                            \
 				;                                                                                           \
 			};                                                                                                  \
-			spllog(0, "SPSR_CloseHandle 0x%p -->> %s", __serialpp__, (bl ? "DONE" : "ERROR"));                  \
+			spsr_all( "SPSR_CloseHandle 0x%p -->> %s", __serialpp__, (bl ? "DONE" : "ERROR"));                  \
 			;                                                                                                   \
 			(__o0bj__) = 0;                                                                                     \
 			;                                                                                                   \
@@ -80,6 +80,19 @@ spsr_inst_close, spsr_inst_write].
 #define SPSR_PORT_CARTRIDGE        (SPSR_PORT_TRIGGER + 10)
 #endif
 
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+#define spsr_all(__fmt_____, ...) \
+	spllog(SPL_LOG_BASE, __fmt_____, ##__VA_ARGS__)
+#define spsr_dbg(__fmt_____, ...) \
+	spllog(SPL_LOG_DEBUG, __fmt_____, ##__VA_ARGS__)
+#define spsr_inf(__fmt_____, ...) \
+	spllog(SPL_LOG_INFO, __fmt_____, ##__VA_ARGS__)
+#define spsr_wrn(__fmt_____, ...) \
+	spllog(SPL_LOG_WARNING, __fmt_____, ##__VA_ARGS__)
+#define spsr_err(__fmt_____, ...) \
+	spllog(SPL_LOG_ERROR, __fmt_____, ##__VA_ARGS__)
+#define spsr_ftl(__fmt_____, ...) \
+	spllog(SPL_LOG_FATAL, __fmt_____, ##__VA_ARGS__)
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #define SPSR_MAX_AB(__a__, __b__) ((__a__) > (__b__)) ? (__a__) : (__b__)
@@ -272,7 +285,7 @@ int spsr_inst_open(
 	} while (0);
 
 	if (ret) {
-		spllog(SPL_LOG_ERROR, 
+		spsr_err( 
 			"spsr_verify_info: %d.", ret);
 	}
 	return ret;
@@ -281,14 +294,14 @@ int spsr_inst_open(
 int spsr_inst_close(char *portname)
 {
 	int ret = 0;
-	spllog(0, "Delete port: %s.", portname);
+	spsr_all( "Delete port: %s.", portname);
 #ifndef UNIX_LINUX
 	void *p = 0;
 	SPSR_ARR_LIST_LINED *node = 0;
 	do {
 		ret = spsr_get_obj(portname, &p, 1);
 		if (p) {
-			spllog(0, "Delete port: %s.", portname);
+			spsr_all( "Delete port: %s.", portname);
 			node = (SPSR_ARR_LIST_LINED *)p;
 			spsr_clear_node(node);
 
@@ -306,7 +319,7 @@ int spsr_inst_close(char *portname)
 			break;
 		}
 		if(!isExisted) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"port %s not exsied.", 
 				portname);
 			ret = SPSR_PORTNAME_NONEXISTED;
@@ -349,14 +362,14 @@ int spsr_module_openport(void *obj)
 
 		if (hSerial == INVALID_HANDLE_VALUE) {
 			DWORD dwError = GetLastError();
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"Open port errcode: %lu", dwError);
 			ret = SPSR_PORT_OPEN;
 			hSerial = 0;
 			break;
 		}
 		p->handle = hSerial;
-		spllog(0, "Create hSerial: 0x%p.", hSerial);
+		spsr_all( "Create hSerial: 0x%p.", hSerial);
 		if (p->is_retry) {
 			break;
 		}
@@ -364,7 +377,7 @@ int spsr_module_openport(void *obj)
 		dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
 		if (!GetCommState(hSerial, &dcbSerialParams)) {
 			DWORD dwError = GetLastError();
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"GetCommState: %lu", dwError);
 			ret = SPSR_PORT_GETCOMMSTATE;
 			break;
@@ -396,7 +409,7 @@ int spsr_module_openport(void *obj)
 
 		if (!SetCommState(hSerial, &dcbSerialParams)) {
 			DWORD dwError = GetLastError();
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SetCommState: %lu", dwError);
 			ret = SPSR_PORT_SETCOMMSTATE;
 			break;
@@ -406,13 +419,13 @@ int spsr_module_openport(void *obj)
 		}
 		if (!p->hEvent) {
 			DWORD dwError = GetLastError();
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"CreateEvent: %lu", dwError);
 			ret = SPSR_PORT_CREATEEVENT;
 			break;
 		}
 
-		spllog(SPL_LOG_DEBUG, "Create hEvent: 0x%p.", p->hEvent);
+		spsr_dbg( "Create hEvent: 0x%p.", p->hEvent);
 
 		/* Set timeouts(e.g., read timeout of 500ms, write timeout of 500ms)
 			//timeouts.ReadIntervalTimeout = 500;
@@ -429,7 +442,7 @@ int spsr_module_openport(void *obj)
 
 		if (!SetCommTimeouts(hSerial, &timeouts)) {
 			DWORD dwError = GetLastError();
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SetCommTimeouts: %lu", dwError);
 			ret = SPSR_PORT_SETCOMMTIMEOUTS;
 			break;
@@ -439,7 +452,7 @@ int spsr_module_openport(void *obj)
 		}
 		if (!p->mtx_off) {
 			DWORD dwError = GetLastError();
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"spsr_mutex_create: %lu", dwError);
 			ret = SPSR_PORT_SPSR_MUTEX_CREATE;
 			break;
@@ -449,7 +462,7 @@ int spsr_module_openport(void *obj)
 		}
 		if (!p->sem_off) {
 			DWORD dwError = GetLastError();
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"spsr_sem_create: %lu", dwError);
 			ret = SPSR_PORT_SPSR_SEM_CREATE;
 			break;
@@ -479,7 +492,7 @@ spsr_sem_create(char *name_key)
 		obj = CreateSemaphoreA(0, 0, 1, 0);
 		if(!obj) {
 			DWORD dwError = GetLastError();
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"CreateSemaphoreA, %d",
 				(int)dwError);
 			break;
@@ -496,12 +509,12 @@ spsr_sem_create(char *name_key)
 				SPSR_LOG_UNIX_CREATE_MODE, 
 				SPSR_LOG_UNIX__SHARED_MODE, 
 				1);
-			spllog(0, "sem_open ret: 0x%p", obj);
+			spsr_all( "sem_open ret: 0x%p", obj);
 			if (obj == SEM_FAILED) {
 				int err = 0;
 				obj = 0;
 				if (retry) {
-					spllog(SPL_LOG_ERROR, 
+					spsr_err( 
 						"mach sem_open, errno: "
 						"%d, text: %s, name: %s.", 
 						errno,
@@ -509,7 +522,7 @@ spsr_sem_create(char *name_key)
 						name);
 					break;
 				} else {
-					spllog(SPL_LOG_ERROR, 
+					spsr_err( 
 						"mach sem_open, errno: "
 						"%d, text: %s, name: %s.", 
 						errno,
@@ -517,7 +530,7 @@ spsr_sem_create(char *name_key)
 				}
 				err = sem_unlink(name);
 				if (err) {
-					spllog(SPL_LOG_ERROR, 
+					spsr_err( 
 						"mach sem_unlink, errno: "
 						"%d, text: %s, name: %s.", 
 						errno,
@@ -541,7 +554,7 @@ spsr_sem_create(char *name_key)
 #endif
 #endif
 	} while (0);
-	spllog(0, "Create: 0x%p.", obj);
+	spsr_all( "Create: 0x%p.", obj);
 	return obj;
 }
 
@@ -564,7 +577,7 @@ spsr_mutex_create()
 		pthread_mutex_init((pthread_mutex_t *)obj, 0);
 #endif
 	} while (0);
-	spllog(0, "Create: 0x%p.", obj);
+	spsr_all( "Create: 0x%p.", obj);
 	return obj;
 }
 
@@ -603,7 +616,7 @@ spsr_win32_read(
 			SPSR_BUFFER_SIZE, 
 			pbytesRead, polReadWrite);
 
-		spllog(SPL_LOG_DEBUG,
+		spsr_dbg(
 		    "olRead.InternalHigh: %d, "
 		    "olRead.Internal: %d, rs : %s!!!",
 		    (int)polReadWrite->InternalHigh, 
@@ -611,13 +624,13 @@ spsr_win32_read(
 			rs ? "true" : "false");
 
 		if (rs) {
-			spllog(SPL_LOG_INFO, "Read OK");
+			spsr_inf( "Read OK");
 			break;
 		}
 		readErr = GetLastError();
 		if (readErr != ERROR_IO_PENDING) {
 			ret = SPSR_WIN32_NOT_PENDING;
-			spllog(SPL_LOG_ERROR, "Read error readErr: %d", (int)readErr);
+			spsr_err( "Read error readErr: %d", (int)readErr);
 			break;
 		}
 		*pbytesRead = 0;
@@ -630,7 +643,7 @@ spsr_win32_read(
 			polReadWrite, pbytesRead, 1);
 
 		if (!rs) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"PurgeComm: %d", 
 				(int)GetLastError());
 			PurgeComm(p->handle, 
@@ -639,7 +652,7 @@ spsr_win32_read(
 			ret = SPSR_WIN32_OVERLAP_ERR;
 			break;
 		}
-		spllog(SPL_LOG_DEBUG, 
+		spsr_dbg( 
 			"bRead: %d", (int)*pbytesRead);
 	} while (0);
 
@@ -651,13 +664,13 @@ spsr_win32_read(
 	ClearCommError(p->handle, &dwError, &csta);
 
 	if (csta.cbInQue > 0) {
-		spllog(SPL_LOG_ERROR, 
+		spsr_err( 
 			"Read Com not finished!!!");
 	} 
 	else if (*pbytesRead > 0) 
 	{
 		tbuffer[*pbytesRead] = 0;
-		spllog(0, "[tbuffer: %s]!", tbuffer);
+		spsr_all( "[tbuffer: %s]!", tbuffer);
 		spsr_invoke_cb(
 			SPSR_EVENT_READ_BUF, 
 			p->cb_evt_fn,
@@ -688,31 +701,31 @@ spsr_win32_write(SPSR_INFO_ST *p,
 	do {
 		if (!p) {
 			ret = SPSR_WIN32_OBJ_NULL;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_WIN32_OBJ_NULL"); 			
 			break;
 		}
 		if (!buf) {
 			ret = SPSR_WIN32_BUF_NULL;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_WIN32_BUF_NULL"); 
 			break;
 		}
 		if (buf->pl < 1) {
 			ret = SPSR_WIN32_BUF_NULL;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_WIN32_BUF_NULL"); 			
 			break;
 		}
 		if (!pbytesWrite) {
 			ret = SPSR_WIN32_BWRITE_NULL;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_WIN32_BWRITE_NULL"); 			
 			break;
 		}
 		if (!polReadWrite) {
 			ret = SPSR_WIN32_OVERLAP_NULL;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_WIN32_OVERLAP_NULL");			
 			break;
 		}
@@ -732,22 +745,22 @@ spsr_win32_write(SPSR_INFO_ST *p,
 				pbytesWrite, polReadWrite);
 			if (wrs) {
 				if (buf->pl == (int)(*pbytesWrite)) {
-					spllog(SPL_LOG_DEBUG, 
+					spsr_dbg( 
 						"Write DONE, %d.", buf->pl);
 					wroteRes = 1;
 					buf->pl = 0;
 				} else {
-					spllog(SPL_LOG_ERROR, 
+					spsr_err( 
 						"Write Error, %d.", buf->pl);
 				}
 				break;
 			}
 
 			wErr = GetLastError();
-			spllog(SPL_LOG_DEBUG, 
+			spsr_dbg( 
 				"WriteFile: %d", (int)wErr);
 			if (wErr != ERROR_IO_PENDING) {
-				spllog(SPL_LOG_ERROR, 
+				spsr_err( 
 					"Write Error, %d.", buf->pl);
 				break;
 			}
@@ -755,7 +768,7 @@ spsr_win32_write(SPSR_INFO_ST *p,
 			dwWaitResult = WaitForSingleObject(
 				p->hEvent, INFINITE);
 			if (dwWaitResult != WAIT_OBJECT_0) {
-				spllog(SPL_LOG_ERROR, 
+				spsr_err( 
 					"Write Error, WaitForSingleObject, %d.",
 					buf->pl);
 				break;
@@ -766,16 +779,16 @@ spsr_win32_write(SPSR_INFO_ST *p,
 				polReadWrite, pbytesWrite, TRUE);
 
 			if (!rsOverlap) {
-				spllog(SPL_LOG_ERROR, 
+				spsr_err( 
 					"Write Error code, %d.", buf->pl);
 				break;
 			}
 			if (buf->pl != (int)(*pbytesWrite)) {
-				spllog(SPL_LOG_ERROR, 
+				spsr_err( 
 					"Write Error, %d.", buf->pl);
 				break;
 			}
-			spllog(SPL_LOG_DEBUG, "Write DONE, %d.", buf->pl);
+			spsr_dbg( "Write DONE, %d.", buf->pl);
 			wroteRes = 1;
 			buf->pl = 0;
 			break;
@@ -843,12 +856,12 @@ DWORD WINAPI spsr_thread_operating_routine(
 
 
 		if (!buf) {
-			spllog(SPL_LOG_ERROR, "buf NULL");
+			spsr_err( "buf NULL");
 			break;
 		}
 
 		if (isoff) {
-			spllog(0, "is OFF");
+			spsr_all( "is OFF");
 			break;
 		}
 
@@ -856,7 +869,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 
 		isoff = spsr_module_isoff(p);		
 		if (p->is_retry) {
-			spllog(0, "retry");
+			spsr_all( "retry");
 		}			
 
 		ret = spsr_module_openport(p);
@@ -882,7 +895,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 
 		if (ret) {
 			Sleep(1000 * 2);
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"In r/w loop.");
 			continue;;
 		}
@@ -890,7 +903,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 		while (1) {
 			isoff = spsr_module_isoff(p);
 			if (isoff) {
-				spllog(0, "is OFF");
+				spsr_all( "is OFF");
 				break;
 			}
 			memset(&olReadWrite, 
@@ -901,16 +914,16 @@ DWORD WINAPI spsr_thread_operating_routine(
 			do {
 
 				if (!p->buff) {
-					spllog(0, "No data.");
+					spsr_all( "No data.");
 					break;
 				}	
 
 				if (p->buff->pl < 1) {
-					spllog(0, "No data.");
+					spsr_all( "No data.");
 					break;
 				}
 
-				spllog(0, 
+				spsr_all( 
 					"(pl, range): (%d, %d)",
 					p->buff->pl, buf->range);
 
@@ -936,7 +949,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 					buf, &bytesWrite, 
 					&olReadWrite, ecb_buf);
 				if(ret) {
-					spllog(SPL_LOG_ERROR, 
+					spsr_err( 
 						"spsr_win32_write");
 					SPSR_CloseHandle(p->handle);
 					break;
@@ -961,7 +974,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 					break;
 				}
 			} else {
-				spllog(SPL_LOG_DEBUG, 
+				spsr_dbg( 
 					"WaitCommEvent OK");
 			}
 			memset(&csta, 0, sizeof(csta));
@@ -991,7 +1004,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 			ret = spsr_win32_read(p, 
 				&bytesRead, 
 				&olReadWrite, ecb_buf);
-			spllog(SPL_LOG_DEBUG, 
+			spsr_dbg( 
 				" [[[ cbInQue: %d, bRead: %d ]]]", 
 				cbInQue, bytesRead);
 			bytesRead = 0;
@@ -1080,14 +1093,14 @@ spsr_module_init()
 		spsr_malloc(nsize, 
 			t->cmd_buff, SPSR_GENERIC_ST);
 		if (!t->cmd_buff) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"spsr_malloc error");
 			exit(1);
 		}
 		t->cmd_buff->total = nsize;
 		t->cmd_buff->range = SPSR_BUFFER_SIZE;
 #endif
-		spllog(SPL_LOG_DEBUG, 
+		spsr_dbg( 
 			"spsr_module_init: DONE");
 
 	} while (0);
@@ -1162,7 +1175,7 @@ int spsr_mutex_lock(void *obj)
 		err = WaitForSingleObject(obj, INFINITE);
 		if (err != WAIT_OBJECT_0) {
 			DWORD dwError = GetLastError();
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"WaitForSingleObject errcode: %lu", 
 				dwError);			
 			ret = SPSR_WIN32_LK_MTX;;
@@ -1172,7 +1185,7 @@ int spsr_mutex_lock(void *obj)
 		ret = pthread_mutex_lock(
 			(pthread_mutex_t *)obj);
 		if (ret) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"pthread_mutex_lock: ret: %d, "
 				"errno: %d, text: %s, obj: 0x%p.", 
 				ret, errno,
@@ -1200,7 +1213,7 @@ int spsr_mutex_unlock(void *obj)
 		done = ReleaseMutex(obj);
 		if (!done) {
 			DWORD dwError = GetLastError();
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"ReleaseMutex errcode: %lu", 
 				dwError);
 			ret = SPSR_WIN32_RL_MTX;
@@ -1210,7 +1223,7 @@ int spsr_mutex_unlock(void *obj)
 		ret = pthread_mutex_unlock(
 			(pthread_mutex_t *)obj);
 		if (ret) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"pthread_mutex_unlock: ret: %d, "
 				"errno: %d, text: %s.", 
 				ret, errno,
@@ -1241,7 +1254,7 @@ int spsr_rel_sem(void *sem)
 		iswell = ReleaseSemaphore(sem, 1, 0);
 		if (!iswell) {
 			DWORD dwError = GetLastError();
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"ReleaseSemaphore errcode: %lu", 
 				dwError);
 			ret = SPSR_WIN32_RL_SEM;
@@ -1250,7 +1263,7 @@ int spsr_rel_sem(void *sem)
 
 		err = sem_post((sem_t *)sem);
 		if (err) {
-			spllog(SPL_LOG_ERROR, "sem_post: err: %d, "
+			spsr_err( "sem_post: err: %d, "
 				"errno: %d, text: %s, sem: 0x%p.", 
 				err, errno,
 			    strerror(errno), sem);
@@ -1280,7 +1293,7 @@ spsr_wait_sem(void *sem)
 			(HANDLE)sem, INFINITE);
 		if (iswell != WAIT_OBJECT_0) {
 			DWORD dwError = GetLastError();
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"WaitForSingleObject errcode: %lu", 
 				dwError);
 			ret = SPSR_WIN32_WAIT_SEM;
@@ -1288,7 +1301,7 @@ spsr_wait_sem(void *sem)
 #else
 		err = sem_wait((sem_t *)sem);
 		if (err) {
-			spllog(SPL_LOG_ERROR, "sem_post: err: %d, "
+			spsr_err( "sem_post: err: %d, "
 				"errno: %d, text: %s, sem: 0x%p.", 
 				err, errno, strerror(errno), sem);
 			ret = SPSR_PX_WAIT_SEM;
@@ -1347,7 +1360,7 @@ int spsr_get_obj(
 	} while (0);
 
 	if (!found) {
-		spllog(SPL_LOG_WARNING, 
+		spsr_wrn( 
 			"Cannot find port: %s", portname);
 		ret = SPSR_ITEM_NOT_FOUND;
 	}
@@ -1370,7 +1383,7 @@ int spsr_create_thread(
 		NULL, 0, f, arg, 0, &dwThreadId);
 	if (!hThread) {
 		ret = SPSR_THREAD_W32_CREATE;
-		spllog(SPL_LOG_DEBUG, 
+		spsr_dbg( 
 			"CreateThread error: %d", 
 			(int)GetLastError());
 	}
@@ -1454,7 +1467,7 @@ int spsr_inst_write(
 		ret = spsr_get_obj(portname, &p, 0);
 		if (!p) {
 			ret = SPSR_NOT_FOUND_IDD;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"Cannot find the object.");
 			break;
 		}
@@ -1477,7 +1490,7 @@ int spsr_inst_write(
 					step, &(item->buff));
 
 				if(ret) {
-					spllog(SPL_LOG_ERROR, 
+					spsr_err( 
 						"spsr_resize_obj.");					
 					break;
 				}
@@ -1504,7 +1517,7 @@ int spsr_inst_write(
 			ret = spsr_resize_obj(
 				total, &(item->buff));
 			if(ret) {
-				spllog(SPL_LOG_ERROR, 
+				spsr_err( 
 					"spsr_resize_obj.");					
 				break;
 			}
@@ -1533,7 +1546,7 @@ int spsr_inst_write(
 				break;
 			}
 			if(!isExisted) {
-				spllog(SPL_LOG_ERROR, 
+				spsr_err( 
 					"port %s not exsied.", 
 					portname);
 				ret = SPSR_PORTNAME_NONEXISTED;
@@ -1544,7 +1557,7 @@ int spsr_inst_write(
 		} while(0);
 		spsr_mutex_unlock(t->mutex);
 		if (ret) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SEND command error ret: %d.", ret);
 		}
 #endif
@@ -1606,14 +1619,14 @@ void *spsr_init_cartridge_routine(void *obj)
 	struct epoll_event event, 
 		events[SPSR_SIZE_MAX_EVENTS];
 #endif
-	spllog(SPL_LOG_DEBUG, "cartridge: ");
+	spsr_dbg( "cartridge: ");
 	/* Creating socket file descriptor */
 	spsr_malloc(SPSR_CMD_BUFF_LEN, 
 		cart_buff, SPSR_GENERIC_ST);
 	do {
 		if(!cart_buff) {
 			ret = SPSR_MEM_NULL;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_MEM_NULL.");
 			break;
 		}
@@ -1623,7 +1636,7 @@ void *spsr_init_cartridge_routine(void *obj)
 		sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 		if (sockfd < 0) {
 
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"fcntl: ret: %d, errno: %d, "
 				"text: %s.", sockfd, 
 				errno, strerror(errno));
@@ -1649,7 +1662,7 @@ void *spsr_init_cartridge_routine(void *obj)
 
 		flags = fcntl(sockfd, F_GETFL, 0);
 		if (flags == -1) {
-			spllog(SPL_LOG_ERROR, "fcntl: ret: %d, "
+			spsr_err( "fcntl: ret: %d, "
 				"errno: %d, text: %s.", 
 				ret, errno, strerror(errno));
 			ret = SPSR_FCNTL_SOCK;
@@ -1658,7 +1671,7 @@ void *spsr_init_cartridge_routine(void *obj)
 		err = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 		if (err == -1) {
 
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"fcntl: err: %d, errno: %d, "
 				"text: %s.", err, errno, 
 				strerror(errno));
@@ -1672,7 +1685,7 @@ void *spsr_init_cartridge_routine(void *obj)
 			(const struct sockaddr *)&cartridge_addr, 
 			sizeof(cartridge_addr));
 		if (err < 0) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"bind failed: err: %d, errno: %d, "
 				"text: %s.", err, 
 				errno, strerror(errno));
@@ -1707,7 +1720,7 @@ void *spsr_init_cartridge_routine(void *obj)
 				err = poll(fds, mx_number, 
 					60 * 1000);
 
-				spllog(SPL_LOG_DEBUG, 
+				spsr_dbg( 
 					"poll,  mx_number: %d", 
 					mx_number);
 
@@ -1750,7 +1763,7 @@ void *spsr_init_cartridge_routine(void *obj)
 			/* Start epoll */
 			epollfd = epoll_create1(0);
 			if (epollfd < 0) {
-				spllog(SPL_LOG_ERROR, 
+				spsr_err( 
 					"epoll_create, epollfd: %d, "
 					"errno: %d, text: %s.", 
 					epollfd, errno,
@@ -1822,13 +1835,13 @@ void *spsr_init_cartridge_routine(void *obj)
 	if (sockfd > 0) {
 		err = close(sockfd);
 		if (err) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"close: err: %d, "
 				"errno: %d, text: %s.", 
 				err, errno, strerror(errno));
 			ret = SPSR_CLOSE_SOCK;
 		} else {
-			spllog(SPL_LOG_DEBUG, 
+			spsr_dbg( 
 				"close socket done: %d", sockfd);
 		}
 	}
@@ -1839,7 +1852,7 @@ void *spsr_init_cartridge_routine(void *obj)
 	}
 #endif
 	if(ret) {
-		spllog(SPL_LOG_ERROR, 
+		spsr_err( 
 			"ret: %d", ret);
 	}
 	spsr_free(cart_buff);
@@ -1859,12 +1872,12 @@ int spsr_init_trigger(void *obj)
 	int flags = 0;
 	socklen_t len = 0;
 	struct sockaddr_in trigger_addr, cartridge_addr;
-	spllog(SPL_LOG_DEBUG, "trigger: ");
+	spsr_dbg( "trigger: ");
 	char had_cmd = 0;
 	do {
 		/* Creating socket file descriptor */
 		if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-			spllog(SPL_LOG_DEBUG, 
+			spsr_dbg( 
 				"fcntl: ret: %d, errno: %d, "
 				"text: %s.", 
 				sockfd, errno, strerror(errno));
@@ -1890,7 +1903,7 @@ int spsr_init_trigger(void *obj)
 		/* Set socket to non-blocking mode */
 		ret = fcntl(sockfd, F_GETFL, 0);
 		if (ret == -1) {
-			spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, "
+			spsr_dbg( "fcntl: ret: %d, "
 				"errno: %d, text: %s.", 
 				ret, errno, strerror(errno));
 			ret = SPSR_FCNTL_SOCK;
@@ -1899,7 +1912,7 @@ int spsr_init_trigger(void *obj)
 
 		ret = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 		if (ret == -1) {
-			spllog(SPL_LOG_DEBUG, "fcntl: ret: %d, "
+			spsr_dbg( "fcntl: ret: %d, "
 				"errno: %d, text: %s.", 
 				ret, errno, strerror(errno));
 			ret = SPSR_FCNTL_SOCK;
@@ -1912,7 +1925,7 @@ int spsr_init_trigger(void *obj)
 			sizeof(trigger_addr));
 		if (ret < 0) {
 			/* perror("bind failed"); */
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"bind failed: ret: %d, "
 				"errno: %d, text: %s.", 
 				ret, errno, strerror(errno));
@@ -1942,7 +1955,7 @@ int spsr_init_trigger(void *obj)
 					(const char *)SPSR_MSG_OFF, 
 					strlen(SPSR_MSG_OFF), SPSR_SENDSK_FLAG,
 				    (const struct sockaddr *)&cartridge_addr, len);
-				spllog(SPL_LOG_DEBUG, "sendto kkk: %d", kkk);
+				spsr_dbg( "sendto kkk: %d", kkk);
 				break;
 			}
 			if (had_cmd) {
@@ -1957,13 +1970,13 @@ int spsr_init_trigger(void *obj)
 
 		ret = close(sockfd);
 		if (ret) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"Close socket, ret: %d, "
 				"errno: %d, text: %s.", 
 				ret, errno, strerror(errno));
 			ret = SPSR_CLOSE_SOCK;
 		} else {
-			spllog(SPL_LOG_DEBUG, 
+			spsr_dbg( 
 				"Close socket DONE: %d.", sockfd);
 		}
 		/* Clean linked list. TODO 2.*/
@@ -1994,7 +2007,7 @@ int spsr_fetch_commands(int epollfd,
 #else
 #endif
 	int step = 0;
-	spllog(0, "Enter fetching command, n: %d", n);
+	spsr_all( "Enter fetching command, n: %d", n);
 
 	for (step = 0; step < n;) {
 		item = (SPSR_GENERIC_ST *)(info + step);
@@ -2002,7 +2015,7 @@ int spsr_fetch_commands(int epollfd,
 		
 		if (item->type == SPSR_CMD_ADD) 
 		{
-			spllog(0, "\t SPSR_CMD_ADD: %d", item->type);
+			spsr_all( "\t SPSR_CMD_ADD: %d", item->type);
 		#ifndef __SPSR_EPOLL__
 			ret = spsr_px_add(item, evt, prange, fds);
 		#else
@@ -2012,7 +2025,7 @@ int spsr_fetch_commands(int epollfd,
 		}
 		/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 		if (item->type == SPSR_CMD_REM) {
-			spllog(0, "\t SPSR_CMD_REM: %d", item->type);
+			spsr_all( "\t SPSR_CMD_REM: %d", item->type);
 		#ifndef __SPSR_EPOLL__
 				ret = spsr_px_rem(item, evt, prange, fds);
 		#else
@@ -2022,7 +2035,7 @@ int spsr_fetch_commands(int epollfd,
 		}
 		/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 		if (item->type == SPSR_CMD_WRITE) {
-			spllog(0, "\t SPSR_CMD_WRITE: %d", item->type);
+			spsr_all( "\t SPSR_CMD_WRITE: %d", item->type);
 			ret = spsr_px_write(item, evt);
 			continue;
 		}
@@ -2055,7 +2068,7 @@ int spsr_px_hash_add( SPSR_ARR_LIST_LINED *temp,
 			hashobj, SPSR_HASH_FD_NAME);
 		if (!hashobj) {
 			ret = SPSR_MALLOC_ERROR;
-			spllog(SPL_LOG_ERROR, "hashobj null");
+			spsr_err( "hashobj null");
 			break;
 		}
 		hashobj->fd = fd;
@@ -2146,28 +2159,28 @@ int spsr_px_add(
 			memcpy(tmp_port, input->port_name, l);
 			temp->item->handle = fd;
 #ifndef __SPSR_EPOLL__
-			spllog(0, "Range of hashtable before adding, "
+			spsr_all( "Range of hashtable before adding, "
 				"*prange: %d,  DONE.", *prange);
 			if(!prange) {
-				spllog(SPL_LOG_ERROR, "prange NULL");
+				spsr_err( "prange NULL");
 				ret = SPSR_PX_PRANGE_NULL;
 				break;
 			}				
 			for (i = 0; i < (*prange + 1); ++i) {
-				spllog(0, "*prange: %d , "
+				spsr_all( "*prange: %d , "
 					"fds[%d].fd: %d .", 
 					*prange, i, fds[i].fd);
 				if (fds[i].fd < 0) {
 					fds[i].fd = fd;
 					fds[i].events = POLLIN;
 					(*prange)++;
-					spllog(0, "Add to poll list, "
+					spsr_all( "Add to poll list, "
 						"index: %d, fd: %d, range: %d",
 						i, fd, (*prange));
 					break;
 				}
 			}
-			spllog(0, "Range of hashtable after adding, "
+			spsr_all( "Range of hashtable after adding, "
 				"*prange: %d,  DONE.", *prange);
 #else
 			memset(&event, 0, sizeof(event));
@@ -2176,7 +2189,7 @@ int spsr_px_add(
 			rerr = epoll_ctl(epollfd, 
 				EPOLL_CTL_ADD, fd, &event);
 			if (rerr == -1) {
-				spllog(SPL_LOG_ERROR,
+				spsr_err(
 					"epoll_ctl error, fd: %d, "
 					"errno: %d, text: %s.", fd, errno,
 					strerror(errno));
@@ -2208,9 +2221,9 @@ int spsr_px_off_poll(int fd, int epollfd)
 	int ret = SPSR_PX_POLL_NOT_FOUND;
 #ifndef __SPSR_EPOLL__
 	int i = 0;
-	spllog(0, "Did catch handle: %d", fd);
+	spsr_all( "Did catch handle: %d", fd);
 	if(!prange) {
-		spllog(SPL_LOG_ERROR, "prange NULL");
+		spsr_err( "prange NULL");
 		return ret;
 	}
 	for (i = 1; i < *prange; ++i) {
@@ -2225,7 +2238,7 @@ int spsr_px_off_poll(int fd, int epollfd)
 			fds[(*prange - 1)].fd = -1;
 
 			(*prange)--;
-			spllog(SPL_LOG_DEBUG, 
+			spsr_dbg( 
 				"EPOLL_CTL_DEL, " "fd: %d DONE", fd);
 			ret = 0;
 			break;
@@ -2233,16 +2246,16 @@ int spsr_px_off_poll(int fd, int epollfd)
 	}
 #else
 	int errr = 0;
-	spllog(0, "Did catch handle: %d", fd);
+	spsr_all( "Did catch handle: %d", fd);
 	errr = epoll_ctl( epollfd, EPOLL_CTL_DEL, fd, 0);
 	if (errr == -1) {
-		spllog(SPL_LOG_ERROR,
+		spsr_err(
 			"epoll_ctl error, fd: %d, "
 			"errno: %d, text: %s.",
 			fd, errno, strerror(errno));
 		ret = SPSR_PX_EPOLL_DEL;
 	} else {
-		spllog(SPL_LOG_DEBUG,
+		spsr_dbg(
 			"EPOLL_CTL_DEL, "
 			"fd: %d DONE",
 			fd);
@@ -2290,14 +2303,14 @@ static int spsr_px_off_hash(int fd)
 		} else {
 			spsr_hash_fd_arr[hashid] = temp->next;
 		}
-		spllog(SPL_LOG_DEBUG,
+		spsr_dbg(
 			"Clear from spsr_hash_fd_arr, "
 			"hashid:%d, fd: %d.", hashid, fd);
 		spsr_free(temp);
 		break;		
 	} while (0);	
 	if(ret) {
-		spllog(SPL_LOG_ERROR, 
+		spsr_err( 
 			"SPSR_HASH_NOT_FOUND Cannot find object.");		
 	}
 	return ret;
@@ -2351,12 +2364,12 @@ int spsr_px_rem(
 	#endif
 		portname = item->data;
 		l = strlen(portname);
-		spllog(0, "port: %s", item->data);
+		spsr_all( "port: %s", item->data);
 		spsr_mutex_lock(t->mutex);
 
 		do {
 			temp = t->init_node;
-			spllog(0,
+			spsr_all(
 				"SPSR_CMD_REM command, "
 				"pl: %d, "
 				"portname: %s, "
@@ -2365,7 +2378,7 @@ int spsr_px_rem(
 				item->pl, portname, item->total, temp);
 			while (temp) 
 			{
-				spllog(0, "portname: %s", temp->item->port_name);
+				spsr_all( "portname: %s", temp->item->port_name);
 				if(strcmp(temp->item->port_name, portname)) {
 					prev = temp;
 					temp = temp->next;					
@@ -2376,7 +2389,7 @@ int spsr_px_rem(
 			}
 			if(!found) {
 				ret = SPSR_REM_NOT_FOUND;
-				spllog( SPL_LOG_ERROR, 
+				spsr_err( 
 					"SPSR_REM_NOT_FOUND, port: %s.", portname);
 				break;
 			}
@@ -2394,7 +2407,7 @@ int spsr_px_rem(
 			ret = spsr_px_off_poll(fd, epollfd);
 #endif
 			if(ret) {
-				spllog( SPL_LOG_ERROR, 
+				spsr_err( 
 					"spsr_px_off_poll, ret: %d.", ret);
 			}
 			ret = spsr_px_off_hash(fd);
@@ -2403,7 +2416,7 @@ int spsr_px_rem(
 			if (errr) {
 				callback_evt = 
 					SPSR_EVENT_CLOSE_DEVICE_ERROR;
-				spllog(SPL_LOG_ERROR,
+				spsr_err(
 					"close error, "
 					"fd: %d, "
 					"errno: %d, text: %s.",
@@ -2411,8 +2424,7 @@ int spsr_px_rem(
 			} else {
 				callback_evt = 
 					SPSR_EVENT_CLOSE_DEVICE_OK;
-				spllog(
-					SPL_LOG_DEBUG, "close, fd: %d, DONE", fd);
+				spsr_dbg( "close, fd: %d, DONE", fd);
 			}
 			/* Remove out of root list*/
 			if (t->count < 2) {
@@ -2431,7 +2443,7 @@ int spsr_px_rem(
 			spsr_free(temp->item);
 			spsr_free(temp);
 			t->count--;
-			spllog( SPL_LOG_DEBUG, "t->count: %d", t->count);
+			spsr_dbg( "t->count: %d", t->count);
 			break;			
 		} while (0);
 		spsr_mutex_unlock(t->mutex);
@@ -2470,13 +2482,13 @@ int spsr_px_write(
 	do {
 		if(!item) {
 			ret = SPSR_PX_ITEM_NULL;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_PX_ITEM_NULL");				
 			break;
 		}
 		if(!evt) {
 			ret = SPSR_PX_CB_NULL;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_PX_CB_NULL");			
 			break;
 		}		
@@ -2485,11 +2497,11 @@ int spsr_px_write(
 		spsr_mutex_lock(t->mutex);
 		/*do { */
 			temp = t->init_node;
-			spllog(0, "SPSR_CMD_WRITE, pl: %d, "
+			spsr_all( "SPSR_CMD_WRITE, pl: %d, "
 				"portname: %s, total: %d, initnode: 0x%p",
 				item->pl, portname, item->total, temp);
 			while (temp) {
-				spllog(0, 
+				spsr_all( 
 					"portname: %s", 
 					temp->item->port_name);
 				kcmp = strcmp(
@@ -2501,7 +2513,7 @@ int spsr_px_write(
 					continue;
 				}
 				if (temp->item->handle < 0) {
-					spllog(SPL_LOG_ERROR, 
+					spsr_err( 
 						"temp->item->handle: %d",
 						temp->item->handle);
 					break;
@@ -2513,7 +2525,7 @@ int spsr_px_write(
 		spsr_mutex_unlock(t->mutex);
 
 		if(fd < 0) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_PX_FD_NOT_FOUND");
 			ret = SPSR_PX_FD_NOT_FOUND;
 			break;
@@ -2529,24 +2541,24 @@ int spsr_px_write(
 
 		if (tcflush(fd, TCIOFLUSH) == -1) 
 		{
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"Error flushing the serial port buffer");
 			break;
 		} 
 		else {
-			spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
+			spsr_dbg( "tcdrain DONE,");
 		}
 
 		nwrote = write(fd, p, wlen);
 		if (nwrote != wlen) {
-			spllog(SPL_LOG_ERROR,
+			spsr_err(
 				"write error, fd: %d, "
 				"errno: %d, text: %s.",
 				fd, errno, strerror(errno));		
 			break;
 		}
 		wrote = 1;
-		spllog(SPL_LOG_DEBUG, 
+		spsr_dbg( 
 			"write DONE, fd: %d, nwrote: %d, wlen: %d.",
 			fd, nwrote, wlen);
 		break;
@@ -2580,11 +2592,11 @@ int spsr_px_write(
 	if(!ret && fd >= 0) {
 		if (tcdrain(fd) == -1) 
 		{
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"Error flushing the serial port buffer");
 
 		} else {
-			spllog(SPL_LOG_DEBUG, "tcdrain DONE,");
+			spsr_dbg( "tcdrain DONE,");
 		}		
 	}
 
@@ -2617,7 +2629,7 @@ int spsr_send_cmd(
 				t->cmd_buff->pl += nsize;
 				pend = (int *)(t->cmd_buff->data + t->cmd_buff->pl);
 				*pend = 0;
-				spllog(0, 
+				spsr_all( 
 					"cmd type SPSR_CMD_ADD: %d, size: %d", 
 					obj->type, obj->total);
 			}
@@ -2629,7 +2641,7 @@ int spsr_send_cmd(
 
 			lport = len + 1;
 			nsize = sizeof(SPSR_GENERIC_ST) + lport;
-			spllog(0, 
+			spsr_all( 
 				"SPSR_CMD_REM, nsize: %d, portname: %s", 
 				nsize, portname);
 			if (t->cmd_buff->range > t->cmd_buff->pl + nsize) {
@@ -2658,7 +2670,7 @@ int spsr_send_cmd(
 			
 			lport = (len + 1) + datasz;
 			nsize = sizeof(SPSR_GENERIC_ST) + lport;
-			spllog(0, 
+			spsr_all( 
 				"SPSR_CMD_WRITE, nsize: %d, "
 				"portname: %s", nsize, portname);
 			range = t->cmd_buff->range;
@@ -2716,7 +2728,7 @@ int spsr_is_existed(char *port, int *isExisted) {
 	do {
 		if(!isExisted) {
 			ret = SPSR_OBJ_NULL;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_OBJ_NULL.");
 			break;
 		}		
@@ -2757,7 +2769,7 @@ int spsr_verify_info(SPSR_INPUT_ST *p)
 	int ret = 0;
 	SPSR_INFO_ST *item = 0;
 	SPSR_ARR_LIST_LINED *node = 0;
-	spllog(SPL_LOG_DEBUG, "spsr_verify_info:");
+	spsr_dbg( "spsr_verify_info:");
 #ifndef UNIX_LINUX
 	HANDLE hSerial = 0;
 #else
@@ -2766,18 +2778,18 @@ int spsr_verify_info(SPSR_INPUT_ST *p)
 	do {
 		if (!p) {
 			ret = SPSR_PORT_INPUT_NULL;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_PORT_INPUT_NULL.");
 			break;
 		}
 		if (p->baudrate < 1) {
 			ret = SPSR_PORT_BAUDRATE_ERROR;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_PORT_BAUDRATE_ERROR.");
 			break;
 		}
 		if (!p->port_name[0]) {
-			spllog(SPL_LOG_DEBUG, 
+			spsr_dbg( 
 				"port_name empty.");
 			ret = SPSR_PORT_NAME_ERROR;
 			break;
@@ -2794,7 +2806,7 @@ int spsr_verify_info(SPSR_INPUT_ST *p)
 					tmp = tmp->next;
 					continue;
 				}
-				spllog(SPL_LOG_ERROR, 
+				spsr_err( 
 					"SPSR_PORTNAME_EXISTED: \"%s\".", 
 					p->port_name);
 				ret = SPSR_PORTNAME_EXISTED;
@@ -2816,12 +2828,12 @@ int spsr_verify_info(SPSR_INPUT_ST *p)
 
 		if (hSerial == INVALID_HANDLE_VALUE) {
 			DWORD dwError = GetLastError();
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"Open port errcode: %lu", dwError);
 			ret = SPSR_PORT_OPEN;
 			break;
 		} else {
-			spllog(SPL_LOG_DEBUG, 
+			spsr_dbg( 
 				"Create hSerial: 0x%p.", hSerial);
 			SPSR_CloseHandle(hSerial);
 		}
@@ -2831,17 +2843,17 @@ int spsr_verify_info(SPSR_INPUT_ST *p)
 			O_RDWR | O_NOCTTY | O_NDELAY);
 		if (fd == -1) {
 			ret = SPSR_PORT_OPEN_UNIX;
-			spllog(SPL_LOG_ERROR, "open port: ret: %d, "
+			spsr_err( "open port: ret: %d, "
 				"errno: %d, text: %s.", 
 				ret, errno, strerror(errno));
 			break;
 		}
-		spllog(SPL_LOG_DEBUG, "open portname: %s, "
+		spsr_dbg( "open portname: %s, "
 			"fd: %d.", p->port_name, fd);
 		ret = close(fd);
 		if (ret) {
 			ret = SPSR_PORT_CLOSE_UNIX;
-			spllog(SPL_LOG_ERROR, "close port fd: %d, "
+			spsr_err( "close port fd: %d, "
 				"ret: %d, errno: %d, text: %s.", 
 				fd, ret, errno,
 			    strerror(errno));
@@ -2854,14 +2866,14 @@ int spsr_verify_info(SPSR_INPUT_ST *p)
 			node, SPSR_ARR_LIST_LINED);
 		if (!node) {
 			ret = SPSR_MEM_NULL;
-			spllog(SPL_LOG_ERROR, "SPSR_MEM_NULL");
+			spsr_err( "SPSR_MEM_NULL");
 			break;
 		}
 		spsr_malloc(sizeof(SPSR_INFO_ST), 
 			item, SPSR_INFO_ST);
 		if (!item) {
 			ret = SPSR_MEM_NULL;
-			spllog(SPL_LOG_ERROR, "SPSR_MEM_NULL");
+			spsr_err( "SPSR_MEM_NULL");
 			break;
 		}
 
@@ -2890,7 +2902,7 @@ int spsr_verify_info(SPSR_INPUT_ST *p)
 			spsr_thread_operating_routine, node);
 #else
 		item->handle = -1;
-		spllog(SPL_LOG_DEBUG, 
+		spsr_dbg( 
 			"Check t->init_node: 0x%p", t->init_node);
 		spsr_send_cmd(SPSR_CMD_ADD, 0, 0, 0);
 #endif
@@ -2941,7 +2953,7 @@ spsr_clear_all()
 		if(!ret) {
 			continue;
 		}
-		spllog(SPL_LOG_ERROR,
+		spsr_err(
 			"spsr_inst_close: ret: %d, port: %s.",
 			ret, port);
 	} while (count);
@@ -2964,11 +2976,11 @@ spsr_clear_all()
 		fd = tnode->item->handle;
 		ret = close(fd);
 		if (ret) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"close: ret: %d, errno: %d, text: %s.", 
 				ret, errno, strerror(errno));
 		} else {
-			spllog( SPL_LOG_DEBUG,"closed fd: %d.", fd);
+			spsr_dbg("closed fd: %d.", fd);
 		}
 		spsr_free(tnode->item);
 		spsr_free(tnode);
@@ -3029,7 +3041,7 @@ spsr_clear_hash()
 		while (obj) {
 			tmp = obj;
 			obj = obj->next;
-			spllog(0, "fd: %d, name: %s", 
+			spsr_all( "fd: %d, name: %s", 
 				tmp->fd, tmp->port_name);
 			spsr_free(tmp);
 		}
@@ -3052,20 +3064,20 @@ int spsr_open_fd(
 		fd = open(port_name, 
 			O_RDWR | O_NOCTTY | O_NONBLOCK | O_SYNC);
 		if (fd == -1) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"open port error, fd: %d, "
 				"errno: %d, text: %s.", 
 				fd, errno, strerror(errno));
 			ret = SPSR_UNIX_OPEN_PORT;
 			break;
 		}
-		spllog(0, 
+		spsr_all( 
 			"fd: %d, portname: %s", 
 			fd, port_name);
 		memset(&options, 0, sizeof(options));
 		rerr = tcgetattr(fd, &options);
 		if (rerr < 0) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"tcgetattr error, fd: %d, "
 				"errno: %d, text: %s.", 
 				fd, errno, strerror(errno));
@@ -3073,7 +3085,7 @@ int spsr_open_fd(
 			break;
 		}
 
-		spllog(0, "fd: %d, "
+		spsr_all( "fd: %d, "
 			"portname: %s, rate: %d", 
 			fd, port_name, baudrate);
 
@@ -3104,14 +3116,14 @@ int spsr_open_fd(
 
 		rerr = tcsetattr(fd, TCSANOW, &options);
 		if (rerr < 0) {
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"tcsetattr error, fd: %d, "
 				"errno: %d, text: %s.", 
 				fd, errno, strerror(errno));
 			ret = SPSR_UNIX_SET_ATTR;
 			break;
 		} else {
-			spllog(0, "tcsetattr: DONE.")
+			spsr_all( "tcsetattr: DONE.")
 		}
 		*outfd = fd;
 	} while (0);
@@ -3139,13 +3151,13 @@ int spsr_read_fd(
 	do {
 		if (!pevtcb) {
 			ret = SPSR_MEM_NULL;
-			spllog(SPL_LOG_ERROR, "pevtcb NULL");
+			spsr_err( "pevtcb NULL");
 			break;
 		}
 		evtcb = pevtcb;
 		if (!evtcb) {
 			ret = SPSR_MEM_NULL;
-			spllog(SPL_LOG_ERROR, "evtcb NULL");
+			spsr_err( "evtcb NULL");
 			break;
 		}
 		buffer = evtcb->data + evtcb->pc;
@@ -3155,7 +3167,7 @@ int spsr_read_fd(
 			hashobj = (SPSR_HASH_FD_NAME *)
 				spsr_hash_fd_arr[hasdid];
 			if (!hashobj) {
-				spllog(SPL_LOG_ERROR, 
+				spsr_err( 
 					"Cannot find obj in reading.");
 				ret = SPSR_HASH_NOTFOUND;
 				break;
@@ -3179,8 +3191,7 @@ int spsr_read_fd(
 			range = evtcb->range;
 			didread = (int)read(comfd, buffer, range);
 			if (didread < 1) {
-				spllog(
-				    SPL_LOG_ERROR, 
+				spsr_err( 
 					"read error, fd: %d, "
 					"errno: %d, text: %s.", 
 					fd, errno, strerror(errno));
@@ -3196,12 +3207,12 @@ int spsr_read_fd(
 
 			if (!temp) {
 				ret = SPSR_HASH_NOTFOUND;
-				spllog(SPL_LOG_ERROR, 
+				spsr_err( 
 					"Didsee Cannot find obj in reading.");
 				break;
 			}
 			if (!temp->cb_evt_fn) {
-				spllog(SPL_LOG_DEBUG, 
+				spsr_dbg( 
 					"cb_evt_fn, cb_evt_fn null.");
 				break;
 			}
@@ -3302,7 +3313,7 @@ spsr_ctrl_sock(
 					break;
 				}
 #endif
-				spllog(SPL_LOG_ERROR, 
+				spsr_err( 
 					"mach recvfrom, "
 					"lenmsg: %d, errno: %d, text: %s.", 
 					(int)lenmsg, errno,
@@ -3311,9 +3322,9 @@ spsr_ctrl_sock(
 			}
 
 			buffer[lenmsg] = 0;
-			spllog(SPL_LOG_DEBUG, "buffer: %s", buffer);
+			spsr_dbg( "buffer: %s", buffer);
 			if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
-				spllog(SPL_LOG_DEBUG, SPSR_MSG_OFF);
+				spsr_dbg( SPSR_MSG_OFF);
 				isoff = 1;
 				break;
 			}
@@ -3328,7 +3339,7 @@ spsr_ctrl_sock(
 			do {
 				if(!t->cmd_buff) {
 					ret = SPSR_MEM_NULL;
-					spllog(SPL_LOG_ERROR, 
+					spsr_err( 
 						"SPSR_MEM_NULL");
 					break;
 				}
@@ -3357,11 +3368,11 @@ spsr_ctrl_sock(
 #ifndef __SPSR_EPOLL__
 			ret = spsr_fetch_commands(
 				fds, mx_number, p, lenp, evt);
-			spllog(0, "MACH POLL --->>> "
+			spsr_all( "MACH POLL --->>> "
 				"Size of buffer of command : %d", lenp);
 #else
 			ret = spsr_fetch_commands(epollfd, p, lenp, evt);
-			spllog(0, "LINUX EPOLL --->>> "
+			spsr_all( "LINUX EPOLL --->>> "
 				"Size of buffer of command : %d", lenp);
 #endif
 
@@ -3388,7 +3399,7 @@ spsr_mutex_delete(void *mtx)
 		SPSR_CloseHandle(mtx);
 #else
 		ret = pthread_mutex_destroy((pthread_mutex_t *)mtx);
-		spllog(0, "Delete 0x%p", mtx);
+		spsr_all( "Delete 0x%p", mtx);
 		spsr_free(mtx);
 #endif
 	} while (0);
@@ -3410,7 +3421,7 @@ int spsr_sem_delete(void *sem, char *sem_name)
 		err = sem_close((sem_t *)sem);
 		if (err == -1) {
 			ret = SPSR_SEM_CLOSE;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"mach sem_close, "
 				"err: %d, errno: %d, text: %s.", 
 				(int)err, 
@@ -3418,14 +3429,14 @@ int spsr_sem_delete(void *sem, char *sem_name)
 				strerror(errno));
 		}
 
-		spllog(0, "Sem Delete 0x%p,  "
+		spsr_all( "Sem Delete 0x%p,  "
 			"sem_name: %s, name: %s", 
 			sem, sem_name, name);
 
 		err = sem_unlink(name);
 		if (err) {
 			ret = SPSR_SEM_UNLINK;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"mach sem_unlink, "
 				"err: %d, errno: %d, text: %s.", 
 				(int)err, errno,
@@ -3434,7 +3445,7 @@ int spsr_sem_delete(void *sem, char *sem_name)
 		/* spsr_free(sem); */
 #else
 		ret = sem_destroy((sem_t *)sem);
-		spllog(0, "Delete 0x%p", sem);
+		spsr_all( "Delete 0x%p", sem);
 		spsr_free(sem);
 #endif
 #endif
@@ -3451,7 +3462,7 @@ int spsr_invoke_cb(
 {
 	int ret = 0;
 #ifdef SPSR_SHOW_CONSOLE
-	spllog(0, "Enter call callback.");
+	spsr_all( "Enter call callback.");
 #endif
 	do {
 		if (!fn_cb) {
@@ -3465,12 +3476,12 @@ int spsr_invoke_cb(
 		{
 			SPSR_UNIT *pt = (SPSR_UNIT *)evt->data;
 			*pt = (SPSR_UNIT)obj_cb;
-			spllog(SPL_LOG_DEBUG, "With 32 bit.");
+			spsr_dbg( "With 32 bit.");
 		} 
 		else if (sizeof(void *) == sizeof(SPSR_LLU)) 
 		{
 			SPSR_LLU *pt = (SPSR_LLU *)evt->data;
-			spllog(SPL_LOG_DEBUG, "With 64 bit.");
+			spsr_dbg( "With 64 bit.");
 			*pt = (SPSR_LLU)obj_cb;
 		}
 		evt->pl = evt->pc + lendata;
@@ -3494,13 +3505,13 @@ int spsr_resize_obj(
 		if(sz < (2 * sizeof(SPSR_GENERIC_ST))) 
 		{
 			ret = SPSR_MINI_SIZE;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_MINI_SIZE");			
 			break;
 		}
 		if(!obj) {
 			ret = SPSR_OBJ_NULL;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_OBJ_NULL");
 			break;
 		}
@@ -3518,7 +3529,7 @@ int spsr_resize_obj(
 		
 		if(!p) {
 			ret = SPSR_MEM_NULL;
-			spllog(SPL_LOG_ERROR, 
+			spsr_err( 
 				"SPSR_MEM_NULL");			
 			break;
 		}
