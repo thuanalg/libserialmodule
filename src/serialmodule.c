@@ -3,8 +3,8 @@
 *		<nguyenthaithuanalg@gmail.com> - Nguyễn Thái Thuận
 * Mobile:
 *		<+084.799.324.179>
-* Skype:
-*		<nguyenthaithuanalg>
+* Whatsapp:
+*		<+084.799.324.179>
 * Date:
 *		<2025-Mar-01>
 * The lasted modified date:
@@ -15,6 +15,7 @@
 		<2025-May-02>
 		<2025-May-03>
 		<2025-May-06>
+		<2025-May-13>
 * Decription:
 *		The (only) main header file to export 
 		5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
@@ -68,7 +69,8 @@ spsr_inst_close, spsr_inst_write].
 				spsr_err( "CloseHandle error: %lu", GetLastError());                            \
 				;                                                                                           \
 			};                                                                                                  \
-			spsr_all( "SPSR_CloseHandle 0x%p -->> %s", __serialpp__, (bl ? "DONE" : "ERROR"));                  \
+			spsr_all("SPSR_CloseHandle 0x%p -->> %s", \
+				__serialpp__, (bl ? "DONE" : "ERROR"));                  \
 			;                                                                                                   \
 			(__o0bj__) = 0;                                                                                     \
 			;                                                                                                   \
@@ -103,7 +105,7 @@ spsr_inst_close, spsr_inst_write].
 #define spsr_api_err(___api__)                                                                                              \
 	\                                                                                                                   \
 	{                                                                                                                   \
-		spsr_err("%s, errno: %d: \"%s\".", \
+		spsr_err("%s, errno: %d: \"%s\"."___api__, \
 			___api__, errno, strerror(errno));                                              \
 	}
 #endif
@@ -308,14 +310,14 @@ int spsr_inst_open(
 int spsr_inst_close(char *portname)
 {
 	int ret = 0;
-	spsr_all( "Delete port: %s.", portname);
+	spsr_all("Delete port: %s.", portname);
 #ifndef UNIX_LINUX
 	void *p = 0;
 	SPSR_ARR_LIST_LINED *node = 0;
 	do {
 		ret = spsr_get_obj(portname, &p, 1);
 		if (p) {
-			spsr_all( "Delete port: %s.", portname);
+			spsr_all("Delete port: %s.", portname);
 			node = (SPSR_ARR_LIST_LINED *)p;
 			spsr_clear_node(node);
 
@@ -386,7 +388,7 @@ int spsr_module_openport(void *obj)
 			break;
 		}
 		p->handle = hSerial;
-		spsr_all( "Create hSerial: 0x%p.", hSerial);
+		spsr_all("Create hSerial: 0x%p.", hSerial);
 		if (p->is_retry) {
 			break;
 		}
@@ -520,10 +522,7 @@ spsr_sem_create(char *name_key)
 #ifndef UNIX_LINUX
 		obj = CreateSemaphoreA(0, 0, 1, 0);
 		if(!obj) {
-			DWORD dwError = GetLastError();
-			spsr_err( 
-				"CreateSemaphoreA, %d",
-				(int)dwError);
+			spsr_api_err("CreateSemaphoreA");
 			break;
 		}
 #else
@@ -586,6 +585,7 @@ spsr_sem_create(char *name_key)
 		/*https://linux.die.net/man/3/sem_init*/
 		spsr_malloc(sizeof(sem_t), obj, void);
 		if (!obj) {
+			spsr_api_err("malloc");
 			break;
 		}
 		memset(obj, 0, sizeof(sem_t));
@@ -593,7 +593,7 @@ spsr_sem_create(char *name_key)
 #endif
 #endif
 	} while (0);
-	spsr_all( "Create: 0x%p.", obj);
+	spsr_all("Create: 0x%p.", obj);
 	return obj;
 }
 
@@ -606,17 +606,22 @@ spsr_mutex_create()
 	do {
 #ifndef UNIX_LINUX
 		obj = CreateMutexA(0, 0, 0);
+		if (!obj) {
+			spsr_api_err("CreateMutexA");
+			break;
+		}
 #else
 		/*https://linux.die.net/man/3/pthread_mutex_init*/
 		spsr_malloc(sizeof(pthread_mutex_t), obj, void);
 		if (!obj) {
+			spsr_api_err("malloc");
 			break;
 		}
 		memset(obj, 0, sizeof(pthread_mutex_t));
 		pthread_mutex_init((pthread_mutex_t *)obj, 0);
 #endif
 	} while (0);
-	spsr_all( "Create: 0x%p.", obj);
+	spsr_all("Create: 0x%p.", obj);
 	return obj;
 }
 
@@ -709,7 +714,7 @@ spsr_win32_read(
 	else if (*pbytesRead > 0) 
 	{
 		tbuffer[*pbytesRead] = 0;
-		spsr_all( "[tbuffer: %s]!", tbuffer);
+		spsr_all("[tbuffer: %s]!", tbuffer);
 		spsr_invoke_cb(
 			SPSR_EVENT_READ_BUF, 
 			p->cb_evt_fn,
@@ -900,7 +905,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 		}
 
 		if (isoff) {
-			spsr_all( "is OFF");
+			spsr_all("is OFF");
 			break;
 		}
 
@@ -908,7 +913,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 
 		isoff = spsr_module_isoff(p);		
 		if (p->is_retry) {
-			spsr_all( "retry");
+			spsr_all("retry");
 		}			
 
 		ret = spsr_module_openport(p);
@@ -942,7 +947,7 @@ DWORD WINAPI spsr_thread_operating_routine(
 		while (1) {
 			isoff = spsr_module_isoff(p);
 			if (isoff) {
-				spsr_all( "is OFF");
+				spsr_all("is OFF");
 				break;
 			}
 			memset(&olReadWrite, 
@@ -953,12 +958,12 @@ DWORD WINAPI spsr_thread_operating_routine(
 			do {
 
 				if (!p->buff) {
-					spsr_all( "No data.");
+					spsr_all("No data.");
 					break;
 				}	
 
 				if (p->buff->pl < 1) {
-					spsr_all( "No data.");
+					spsr_all("No data.");
 					break;
 				}
 
@@ -2046,7 +2051,7 @@ int spsr_fetch_commands(int epollfd,
 #else
 #endif
 	int step = 0;
-	spsr_all( "Enter fetching command, n: %d", n);
+	spsr_all("Enter fetching command, n: %d", n);
 
 	for (step = 0; step < n;) {
 		item = (SPSR_GENERIC_ST *)(info + step);
@@ -2054,7 +2059,7 @@ int spsr_fetch_commands(int epollfd,
 		
 		if (item->type == SPSR_CMD_ADD) 
 		{
-			spsr_all( "\t SPSR_CMD_ADD: %d", item->type);
+			spsr_all("\t SPSR_CMD_ADD: %d", item->type);
 		#ifndef __SPSR_EPOLL__
 			ret = spsr_px_add(item, evt, prange, fds);
 		#else
@@ -2064,7 +2069,7 @@ int spsr_fetch_commands(int epollfd,
 		}
 		/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 		if (item->type == SPSR_CMD_REM) {
-			spsr_all( "\t SPSR_CMD_REM: %d", item->type);
+			spsr_all("\t SPSR_CMD_REM: %d", item->type);
 		#ifndef __SPSR_EPOLL__
 				ret = spsr_px_rem(item, evt, prange, fds);
 		#else
@@ -2074,7 +2079,7 @@ int spsr_fetch_commands(int epollfd,
 		}
 		/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 		if (item->type == SPSR_CMD_WRITE) {
-			spsr_all( "\t SPSR_CMD_WRITE: %d", item->type);
+			spsr_all("\t SPSR_CMD_WRITE: %d", item->type);
 			ret = spsr_px_write(item, evt);
 			continue;
 		}
@@ -2198,7 +2203,7 @@ int spsr_px_add(
 			memcpy(tmp_port, input->port_name, l);
 			temp->item->handle = fd;
 #ifndef __SPSR_EPOLL__
-			spsr_all( "Range of hashtable before adding, "
+			spsr_all("Range of hashtable before adding, "
 				"*prange: %d,  DONE.", *prange);
 			if(!prange) {
 				spsr_err( "prange NULL");
@@ -2206,20 +2211,20 @@ int spsr_px_add(
 				break;
 			}				
 			for (i = 0; i < (*prange + 1); ++i) {
-				spsr_all( "*prange: %d , "
+				spsr_all("*prange: %d , "
 					"fds[%d].fd: %d .", 
 					*prange, i, fds[i].fd);
 				if (fds[i].fd < 0) {
 					fds[i].fd = fd;
 					fds[i].events = POLLIN;
 					(*prange)++;
-					spsr_all( "Add to poll list, "
+					spsr_all("Add to poll list, "
 						"index: %d, fd: %d, range: %d",
 						i, fd, (*prange));
 					break;
 				}
 			}
-			spsr_all( "Range of hashtable after adding, "
+			spsr_all("Range of hashtable after adding, "
 				"*prange: %d,  DONE.", *prange);
 #else
 			memset(&event, 0, sizeof(event));
@@ -2260,7 +2265,7 @@ int spsr_px_off_poll(int fd, int epollfd)
 	int ret = SPSR_PX_POLL_NOT_FOUND;
 #ifndef __SPSR_EPOLL__
 	int i = 0;
-	spsr_all( "Did catch handle: %d", fd);
+	spsr_all("Did catch handle: %d", fd);
 	if(!prange) {
 		spsr_err( "prange NULL");
 		return ret;
@@ -2285,7 +2290,7 @@ int spsr_px_off_poll(int fd, int epollfd)
 	}
 #else
 	int errr = 0;
-	spsr_all( "Did catch handle: %d", fd);
+	spsr_all("Did catch handle: %d", fd);
 	errr = epoll_ctl( epollfd, EPOLL_CTL_DEL, fd, 0);
 	if (errr == -1) {
 		spsr_err(
@@ -2403,7 +2408,7 @@ int spsr_px_rem(
 	#endif
 		portname = item->data;
 		l = strlen(portname);
-		spsr_all( "port: %s", item->data);
+		spsr_all("port: %s", item->data);
 		spsr_mutex_lock(t->mutex);
 
 		do {
@@ -2417,7 +2422,7 @@ int spsr_px_rem(
 				item->pl, portname, item->total, temp);
 			while (temp) 
 			{
-				spsr_all( "portname: %s", temp->item->port_name);
+				spsr_all("portname: %s", temp->item->port_name);
 				if(strcmp(temp->item->port_name, portname)) {
 					prev = temp;
 					temp = temp->next;					
@@ -2536,7 +2541,7 @@ int spsr_px_write(
 		spsr_mutex_lock(t->mutex);
 		/*do { */
 			temp = t->init_node;
-			spsr_all( "SPSR_CMD_WRITE, pl: %d, "
+			spsr_all("SPSR_CMD_WRITE, pl: %d, "
 				"portname: %s, total: %d, initnode: 0x%p",
 				item->pl, portname, item->total, temp);
 			while (temp) {
@@ -3015,9 +3020,12 @@ spsr_clear_all()
 		fd = tnode->item->handle;
 		ret = close(fd);
 		if (ret) {
+			/*
 			spsr_err( 
 				"close: ret: %d, errno: %d, text: %s.", 
 				ret, errno, strerror(errno));
+			*/
+			spsr_api_err("close");
 		} else {
 			spsr_dbg("closed fd: %d.", fd);
 		}
@@ -3080,7 +3088,7 @@ spsr_clear_hash()
 		while (obj) {
 			tmp = obj;
 			obj = obj->next;
-			spsr_all( "fd: %d, name: %s", 
+			spsr_all("fd: %d, name: %s", 
 				tmp->fd, tmp->port_name);
 			spsr_free(tmp);
 		}
@@ -3116,15 +3124,17 @@ int spsr_open_fd(
 		memset(&options, 0, sizeof(options));
 		rerr = tcgetattr(fd, &options);
 		if (rerr < 0) {
+			
 			spsr_err( 
 				"tcgetattr error, fd: %d, "
 				"errno: %d, text: %s.", 
 				fd, errno, strerror(errno));
+			
 			ret = SPSR_UNIX_GET_ATTR;
 			break;
 		}
 
-		spsr_all( "fd: %d, "
+		spsr_all("fd: %d, "
 			"portname: %s, rate: %d", 
 			fd, port_name, baudrate);
 
@@ -3162,7 +3172,7 @@ int spsr_open_fd(
 			ret = SPSR_UNIX_SET_ATTR;
 			break;
 		} else {
-			spsr_all( "tcsetattr: DONE.")
+			spsr_all("tcsetattr: DONE.")
 		}
 		*outfd = fd;
 	} while (0);
@@ -3407,11 +3417,11 @@ spsr_ctrl_sock(
 #ifndef __SPSR_EPOLL__
 			ret = spsr_fetch_commands(
 				fds, mx_number, p, lenp, evt);
-			spsr_all( "MACH POLL --->>> "
+			spsr_all("MACH POLL --->>> "
 				"Size of buffer of command : %d", lenp);
 #else
 			ret = spsr_fetch_commands(epollfd, p, lenp, evt);
-			spsr_all( "LINUX EPOLL --->>> "
+			spsr_all("LINUX EPOLL --->>> "
 				"Size of buffer of command : %d", lenp);
 #endif
 
@@ -3438,7 +3448,7 @@ spsr_mutex_delete(void *mtx)
 		SPSR_CloseHandle(mtx);
 #else
 		ret = pthread_mutex_destroy((pthread_mutex_t *)mtx);
-		spsr_all( "Delete 0x%p", mtx);
+		spsr_all("Delete 0x%p", mtx);
 		spsr_free(mtx);
 #endif
 	} while (0);
@@ -3460,31 +3470,37 @@ int spsr_sem_delete(void *sem, char *sem_name)
 		err = sem_close((sem_t *)sem);
 		if (err == -1) {
 			ret = SPSR_SEM_CLOSE;
+			spsr_api_err("sem_close");
+			/*
 			spsr_err( 
 				"mach sem_close, "
 				"err: %d, errno: %d, text: %s.", 
 				(int)err, 
 				errno, 
 				strerror(errno));
+			*/
 		}
 
-		spsr_all( "Sem Delete 0x%p,  "
+		spsr_all("Sem Delete 0x%p,  "
 			"sem_name: %s, name: %s", 
 			sem, sem_name, name);
 
 		err = sem_unlink(name);
 		if (err) {
 			ret = SPSR_SEM_UNLINK;
+			/*
 			spsr_err( 
 				"mach sem_unlink, "
 				"err: %d, errno: %d, text: %s.", 
 				(int)err, errno,
 			    strerror(errno));
+			*/
+			spsr_api_err("sem_unlink");
 		}
 		/* spsr_free(sem); */
 #else
 		ret = sem_destroy((sem_t *)sem);
-		spsr_all( "Delete 0x%p", sem);
+		spsr_all("Delete 0x%p", sem);
 		spsr_free(sem);
 #endif
 #endif
@@ -3501,7 +3517,7 @@ int spsr_invoke_cb(
 {
 	int ret = 0;
 #ifdef SPSR_SHOW_CONSOLE
-	spsr_all( "Enter call callback.");
+	spsr_all("Enter call callback.");
 #endif
 	do {
 		if (!fn_cb) {
