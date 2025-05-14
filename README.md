@@ -43,5 +43,3 @@ Contributions are welcome! Feel free to submit issues or pull requests to enhanc
 ### Contact:
 - [Email](mailto:nguyenthaithuanalg@gmail.com)
 
-### Used:
-- [meta-voltumna](https://layers.openembedded.org/layerindex/branch/master/layer/meta-voltumna/) -->> [libserialmodule](https://layers.openembedded.org/layerindex/recipe/448793/) by [Elettra-Sincrotrone Trieste](https://www.elettra.eu/).
