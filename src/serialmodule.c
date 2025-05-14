@@ -2988,9 +2988,7 @@ spsr_read_fd(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 			}
 			/* } */
 			buffer[didread] = 0;
-
-			spllog(0,
-			    "Didread: %d, data: \"%s\", "
+			spsr_all("Didread: %d, data: \"%s\", "
 			    "fd: %d, temp->t_delay/timeout: %d",
 			    didread, buffer, fd, t_wait);
 
