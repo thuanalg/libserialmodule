@@ -1070,7 +1070,7 @@ spsr_module_finish()
 
 	spsr_mutex_lock(t->mutex);
 	/*do {*/
-	t->spsr_off = 1;
+		t->spsr_off = 1;
 	/*} while (0);*/
 	spsr_mutex_unlock(t->mutex);
 
@@ -1485,7 +1485,7 @@ spsr_inst_write(char *portname, char *data, int sz)
 #define SPSR_SIZE_CARTRIDGE        10
 #define SPSR_SIZE_TRIGGER          2
 #define SPSR_SIZE_MAX_EVENTS       10
-#define SPSR_MSG_OFF               "SPSR_MSG_OFF"
+/*#define SPSR_MSG_OFF               "SPSR_MSG_OFF"*/
 #define SPSR_MILLION               1000000
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void *
@@ -1828,19 +1828,35 @@ spsr_init_trigger(void *obj)
 			spsr_mutex_unlock(t->mutex);
 
 			if (isoff) {
+				/*
 				int kkk = sendto(sockfd,
 				    (const char *)SPSR_MSG_OFF,
 				    strlen(SPSR_MSG_OFF), SPSR_SENDSK_FLAG,
 				    (const struct sockaddr *)&cartridge_addr,
 				    len);
-				spsr_dbg("sendto kkk: %d", kkk);
+				*/
+				char c = 1;
+				int didsent = sendto(sockfd,
+					&c, 1, SPSR_SENDSK_FLAG,
+					(const struct sockaddr *)&cartridge_addr,
+					len);	
+
+				spsr_dbg("didsent: %d", didsent);
 				break;
 			}
 			if (had_cmd) {
+				/*
 				sendto(sockfd, (const char *)"CMD",
 				    strlen("CMD"), SPSR_SENDSK_FLAG,
 				    (const struct sockaddr *)&cartridge_addr,
 				    len);
+				*/
+				char c = 0;
+				int didsent = sendto(sockfd, &c,
+					1, SPSR_SENDSK_FLAG,
+					(const struct sockaddr *)&cartridge_addr,
+					len);
+				spsr_dbg("didsent: %d", didsent);					
 			}
 			had_cmd = 0;
 			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -2584,6 +2600,7 @@ spsr_is_existed(char *port, int *isExisted)
 	} while (0);
 	return ret;
 }
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_verify_info(SPSR_INPUT_ST *p)
 {
@@ -3083,12 +3100,27 @@ spsr_ctrl_sock(int epollfd, int sockfd, SPSR_GENERIC_ST *evt, int *chk_off,
 					break;
 				}
 #endif
+				/*
 				spsr_err("mach recvfrom, "
 					 "lenmsg: %d, errno: %d, text: %s.",
 				    (int)lenmsg, errno, strerror(errno));
+				*/
+				spsr_api_err("recvfrom");
 				break;
 			}
-
+			buffer[lenmsg] = 0;
+			if(lenmsg == 1) {
+				isoff = (int)buffer[0];
+			} else {
+				int i = 0;
+				for(;i < lenmsg; ++i) {
+					if(buffer[i]) {
+						isoff = 1;
+						break;
+					}
+				}
+			}
+			/*
 			buffer[lenmsg] = 0;
 			spsr_dbg("buffer: %s", buffer);
 			if (strcmp(buffer, SPSR_MSG_OFF) == 0) {
@@ -3096,6 +3128,7 @@ spsr_ctrl_sock(int epollfd, int sockfd, SPSR_GENERIC_ST *evt, int *chk_off,
 				isoff = 1;
 				break;
 			}
+			*/
 			if (isoff) {
 				break;
 			}
