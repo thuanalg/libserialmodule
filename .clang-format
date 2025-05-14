@@ -6,7 +6,7 @@ BreakBeforeBraces: Linux
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: None
-ColumnLimit: 125
+ColumnLimit: 80
 AlignAfterOpenBracket: DontAlign
 AlignConsecutiveDeclarations: false
 AlignConsecutiveAssignments: false
