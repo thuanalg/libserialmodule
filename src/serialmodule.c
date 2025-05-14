@@ -102,12 +102,9 @@ spsr_inst_close, spsr_inst_write].
 			___api__, (LLU)GetLastError());\
 	}
 #else
-#define spsr_api_err(___api__)                                                                                              \
-	\                                                                                                                   \
-	{                                                                                                                   \
-		spsr_err("%s, errno: %d: \"%s\"."___api__, \
-			___api__, errno, strerror(errno));                                              \
-	}
+#define spsr_api_err(___api__)   {\
+		spsr_err("%s, errno: %d: \"%s\"."___api__,\
+			___api__, errno, strerror(errno));}
 #endif
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
