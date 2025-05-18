@@ -197,6 +197,8 @@ gboolean update_ui(void* data) {
     char *realdata = 0;
     int datalen = 0;
     char text[GTK_TEST_BUF];
+    char text_total[GTK_TEST_BUF * 4];
+    const char *cur_text = 0;
     do {
         spllog(SPL_LOG_DEBUG, "evt->data: %s", evt->data + evt->pc);
         if (sizeof(void*) == sizeof(unsigned int)) {
@@ -255,7 +257,9 @@ gboolean update_ui(void* data) {
                 break;
             }                   
         }   while(0);  
-        gtk_entry_set_text( GTK_ENTRY(obj), text);
+        cur_text = gtk_entry_get_text(GTK_ENTRY(obj));
+        snprintf(text_total, GTK_TEST_BUF * 4, "%s\n%s", text, cur_text);
+        gtk_entry_set_text( GTK_ENTRY(obj), text_total);
     } while(0);
 
     spsr_free(evt);
@@ -299,62 +303,7 @@ int spsr_test_callback(void *data) {
     memcpy(evt, data, total);
     spllog(SPL_LOG_DEBUG, "total: %d, type: %d", evt->total, evt->type);
     g_idle_add(update_ui, evt);
-    #if 0
-    if (sizeof(void*) == sizeof(unsigned int)) {
-        /* 32 bit */
-        unsigned int* temp = (unsigned int*)evt->data;
-        obj = (void*)(*temp);
-    } 
-    else if (sizeof(void*) == sizeof(unsigned long long int)) {
-        /* 64 bit */
-        unsigned long long int* temp = (unsigned long long int*)evt->data;
-        obj = (void*)(*temp);
-    }
-    //spllog(0, "obj: 0x%p, value: %d", obj, *((int*)obj));
-    do {
-        datalen = evt->pl - evt->pc; /*datalen.*/
-        realdata = evt->data + evt->pc; /*char *realdata: from evt->pc to evt->pl.*/
-        if (evt->type == SPSR_EVENT_READ_BUF) {
-            /* Read data.*/
-            spllog(0, "SPSR_EVENT_READ_BUF, realdata: %s, datalen: %d", realdata, datalen);
-            break;
-        }
-        if (evt->type == SPSR_EVENT_WRITE_OK) {
-            /* Port name .*/
-            spllog(0, "SPSR_EVENT_WRITE_OK, realdata: %s, datalen: %d", realdata, datalen);
-            break;
-        }
-        if (evt->type == SPSR_EVENT_WRITE_ERROR) {
-            /* Port name .*/
-            spllog(0, "SPSR_EVENT_WRITE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
-            break;
-        }
-        if (evt->type == SPSR_EVENT_OPEN_DEVICE_OK) {
-            /* Port name .*/
-            spllog(0, "SPSR_EVENT_OPEN_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
-            //g_idle_add(update_ui, (GtkWidget *)obj);
-            break;
-        }
-        if (evt->type == SPSR_EVENT_OPEN_DEVICE_ERROR) {
-            /* Port name .*/
-            spllog(0, "SPSR_EVENT_OPEN_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
-            break;
-        }         
-        if (evt->type == SPSR_EVENT_CLOSE_DEVICE_OK) {
-            /* Port name .*/
-            spllog(0, "SPSR_EVENT_CLOSE_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
-            break;
-        }      
-        if (evt->type == SPSR_EVENT_CLOSE_DEVICE_ERROR) {
-            /* Port name .*/
-            spllog(0, "SPSR_EVENT_CLOSE_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
-            break;
-        }       
-           
-    } while (0);
-    #endif    
 
-    //spsr_free(evt);
 
     return 0;
 }
