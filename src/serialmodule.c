@@ -532,34 +532,13 @@ spsr_sem_create(char *name_key)
 				int err = 0;
 				obj = 0;
 				if (retry) {
-					/*
-					spsr_err(
-						"mach sem_open, errno: "
-						"%d, text: %s, name: %s.",
-						errno,
-					    strerror(errno),
-						name);
-					*/
 					spsr_api_err("sem_open");
 					break;
 				} else {
-					/*
-					spsr_err(
-						"mach sem_open, errno: "
-						"%d, text: %s, name: %s.",
-						errno,
-					    strerror(errno), name);*/
 					spsr_api_err("sem_open");
 				}
 				err = sem_unlink(name);
 				if (err) {
-					/*
-					spsr_err(
-						"mach sem_unlink, errno: "
-						"%d, text: %s, name: %s.",
-						errno,
-					    strerror(errno), name);
-					*/
 					spsr_api_err("sem_unlink");
 					break;
 				}
