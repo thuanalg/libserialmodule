@@ -1067,7 +1067,7 @@ spsr_module_finish()
 
 		spsr_mutex_lock(t->mutex);
 		/*do {*/
-		is_off = t->spsr_off;
+			is_off = t->spsr_off;
 		/*} while (0);*/
 		spsr_mutex_unlock(t->mutex);
 		if (is_off > 2) {
@@ -1688,8 +1688,7 @@ spsr_init_cartridge_routine(void *obj)
 	} while (0);
 	spsr_mutex_lock(t->mutex);
 	/*do {*/
-	t->spsr_off++;
-	spsr_clear_all();
+		spsr_clear_all();
 	/*} while (0);*/
 	spsr_mutex_unlock(t->mutex);
 	spsr_clear_hash();
@@ -1714,7 +1713,12 @@ spsr_init_cartridge_routine(void *obj)
 		spsr_err("ret: %d", ret);
 	}
 	spsr_free(cart_buff);
-	spsr_rel_sem(t->sem_spsr);
+	spsr_mutex_lock(t->mutex);
+	/*do {*/
+		t->spsr_off++;
+		spsr_rel_sem(t->sem_spsr);
+	spsr_mutex_unlock(t->mutex);
+	
 
 	return 0;
 }
@@ -1795,9 +1799,11 @@ spsr_init_trigger(void *obj)
 			spsr_mutex_lock(t->mutex);
 			/*do {*/
 			isoff = t->spsr_off;
+			/*
 			if (isoff) {
 				t->spsr_off++;
 			}
+			*/
 			if (t->cmd_buff) {
 				if (t->cmd_buff->pl > 0) {
 					had_cmd = 1;
@@ -1838,9 +1844,10 @@ spsr_init_trigger(void *obj)
 			spsr_dbg("Close socket DONE: %d.", sockfd);
 		}
 		/* Clean linked list.*/
-		/*
-		spsr_rel_sem(t->sem_spsr);
-		*/
+		spsr_mutex_lock(t->mutex);
+			t->spsr_off++;
+			spsr_rel_sem(t->sem_spsr);
+		spsr_mutex_unlock(t->mutex);
 	} while (0);
 	return 0;
 }
