@@ -1,10 +1,10 @@
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* Email:
 *		<nguyenthaithuanalg@gmail.com> - Nguyễn Thái Thuận
 * Mobile:
 *		<+084.799.324.179>
-* Skype:
-*		<nguyenthaithuanalg>
+* Whatsapp:
+*		<+084.799.324.179>
 * Date:
 *		<2025-Mar-01>
 * The lasted modified date:
@@ -15,11 +15,12 @@
 		<2025-May-02>
 		<2025-May-03>
 		<2025-May-06>
-* Decription:
-*		The (only) main header file to export 5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
-spsr_inst_close, spsr_inst_write].
+		<2025-May-13>
+		* Decription:
+*		The (only) main header file to export 5 APIs: [spsr_module_init,
+spsr_module_finish, spsr_inst_open, spsr_inst_close, spsr_inst_write].
 */
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef ___SIMPLE_SERIAL_MODULE__
 #define ___SIMPLE_SERIAL_MODULE__ 
 #include <stdlib.h>
@@ -52,67 +53,69 @@ spsr_inst_close, spsr_inst_write].
 #endif
 
 #ifndef __SP_FILLE__
-#define __SP_FILLE__(__p__)                                                                                                 \
-	do {                                                                                                                \
-		__p__ = strrchr(__FILE__, '/');                                                                             \
-		if (__p__) {                                                                                                \
-			++__p__;                                                                                            \
-			break;                                                                                              \
-		}                                                                                                           \
-		__p__ = strrchr(__FILE__, '\\');                                                                            \
-		if (__p__) {                                                                                                \
-			++__p__;                                                                                            \
-			break;                                                                                              \
-		}                                                                                                           \
-		__p__ = __FILE__;                                                                                           \
+#define __SP_FILLE__(__p__)                                                    \
+	do {                                                                   \
+		__p__ = strrchr(__FILE__, '/');                                \
+		if (__p__) {                                                   \
+			++__p__;                                               \
+			break;                                                 \
+		}                                                              \
+		__p__ = strrchr(__FILE__, '\\');                               \
+		if (__p__) {                                                   \
+			++__p__;                                               \
+			break;                                                 \
+		}                                                              \
+		__p__ = __FILE__;                                              \
 	} while (0);
 #endif
 
 #ifndef __UNIX_LINUX_CPP11_AND_NEWERS__
-#define spsr_console_log(__lv__, ___fmttt___, ...)                                                                          \
-	{                                                                                                                   \
-		;                                                                                                           \
-		const char *pfn = 0;                                                                                        \
-		__SP_FILLE__(pfn);                                                                                          \
-		;                                                                                                           \
-		fprintf(stdout,                                                                                             \
-		    "[%d - %s - %s] [%s:%s:%d] "___fmttt___                                                                 \
-		    "\n",                                                                                                   \
-		    (__lv__), __DATE__, __TIME__, (char *)pfn, (char *)__FUNCTION__, (int)__LINE__, ##__VA_ARGS__);         \
+#define spsr_console_log(__lv__, ___fmttt___, ...)                             \
+	{                                                                      \
+		;                                                              \
+		const char *pfn = 0;                                           \
+		__SP_FILLE__(pfn);                                             \
+		;                                                              \
+		fprintf(stdout,                                                \
+		    "[%d - %s - %s] [%s:%s:%d] "___fmttt___                    \
+		    "\n",                                                      \
+		    (__lv__), __DATE__, __TIME__, (char *)pfn,                 \
+		    (char *)__FUNCTION__, (int)__LINE__, ##__VA_ARGS__);       \
 	}
 #else
-#define spsr_console_log(__lv__, ___fmttt___, ...)                                                                          \
-	{                                                                                                                   \
-		;                                                                                                           \
-		std::string __c11fmt__ = "[%d - %s - %s] [%s:%s:%d] ";                                                      \
-		__c11fmt__ += ___fmttt___;                                                                                  \
-		__c11fmt__ += "\n";                                                                                         \
-		const char *pfn = 0;                                                                                        \
-		__FILLE__(pfn);                                                                                             \
-		;                                                                                                           \
-		fprintf(stdout, __c11fmt__.c_str(), (__lv__), __DATE__, __TIME__, (char *)pfn, (char *)__FUNCTION__,        \
-		    (int)__LINE__, ##__VA_ARGS__);                                                                          \
+#define spsr_console_log(__lv__, ___fmttt___, ...)                             \
+	{                                                                      \
+		;                                                              \
+		std::string __c11fmt__ = "[%d - %s - %s] [%s:%s:%d] ";         \
+		__c11fmt__ += ___fmttt___;                                     \
+		__c11fmt__ += "\n";                                            \
+		const char *pfn = 0;                                           \
+		__FILLE__(pfn);                                                \
+		;                                                              \
+		fprintf(stdout, __c11fmt__.c_str(), (__lv__), __DATE__,        \
+		    __TIME__, (char *)pfn, (char *)__FUNCTION__,               \
+		    (int)__LINE__, ##__VA_ARGS__);                             \
 	}
 #endif
 
-#define spsr_malloc(__nn__, __obj__, __type__)                                                                          \
-	{                                                                                                                   \
-		(__obj__) = (__type__ *)malloc(__nn__);                                                                     \
-		if (__obj__) {                                                                                              \
-			spllog(0, "[MEM] Malloc: 0x%p.", (__obj__));                                                              \
-			memset((__obj__), 0, (__nn__));                                                                     \
-		} else {                                                                                                    \
-			spllog(0, "Malloc: error.");                                                                        \
-		}                                                                                                           \
+#define spsr_malloc(__nn__, __obj__, __type__)                                 \
+	{                                                                      \
+		(__obj__) = (__type__ *)malloc(__nn__);                        \
+		if (__obj__) {                                                 \
+			spllog(0, "[MEM] Malloc: 0x%p.", (__obj__));           \
+			memset((__obj__), 0, (__nn__));                        \
+		} else {                                                       \
+			spllog(0, "Malloc: error.");                           \
+		}                                                              \
 	}
 
-#define spsr_free(__obj__)                                                                                              \
-	{                                                                                                                   \
-		if (__obj__) {                                                                                              \
-			spllog(0, "[MEM] Free: 0x%p.", (__obj__));                                                                \
-			free(__obj__);                                                                                      \
-			(__obj__) = 0;                                                                                      \
-		}                                                                                                           \
+#define spsr_free(__obj__)                                                     \
+	{                                                                      \
+		if (__obj__) {                                                 \
+			spllog(0, "[MEM] Free: 0x%p.", (__obj__));             \
+			free(__obj__);                                         \
+			(__obj__) = 0;                                         \
+		}                                                              \
 	}
 
 #ifdef __cplusplus
@@ -137,8 +140,7 @@ extern "C" {
 #endif
 #endif /*! UNIX_LINUX */
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #define SPSR_PORT_LEN             32
 #define SPSR_KEY_LEN              (SPSR_PORT_LEN)
 #ifndef SPSR_LLU
@@ -158,8 +160,6 @@ typedef enum {
 } SPSR_CMD_TYPE;
 
 typedef int (*SPSR_module_cb)(void *);
-
-
 
 typedef enum {
 	SPSR_PORT_OK,
@@ -234,17 +234,15 @@ typedef enum {
 	SPSR_OBJ_NULL,
 	SPSR_PORTNAME_NONEXISTED,
 	SPSR_PX_FD_NOT_FOUND,
-	SPSR_WIN32_RL_MTX, 
-	SPSR_WIN32_LK_MTX, 
-	SPSR_PX_LK_MTX, 
+	SPSR_WIN32_RL_MTX,
+	SPSR_WIN32_LK_MTX,
+	SPSR_PX_LK_MTX,
 	SPSR_PX_RL_MTX,
-	SPSR_PX_RL_SEM, 
-	SPSR_PX_WAIT_SEM, 
-	SPSR_WIN32_WAIT_SEM, 
-	SPSR_WIN32_RL_SEM, 
+	SPSR_PX_RL_SEM,
+	SPSR_PX_WAIT_SEM,
+	SPSR_WIN32_WAIT_SEM,
+	SPSR_WIN32_RL_SEM,
 	SPSR_MINI_SIZE,
-
-
 
 	SPSR_PORT_PEAK,
 } SPSR_PORT_ERR;
@@ -323,20 +321,22 @@ typedef struct __SPSR_ROOT_TYPE__ {
 	void *sem_spsr; /* Check off.*/
 	SPSR_GENERIC_ST *cmd_buff; /* Command list .*/
 #ifndef __SPSR_EPOLL__
-	char sem_key[SPSR_KEY_LEN]; /*It need to wait for UNIX_LINUX --->>> Mach.*/
+	char sem_key[SPSR_KEY_LEN]; /*It need to wait for UNIX_LINUX --->>>
+				       Mach.*/
 #endif
 #endif
 	SPSR_ARR_LIST_LINED *init_node;
 	SPSR_ARR_LIST_LINED *last_node;
 } SPSR_ROOT_TYPE;
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-
-/*Must be started before using. Thread-safe, but should be at a start of main function.*/
+/*Must be started before using. Thread-safe, but should be at a start of main
+ * function.*/
 DLL_API_SERIAL_MODULE int
 spsr_module_init();
 
-/*Should be invoked to complete using. Thread-safe, but should be at an end of main function.*/
+/*Should be invoked to complete using. Thread-safe, but should be at an end of
+ * main function.*/
 DLL_API_SERIAL_MODULE int
 spsr_module_finish();
 
@@ -353,10 +353,11 @@ spsr_inst_close(char *portname);
 DLL_API_SERIAL_MODULE int
 spsr_inst_write(char *portname, char *data, int sz);
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+DLL_API_SERIAL_MODULE const char *
+spsr_err_txt(int);
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifdef __cplusplus
 }
 #endif
-
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #endif
