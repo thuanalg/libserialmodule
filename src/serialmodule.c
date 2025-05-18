@@ -1714,7 +1714,6 @@ spsr_init_cartridge_routine(void *obj)
 	}
 	spsr_free(cart_buff);
 	spsr_mutex_lock(t->mutex);
-	/*do {*/
 		t->spsr_off++;
 		spsr_rel_sem(t->sem_spsr);
 	spsr_mutex_unlock(t->mutex);
@@ -1798,17 +1797,13 @@ spsr_init_trigger(void *obj)
 
 			spsr_mutex_lock(t->mutex);
 			/*do {*/
-			isoff = t->spsr_off;
-			/*
-			if (isoff) {
-				t->spsr_off++;
-			}
-			*/
-			if (t->cmd_buff) {
-				if (t->cmd_buff->pl > 0) {
-					had_cmd = 1;
+				isoff = t->spsr_off;
+				if (t->cmd_buff) {
+					if (t->cmd_buff->pl > 0) 
+					{
+						had_cmd = 1;
+					}
 				}
-			}
 			/*} while (0);*/
 			spsr_mutex_unlock(t->mutex);
 
