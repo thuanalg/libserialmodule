@@ -1807,13 +1807,6 @@ spsr_init_trigger(void *obj)
 			spsr_mutex_unlock(t->mutex);
 
 			if (isoff) {
-				/*
-				int kkk = sendto(sockfd,
-				    (const char *)SPSR_MSG_OFF,
-				    strlen(SPSR_MSG_OFF), SPSR_SENDSK_FLAG,
-				    (const struct sockaddr *)&cartridge_addr,
-				    len);
-				*/
 				char c = 1;
 				int didsent = sendto(sockfd,
 					&c, 1, SPSR_SENDSK_FLAG,
@@ -1824,12 +1817,6 @@ spsr_init_trigger(void *obj)
 				break;
 			}
 			if (had_cmd) {
-				/*
-				sendto(sockfd, (const char *)"CMD",
-				    strlen("CMD"), SPSR_SENDSK_FLAG,
-				    (const struct sockaddr *)&cartridge_addr,
-				    len);
-				*/
 				char c = 0;
 				int didsent = sendto(sockfd, &c,
 					1, SPSR_SENDSK_FLAG,
@@ -1851,7 +1838,9 @@ spsr_init_trigger(void *obj)
 			spsr_dbg("Close socket DONE: %d.", sockfd);
 		}
 		/* Clean linked list.*/
+		/*
 		spsr_rel_sem(t->sem_spsr);
+		*/
 	} while (0);
 	return 0;
 }
