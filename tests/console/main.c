@@ -252,13 +252,17 @@ test_try_to_write(void *arg)
 			if (!test_spsr_list_ports[i]) {
 				continue;
 			}
-
+			#if 1
+				spl_sleep(1);
+			#endif
 			memset(text_data, 0, sizeof(text_data));
 			snprintf(text_data, 1024, "%s-%d, port: %s", SPSR_TEST_TEXT, i, test_spsr_list_ports[i]);
 			spllog(0, "text_data: %s", text_data);
 			spsr_inst_write(test_spsr_list_ports[i], text_data, (int)strlen(text_data));
 		}
-		spl_sleep(10);
+#if 0		
+		spl_sleep(1);
+#endif		
 	}
 	return 0;
 }
