@@ -1613,7 +1613,7 @@ spsr_init_cartridge_routine(void *obj)
 			k = 0;
 			spsr_mutex_lock(t->mutex);
 			/*do {*/
-			isoff = t->spsr_off;
+				isoff = t->spsr_off;
 			/*} while (0);*/
 			spsr_mutex_unlock(t->mutex);
 			if (isoff) {
@@ -1642,6 +1642,14 @@ spsr_init_cartridge_routine(void *obj)
 				if (err == 0) {
 					continue;
 				}
+				spsr_mutex_lock(t->mutex);
+				/*do {*/
+					isoff = t->spsr_off;
+				/*} while (0);*/
+				spsr_mutex_unlock(t->mutex);
+				if (isoff) {
+					break;
+				}				
 				for (k = 0; k < mx_number; ++k) {
 					if (fds[k].fd < 0) {
 						continue;
@@ -1693,8 +1701,19 @@ spsr_init_cartridge_routine(void *obj)
 				chk_delay = 0;
 
 				nfds = epoll_wait(
-				    epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
-
+				    epollfd, events, 
+					SPSR_SIZE_MAX_EVENTS, -1);
+					
+				spsr_mutex_lock(t->mutex);
+				/*do {*/
+					isoff = t->spsr_off;
+				/*} while (0);*/
+				spsr_mutex_unlock(t->mutex);
+				
+				if (isoff) {
+					break;
+				}
+				
 				for (i = 0; i < nfds; i++) {
 					if (events[i].data.fd == sockfd) {
 						spsr_ctrl_sock(epollfd, sockfd,

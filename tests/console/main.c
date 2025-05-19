@@ -208,7 +208,7 @@ main(int argc, char *argv[])
 		spl_sleep(2);
 		spl_console_log("-----------");
 #ifndef UNIX_LINUX
-		fp = fopen("C:/z/serialmodule/win32/Debug/trigger_serial.txt", "r");
+		fp = fopen("trigger_serial.txt", "r");
 #else
 		fp = fopen("trigger_serial.txt", "r");
 #endif
