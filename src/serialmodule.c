@@ -1861,7 +1861,7 @@ spsr_init_trigger(void *obj)
 					(const struct sockaddr *)&cartridge_addr,
 					len);	
 
-				spsr_dbg("didsent: %d", didsent);
+				spsr_dbg("didsent : isoff, %d", didsent);
 				break;
 			}
 			if (had_cmd) {
