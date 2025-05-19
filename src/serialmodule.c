@@ -1629,6 +1629,7 @@ spsr_init_cartridge_routine(void *obj)
 			mx_number = 1;
 			while (1) {
 				if (isoff) {
+					spsr_all("isoff");
 					break;
 				}
 				chk_delay = 0;
@@ -1638,9 +1639,11 @@ spsr_init_cartridge_routine(void *obj)
 				spsr_dbg("poll,  mx_number: %d", mx_number);
 
 				if (err == -1) {
+					spsr_all("poll");
 					continue;
 				}
 				if (err == 0) {
+					spsr_all("poll");
 					continue;
 				}
 				spsr_mutex_lock(t->mutex);
@@ -1698,6 +1701,7 @@ spsr_init_cartridge_routine(void *obj)
 			while (1) {
 				int nfds = 0;
 				if (isoff) {
+					spsr_all("isoff");
 					break;
 				}
 				chk_delay = 0;
@@ -3037,6 +3041,7 @@ spsr_read_fd(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 				spsr_err("read error, fd: %d, "
 					 "errno: %d, text: %s.",
 				    fd, errno, strerror(errno));
+				ret = SPSR_PX_READ;
 				break;
 			}
 			/* } */
@@ -3055,12 +3060,30 @@ spsr_read_fd(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 				break;
 			}
 
-			ret = spsr_invoke_cb(SPSR_EVENT_READ_BUF,
+			spsr_invoke_cb(SPSR_EVENT_READ_BUF,
 			    temp->cb_evt_fn, temp->cb_obj, evtcb, didread);
 
 		} while (0);
 
 	} while (0);
+#if 0
+	if(ret && temp->cb_evt_fn && buffer) {
+		const char *text = 0;
+		int len = 0;
+		text = spsr_err_txt(ret);
+		
+		snprintf(buffer, 
+			ecb_buf->range, "%s|%s", 
+			text, p->port_name);
+			
+		len = strlen(buffer);
+		
+		spsr_invoke_cb(
+			SPSR_EVENT_READ_ERROR, 
+			p->cb_evt_fn, p->cb_obj,
+			ecb_buf, len);								
+	}	
+#endif
 	return ret;
 }
 
@@ -3450,6 +3473,7 @@ spsr_err_txt_init()
 	__spsr_err_text__[SPSR_WIN32_WAIT_SEM] = "SPSR_WIN32_WAIT_SEM";
 	__spsr_err_text__[SPSR_WIN32_RL_SEM] = "SPSR_WIN32_RL_SEM";
 	__spsr_err_text__[SPSR_MINI_SIZE] = "SPSR_MINI_SIZE";
+	__spsr_err_text__[SPSR_PX_READ] = "SPSR_PX_READ";
 
 	__spsr_err_text__[SPSR_PORT_PEAK] = "SPSR_PORT_PEAK";
 }
