@@ -632,9 +632,13 @@ spsr_win32_read(SPSR_INFO_ST *p, DWORD *pbytesRead, OVERLAPPED *polReadWrite,
 		}
 		readErr = GetLastError();
 		if (readErr != ERROR_IO_PENDING) {
-			ret = SPSR_WIN32_NOT_PENDING;
-			spsr_err("Read error readErr: %d", (int)readErr);
-			break;
+			if (ERROR_TOO_MANY_POSTS != readErr) {
+				ret = SPSR_WIN32_NOT_PENDING;
+				spsr_err("Read error readErr: %d",
+					(int)readErr); 
+				break;
+			}
+			WaitForSingleObject(p->hEvent, INFINITE);
 		}
 		*pbytesRead = 0;
 		if (p->t_delay > 0) {
@@ -642,8 +646,8 @@ spsr_win32_read(SPSR_INFO_ST *p, DWORD *pbytesRead, OVERLAPPED *polReadWrite,
 		}
 		WaitForSingleObject(p->hEvent, INFINITE);
 
-		rs =
-		    GetOverlappedResult(p->handle, polReadWrite, pbytesRead, 1);
+		rs = GetOverlappedResult( p->handle, 
+				polReadWrite, pbytesRead, 1);
 
 		if (!rs) {
 			spsr_err("PurgeComm: %d", (int)GetLastError());
@@ -933,6 +937,7 @@ spsr_thread_operating_routine(LPVOID arg)
 			if (!cbInQue) {
 				BOOL rsOverlap = TRUE;
 				WaitForSingleObject(p->hEvent, INFINITE);
+				
 				rsOverlap = GetOverlappedResult(
 				    p->handle, &olReadWrite, &bytesRead, TRUE);
 				if (rsOverlap) {
@@ -940,7 +945,7 @@ spsr_thread_operating_routine(LPVOID arg)
 				}
 				PurgeComm(
 				    p->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
-
+				
 				continue;
 			}
 
