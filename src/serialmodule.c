@@ -2080,7 +2080,7 @@ spsr_px_add(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 				    *prange, i, fds[i].fd);
 				if (fds[i].fd < 0) {
 					fds[i].fd = fd;
-					fds[i].events = POLLIN;
+					fds[i].events = (POLLIN | POLLOUT);
 					(*prange)++;
 					spsr_all("Add to poll list, "
 						 "index: %d, fd: %d, range: %d",
