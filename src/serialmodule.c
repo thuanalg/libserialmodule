@@ -1866,6 +1866,7 @@ spsr_init_trigger(void *obj)
 					len);	
 
 				spsr_dbg("didsent : isoff, %d", didsent);
+				spl_sleep(1);
 				break;
 			}
 			if (had_cmd) {
