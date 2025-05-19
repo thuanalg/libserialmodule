@@ -402,6 +402,14 @@ LRESULT CtestSerialPortDlg::OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam
 		txt.Insert(0, _T("\r\n"));
 		p_Cdata->SetWindowText(txt);
 	} 
+	else if (evt->type == SPSR_EVENT_READ_ERROR) {
+		CString txt;
+		p_Cdata->GetWindowText(txt);
+		CString nstr(p);
+		txt.Insert(0, nstr);
+		txt.Insert(0, _T("\r\n"));
+		p_Cdata->SetWindowText(txt);
+	}
 	else if (evt->type == SPSR_EVENT_WRITE_OK) {
 		CString txt;
 		p_Cdata->GetWindowText(txt);
@@ -461,7 +469,8 @@ LRESULT CtestSerialPortDlg::OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam
 		txt.Insert(0, nstr1);
 		txt.Insert(0, _T("\r\n"));
 		p_Cdata->SetWindowText(txt);
-	}
+	} 
+
 	spsr_free(evt);
 	return 0;
 }
