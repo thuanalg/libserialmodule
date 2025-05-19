@@ -2386,8 +2386,8 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 			break;
 		}
 		wrote = 1;
-		spsr_dbg("write DONE, fd: %d, nwrote: %d, wlen: %d.", fd,
-		    nwrote, wlen);
+		spsr_dbg("write DONE, fd: %d, nwrote: %d, wlen: %d.", 
+			fd, nwrote, wlen);
 		break;
 
 	} while (0);
@@ -2403,17 +2403,22 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 			portname = (char *)"EMPTY";
 			l = strlen(portname);
 		}
-		evtenum = wrote ? SPSR_EVENT_WRITE_OK : SPSR_EVENT_WRITE_ERROR;
+		evtenum = wrote ? 
+			SPSR_EVENT_WRITE_OK : 
+			SPSR_EVENT_WRITE_ERROR;
 
 		memcpy(evt->data + evt->pc, portname, l);
 
 		ret = spsr_invoke_cb(
-		    evtenum, hashobj->cb_evt_fn, hashobj->cb_obj, evt, l);
+		    evtenum, 
+			hashobj->cb_evt_fn, 
+			hashobj->cb_obj, evt, l);
 	} while (0);
 
 	if (!ret && fd >= 0) {
 		if (tcdrain(fd) == -1) {
-			spsr_err("Error flushing the serial port buffer");
+			spsr_err(
+				"Error flushing the serial port buffer");
 
 		} else {
 			spsr_dbg("tcdrain DONE,");
@@ -2424,7 +2429,8 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
-spsr_send_cmd(int cmd, char *portname, void *data, int datasz)
+spsr_send_cmd(int cmd, 
+	char *portname, void *data, int datasz)
 {
 	int ret = 0;
 	int nsize = 0;
@@ -2633,8 +2639,10 @@ spsr_verify_info(SPSR_INPUT_ST *p)
 		 * asynchronous operation */
 		/* https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea
 		 */
-		hSerial = CreateFile(p->port_name, GENERIC_READ | GENERIC_WRITE,
-		    0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
+		hSerial = CreateFile(p->port_name, 
+			GENERIC_READ | GENERIC_WRITE,
+		    0, 0, OPEN_EXISTING, 
+			FILE_FLAG_OVERLAPPED, 0);
 
 		if (hSerial == INVALID_HANDLE_VALUE) {
 			DWORD dwError = GetLastError();
@@ -2668,13 +2676,15 @@ spsr_verify_info(SPSR_INPUT_ST *p)
 #endif
 
 		spsr_malloc(
-		    sizeof(SPSR_ARR_LIST_LINED), node, SPSR_ARR_LIST_LINED);
+		    sizeof(SPSR_ARR_LIST_LINED), 
+			node, SPSR_ARR_LIST_LINED);
 		if (!node) {
 			ret = SPSR_MEM_NULL;
 			spsr_err("SPSR_MEM_NULL");
 			break;
 		}
-		spsr_malloc(sizeof(SPSR_INFO_ST), item, SPSR_INFO_ST);
+		spsr_malloc(sizeof(SPSR_INFO_ST), 
+			item, SPSR_INFO_ST);
 		if (!item) {
 			ret = SPSR_MEM_NULL;
 			spsr_err("SPSR_MEM_NULL");
@@ -2683,7 +2693,8 @@ spsr_verify_info(SPSR_INPUT_ST *p)
 
 		/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-		snprintf(item->port_name, SPSR_PORT_LEN, "%s", p->port_name);
+		snprintf(item->port_name, 
+			SPSR_PORT_LEN, "%s", p->port_name);
 		item->baudrate = p->baudrate;
 		item->cb_evt_fn = p->cb_evt_fn;
 		item->cb_obj = p->cb_obj;
@@ -2701,7 +2712,8 @@ spsr_verify_info(SPSR_INPUT_ST *p)
 		}
 		t->count++;
 #ifndef UNIX_LINUX
-		ret = spsr_create_thread(spsr_thread_operating_routine, node);
+		ret = spsr_create_thread(
+			spsr_thread_operating_routine, node);
 #else
 		item->handle = -1;
 		spsr_dbg("Check t->init_node: 0x%p", t->init_node);
@@ -2753,7 +2765,9 @@ spsr_clear_all()
 		if (!ret) {
 			continue;
 		}
-		spsr_err("spsr_inst_close: ret: %d, port: %s.", ret, port);
+		spsr_err(
+			"spsr_inst_close: ret: %d, port: %s.", 
+			ret, port);
 	} while (count);
 #else
 
@@ -2835,7 +2849,8 @@ spsr_clear_hash()
 		while (obj) {
 			tmp = obj;
 			obj = obj->next;
-			spsr_all("fd: %d, name: %s", tmp->fd, tmp->port_name);
+			spsr_all("fd: %d, name: %s", 
+				tmp->fd, tmp->port_name);
 			spsr_free(tmp);
 		}
 		spsr_hash_fd_arr[i] = 0;
