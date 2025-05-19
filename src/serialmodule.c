@@ -1527,10 +1527,12 @@ spsr_init_cartridge_routine(void *obj)
 
 		sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 		if (sockfd < 0) {
+			/*
 			spsr_err("fcntl: ret: %d, errno: %d, "
 				 "text: %s.",
 			    sockfd, errno, strerror(errno));
-
+			*/
+			spsr_api_err("socket");
 			ret = SPSR_CREATE_SOCK;
 			break;
 		}
@@ -1551,18 +1553,23 @@ spsr_init_cartridge_routine(void *obj)
 
 		flags = fcntl(sockfd, F_GETFL, 0);
 		if (flags == -1) {
+			/*
 			spsr_err("fcntl: ret: %d, "
 				 "errno: %d, text: %s.",
 			    ret, errno, strerror(errno));
+			*/
+			spsr_api_err("fcntl");
 			ret = SPSR_FCNTL_SOCK;
 			break;
 		}
 		err = fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 		if (err == -1) {
+			/*
 			spsr_err("fcntl: err: %d, errno: %d, "
 				 "text: %s.",
 			    err, errno, strerror(errno));
-
+			*/
+			spsr_api_err("fcntl");
 			ret = SPSR_FCNTL_SOCK;
 			break;
 		}
@@ -1695,29 +1702,24 @@ spsr_init_cartridge_routine(void *obj)
 	if (sockfd > 0) {
 		err = close(sockfd);
 		if (err) {
-			spsr_err("close: err: %d, "
-				 "errno: %d, text: %s.",
-			    err, errno, strerror(errno));
+			spsr_api_err("close socket.");
 			ret = SPSR_CLOSE_SOCK;
 		} else {
-			spsr_dbg("close socket done: %d", sockfd);
+			spsr_dbg("close socket: %d", sockfd);
 		}
 	}
-#ifndef __SPSR_EPOLL__
 
-#else
-	if (epollfd > -1) {
-	}
-#endif
 	if (ret) {
 		spsr_err("ret: %d", ret);
 	}
 	spsr_free(cart_buff);
+
 	spsr_mutex_lock(t->mutex);
+	/*do { */
 		t->spsr_off++;
 		spsr_rel_sem(t->sem_spsr);
+	/*} while(0); */
 	spsr_mutex_unlock(t->mutex);
-	
 
 	return 0;
 }
@@ -1838,12 +1840,16 @@ spsr_init_trigger(void *obj)
 		} else {
 			spsr_dbg("Close socket DONE: %d.", sockfd);
 		}
-		/* Clean linked list.*/
-		spsr_mutex_lock(t->mutex);
-			t->spsr_off++;
-			spsr_rel_sem(t->sem_spsr);
-		spsr_mutex_unlock(t->mutex);
+	
+
+
 	} while (0);
+	spsr_mutex_lock(t->mutex);
+	/*do {*/
+		t->spsr_off++;
+		spsr_rel_sem(t->sem_spsr);
+	/*} while(0); */
+	spsr_mutex_unlock(t->mutex);
 	return 0;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
