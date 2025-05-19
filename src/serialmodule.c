@@ -1639,11 +1639,11 @@ spsr_init_cartridge_routine(void *obj)
 				spsr_dbg("poll,  mx_number: %d", mx_number);
 
 				if (err == -1) {
-					spsr_all("poll");
+					spsr_wrn("poll");
 					continue;
 				}
 				if (err == 0) {
-					spsr_all("poll");
+					spsr_wrn("poll");
 					continue;
 				}
 				spsr_mutex_lock(t->mutex);
@@ -1866,7 +1866,6 @@ spsr_init_trigger(void *obj)
 					len);	
 
 				spsr_dbg("didsent : isoff, %d", didsent);
-				spl_sleep(1);
 				break;
 			}
 			if (had_cmd) {
