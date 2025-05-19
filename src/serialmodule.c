@@ -1617,6 +1617,7 @@ spsr_init_cartridge_routine(void *obj)
 			/*} while (0);*/
 			spsr_mutex_unlock(t->mutex);
 			if (isoff) {
+				spsr_all("isoff");
 				break;
 			}
 			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -1648,6 +1649,7 @@ spsr_init_cartridge_routine(void *obj)
 				/*} while (0);*/
 				spsr_mutex_unlock(t->mutex);
 				if (isoff) {
+					spsr_all("isoff");
 					break;
 				}				
 				for (k = 0; k < mx_number; ++k) {
@@ -1711,6 +1713,7 @@ spsr_init_cartridge_routine(void *obj)
 				spsr_mutex_unlock(t->mutex);
 				
 				if (isoff) {
+					spsr_all("isoff");
 					break;
 				}
 				
