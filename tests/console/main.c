@@ -252,7 +252,7 @@ test_try_to_write(void *arg)
 			if (!test_spsr_list_ports[i]) {
 				continue;
 			}
-			#if 1
+			#if 0
 				spl_sleep(1);
 			#endif
 			memset(text_data, 0, sizeof(text_data));
@@ -260,7 +260,7 @@ test_try_to_write(void *arg)
 			spllog(0, "text_data: %s", text_data);
 			spsr_inst_write(test_spsr_list_ports[i], text_data, (int)strlen(text_data));
 		}
-#if 0		
+#if 1		
 		spl_sleep(1);
 #endif		
 	}
