@@ -2443,6 +2443,7 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 		connected = spsr_remote_connected(fd);
 		if(!connected) {
 			spsr_err("Remote unconnected!");
+			ret = SPSR_PX_UNCONNECTED;
 			break;
 		}
 		if (tcflush(fd, TCIOFLUSH) == -1) {
@@ -2483,13 +2484,13 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 
 		memcpy(evt->data + evt->pc, portname, l);
 
-		ret = spsr_invoke_cb(
+		spsr_invoke_cb(
 		    evtenum, 
 			hashobj->cb_evt_fn, 
 			hashobj->cb_obj, evt, l);
 	} while (0);
 
-	if (!ret && fd >= 0) {
+	if (wrote) {
 		if (tcdrain(fd) == -1) {
 			spsr_err(
 				"Error flushing the serial port buffer");
@@ -3499,6 +3500,9 @@ spsr_err_txt_init()
 	__spsr_err_text__[SPSR_WIN32_RL_SEM] = "SPSR_WIN32_RL_SEM";
 	__spsr_err_text__[SPSR_MINI_SIZE] = "SPSR_MINI_SIZE";
 	__spsr_err_text__[SPSR_PX_READ] = "SPSR_PX_READ";
+	__spsr_err_text__[SPSR_PX_UNCONNECTED] = "SPSR_PX_UNCONNECTED";	
+
+
 
 	__spsr_err_text__[SPSR_PORT_PEAK] = "SPSR_PORT_PEAK";
 }
