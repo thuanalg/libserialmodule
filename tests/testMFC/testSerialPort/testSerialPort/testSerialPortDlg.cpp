@@ -44,7 +44,8 @@ static int callback_to_GUI(void* obj) {
 	}
 	//hwm = (void*)evt->data;
 	spllog(SPL_LOG_INFO, "hwm: 0x%p", hwm);
-	::SendMessageA((HWND)hwm, WM_SPSR_CUSTOM_MESSAGE, 0, (LPARAM)evt);
+	//::SendMessageA((HWND)hwm, WM_SPSR_CUSTOM_MESSAGE, 0, (LPARAM)evt);
+	::PostMessageA((HWND)hwm, WM_SPSR_CUSTOM_MESSAGE, 0, (LPARAM)evt);
 	//spserial_free(evt);
 	return 0;
 }

@@ -16,6 +16,7 @@
 		<2025-May-03>
 		<2025-May-06>
 		<2025-May-13>
+		<2025-May-20>
 * Decription:
 *		The (only) main header file to export
 		5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
@@ -41,12 +42,13 @@ spsr_inst_close, spsr_inst_write].
 #include <errno.h>
 #include <termios.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <stdio.h>
+#include <sys/ioctl.h>
 #ifndef __SPSR_EPOLL__
 #include <poll.h>
 #else
@@ -1613,10 +1615,11 @@ spsr_init_cartridge_routine(void *obj)
 			k = 0;
 			spsr_mutex_lock(t->mutex);
 			/*do {*/
-			isoff = t->spsr_off;
+				isoff = t->spsr_off;
 			/*} while (0);*/
 			spsr_mutex_unlock(t->mutex);
 			if (isoff) {
+				spsr_all("isoff");
 				break;
 			}
 			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -1628,6 +1631,7 @@ spsr_init_cartridge_routine(void *obj)
 			mx_number = 1;
 			while (1) {
 				if (isoff) {
+					spsr_all("isoff");
 					break;
 				}
 				chk_delay = 0;
@@ -1637,11 +1641,22 @@ spsr_init_cartridge_routine(void *obj)
 				spsr_dbg("poll,  mx_number: %d", mx_number);
 
 				if (err == -1) {
+					spsr_wrn("poll");
 					continue;
 				}
 				if (err == 0) {
+					spsr_wrn("poll");
 					continue;
 				}
+				spsr_mutex_lock(t->mutex);
+				/*do {*/
+					isoff = t->spsr_off;
+				/*} while (0);*/
+				spsr_mutex_unlock(t->mutex);
+				if (isoff) {
+					spsr_all("isoff");
+					break;
+				}				
 				for (k = 0; k < mx_number; ++k) {
 					if (fds[k].fd < 0) {
 						continue;
@@ -1688,13 +1703,26 @@ spsr_init_cartridge_routine(void *obj)
 			while (1) {
 				int nfds = 0;
 				if (isoff) {
+					spsr_all("isoff");
 					break;
 				}
 				chk_delay = 0;
 
 				nfds = epoll_wait(
-				    epollfd, events, SPSR_SIZE_MAX_EVENTS, -1);
-
+				    epollfd, events, 
+					SPSR_SIZE_MAX_EVENTS, -1);
+					
+				spsr_mutex_lock(t->mutex);
+				/*do {*/
+					isoff = t->spsr_off;
+				/*} while (0);*/
+				spsr_mutex_unlock(t->mutex);
+				
+				if (isoff) {
+					spsr_all("isoff");
+					break;
+				}
+				
 				for (i = 0; i < nfds; i++) {
 					if (events[i].data.fd == sockfd) {
 						spsr_ctrl_sock(epollfd, sockfd,
@@ -1839,7 +1867,7 @@ spsr_init_trigger(void *obj)
 					(const struct sockaddr *)&cartridge_addr,
 					len);	
 
-				spsr_dbg("didsent: %d", didsent);
+				spsr_dbg("didsent : isoff, %d", didsent);
 				break;
 			}
 			if (had_cmd) {
@@ -2328,6 +2356,24 @@ spsr_px_rem(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* SPSR_CMD_WRITE */
+
+
+static int spsr_remote_connected(int fd) {
+    int status = 0;
+    if (ioctl(fd, TIOCMGET, &status) == -1) {
+        spsr_wrn("ioctl");
+        return 0; /*Assume not connected*/
+    }
+	/*Check if DSR (remote ready) or CTS (clear to send) is on*/
+    if (status & TIOCM_DSR) {
+        spsr_all("Remote side is READY (DSR set)\n");
+        return 1;
+    } else {
+        spsr_wrn("Remote side NOT ready (DSR not set)\n");
+    }
+	return 0;
+}
+
 int
 spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 {
@@ -2344,6 +2390,7 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 	int wrote = 0;
 	int evtenum = 0;
 	int l = 0;
+	int connected = 0;
 	do {
 		if (!item) {
 			ret = SPSR_PX_ITEM_NULL;
@@ -2393,7 +2440,12 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 		wlen = item->pl - item->pc;
 
 		hashobj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
-
+		connected = spsr_remote_connected(fd);
+		if(!connected) {
+			spsr_err("Remote unconnected!");
+			ret = SPSR_PX_UNCONNECTED;
+			break;
+		}
 		if (tcflush(fd, TCIOFLUSH) == -1) {
 			spsr_err("Error flushing the serial port buffer");
 			break;
@@ -2432,13 +2484,13 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 
 		memcpy(evt->data + evt->pc, portname, l);
 
-		ret = spsr_invoke_cb(
+		spsr_invoke_cb(
 		    evtenum, 
 			hashobj->cb_evt_fn, 
 			hashobj->cb_obj, evt, l);
 	} while (0);
 
-	if (!ret && fd >= 0) {
+	if (wrote) {
 		if (tcdrain(fd) == -1) {
 			spsr_err(
 				"Error flushing the serial port buffer");
@@ -3015,6 +3067,7 @@ spsr_read_fd(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 				spsr_err("read error, fd: %d, "
 					 "errno: %d, text: %s.",
 				    fd, errno, strerror(errno));
+				ret = SPSR_PX_READ;
 				break;
 			}
 			/* } */
@@ -3033,12 +3086,30 @@ spsr_read_fd(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 				break;
 			}
 
-			ret = spsr_invoke_cb(SPSR_EVENT_READ_BUF,
+			spsr_invoke_cb(SPSR_EVENT_READ_BUF,
 			    temp->cb_evt_fn, temp->cb_obj, evtcb, didread);
 
 		} while (0);
 
 	} while (0);
+#if 0
+	if(ret && temp->cb_evt_fn && buffer) {
+		const char *text = 0;
+		int len = 0;
+		text = spsr_err_txt(ret);
+		
+		snprintf(buffer, 
+			ecb_buf->range, "%s|%s", 
+			text, p->port_name);
+			
+		len = strlen(buffer);
+		
+		spsr_invoke_cb(
+			SPSR_EVENT_READ_ERROR, 
+			p->cb_evt_fn, p->cb_obj,
+			ecb_buf, len);								
+	}	
+#endif
 	return ret;
 }
 
@@ -3428,6 +3499,10 @@ spsr_err_txt_init()
 	__spsr_err_text__[SPSR_WIN32_WAIT_SEM] = "SPSR_WIN32_WAIT_SEM";
 	__spsr_err_text__[SPSR_WIN32_RL_SEM] = "SPSR_WIN32_RL_SEM";
 	__spsr_err_text__[SPSR_MINI_SIZE] = "SPSR_MINI_SIZE";
+	__spsr_err_text__[SPSR_PX_READ] = "SPSR_PX_READ";
+	__spsr_err_text__[SPSR_PX_UNCONNECTED] = "SPSR_PX_UNCONNECTED";	
+
+
 
 	__spsr_err_text__[SPSR_PORT_PEAK] = "SPSR_PORT_PEAK";
 }
