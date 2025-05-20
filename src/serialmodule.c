@@ -2447,10 +2447,10 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 			break;
 		}
 		if (tcflush(fd, TCIOFLUSH) == -1) {
-			spsr_err("Error flushing the serial port buffer");
+			spsr_api_err("tcflush");
 			break;
 		} else {
-			spsr_dbg("tcdrain DONE,");
+			spsr_dbg("tcflush DONE,");
 		}
 
 		nwrote = write(fd, p, wlen);
@@ -2492,9 +2492,7 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 
 	if (wrote) {
 		if (tcdrain(fd) == -1) {
-			spsr_err(
-				"Error flushing the serial port buffer");
-
+			spsr_api_err("tcdrain");
 		} else {
 			spsr_dbg("tcdrain DONE,");
 		}
