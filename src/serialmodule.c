@@ -41,12 +41,13 @@ spsr_inst_close, spsr_inst_write].
 #include <errno.h>
 #include <termios.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <stdio.h>
+#include <sys/ioctl.h>
 #ifndef __SPSR_EPOLL__
 #include <poll.h>
 #else
@@ -2354,6 +2355,24 @@ spsr_px_rem(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* SPSR_CMD_WRITE */
+
+
+static int spsr_remote_connected(int fd) {
+    int status = 0;
+    if (ioctl(fd, TIOCMGET, &status) == -1) {
+        spsr_wrn("ioctl");
+        return 0;
+    }
+
+    if (status & TIOCM_DSR) {
+        spsr_all("Remote side is READY (DSR set)\n");
+        return 1;
+    } else {
+        spsr_wrn("Remote side NOT ready (DSR not set)\n");
+    }
+	return 0;
+}
+
 int
 spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 {
@@ -2370,6 +2389,7 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 	int wrote = 0;
 	int evtenum = 0;
 	int l = 0;
+	int connected = 0;
 	do {
 		if (!item) {
 			ret = SPSR_PX_ITEM_NULL;
@@ -2419,7 +2439,10 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 		wlen = item->pl - item->pc;
 
 		hashobj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
-
+		connected = spsr_remote_connected(fd);
+		if(!connected) {
+			break;
+		}
 		if (tcflush(fd, TCIOFLUSH) == -1) {
 			spsr_err("Error flushing the serial port buffer");
 			break;
