@@ -2361,9 +2361,9 @@ static int spsr_remote_connected(int fd) {
     int status = 0;
     if (ioctl(fd, TIOCMGET, &status) == -1) {
         spsr_wrn("ioctl");
-        return 0;
+        return 0; /*Assume not connected*/
     }
-
+	/*Check if DSR (remote ready) or CTS (clear to send) is on*/
     if (status & TIOCM_DSR) {
         spsr_all("Remote side is READY (DSR set)\n");
         return 1;
