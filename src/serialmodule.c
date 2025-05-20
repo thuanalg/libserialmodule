@@ -2441,6 +2441,7 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 		hashobj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
 		connected = spsr_remote_connected(fd);
 		if(!connected) {
+			spsr_err("Remote unconnected!");
 			break;
 		}
 		if (tcflush(fd, TCIOFLUSH) == -1) {
