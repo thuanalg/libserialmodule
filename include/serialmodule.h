@@ -26,13 +26,13 @@ spsr_module_finish, spsr_inst_open, spsr_inst_close, spsr_inst_write].
 #include <stdlib.h>
 #include <simplelog.h>
 
-#if 1
+#if 0
 #ifndef UNIX_LINUX
 #define UNIX_LINUX                
 #endif
 #endif
 
-#if 1
+#if 0
 #ifndef __SPSR_EPOLL__
 #define __SPSR_EPOLL__            
 #endif
@@ -247,6 +247,7 @@ typedef enum {
 	SPSR_PX_UNCONNECTED,
 	SPSR_WIN32_UNCONNECTED, 
 	SPSR_PX_FD_CLOSED,
+	SPSR_WIN32_FD_CLOSED,
 	
 
 	SPSR_PORT_PEAK,

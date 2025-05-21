@@ -888,7 +888,7 @@ spsr_thread_operating_routine(LPVOID arg)
 			eventcb = ret ? SPSR_EVENT_OPEN_DEVICE_ERROR
 				      : SPSR_EVENT_OPEN_DEVICE_OK;
 
-			spsr_invoke_cb( eventcb, 0, 
+			spsr_invoke_cb( eventcb, ret, 
 				p->cb_evt_fn, p->cb_obj, ecb_buf, portlen);
 
 		} while (0);
@@ -1405,8 +1405,10 @@ spsr_clear_node(SPSR_ARR_LIST_LINED *node)
 			l = (int)strlen(node->item->port_name);
 
 			memcpy(tbuffer, node->item->port_name, l);
-			ret =
-			    spsr_invoke_cb(eventcb, 0, 
+			if(eventcb) {
+				ret = SPSR_WIN32_FD_CLOSED;
+			}
+			spsr_invoke_cb(eventcb, ret, 
 					cb_fn, cb_obj, ecb_buf, l);
 		}
 		spsr_free(node->item->buff);
@@ -3521,6 +3523,7 @@ spsr_err_txt_init()
 	__spsr_err_text__[SPSR_PX_UNCONNECTED] = "SPSR_PX_UNCONNECTED";
 	__spsr_err_text__[SPSR_WIN32_UNCONNECTED] = "SPSR_WIN32_UNCONNECTED";
 	__spsr_err_text__[SPSR_PX_FD_CLOSED] = "SPSR_PX_FD_CLOSED";
+	__spsr_err_text__[SPSR_WIN32_FD_CLOSED] = "SPSR_WIN32_FD_CLOSED";
 
 
 
