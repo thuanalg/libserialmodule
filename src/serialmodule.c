@@ -2033,8 +2033,10 @@ spsr_px_hash_add(SPSR_ARR_LIST_LINED *temp, SPSR_GENERIC_ST *evt)
 			char *tbuff = evt->data + sizeof(void *);
 			memcpy(tbuff, temp->item->port_name,
 			    strlen(temp->item->port_name));
-			ret = spsr_invoke_cb(SPSR_EVENT_OPEN_DEVICE_OK,
-			    hashobj->cb_evt_fn, hashobj->cb_obj, evt,
+			spsr_invoke_cb(
+				SPSR_EVENT_OPEN_DEVICE_OK,
+			    0, hashobj->cb_evt_fn, 
+				hashobj->cb_obj, evt,
 			    strlen(hashobj->port_name));
 		}
 	} while (0);
@@ -2082,8 +2084,9 @@ spsr_px_add(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 
 			if (ret) {
 				if (input->cb_evt_fn) {
-					ret = spsr_invoke_cb(
-					    SPSR_EVENT_OPEN_DEVICE_ERROR,
+					spsr_invoke_cb(
+						SPSR_EVENT_OPEN_DEVICE_ERROR, 
+						ret,
 					    input->cb_evt_fn, input->cb_obj,
 					    evt, l);
 				}
@@ -2340,6 +2343,7 @@ spsr_px_rem(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 					 "fd: %d, "
 					 "errno: %d, text: %s.",
 				    fd, errno, strerror(errno));
+					ret = SPSR_PX_FD_CLOSED;
 			} else {
 				callback_evt = SPSR_EVENT_CLOSE_DEVICE_OK;
 				spsr_dbg("close, fd: %d, DONE", fd);
@@ -2372,8 +2376,8 @@ spsr_px_rem(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 
 		memcpy(evt->data + evt->pc, portname, l);
 
-		ret = spsr_invoke_cb(
-		    callback_evt, callback_fn, callback_obj, evt, l);
+		ret = spsr_invoke_cb( callback_evt, 
+			ret, callback_fn, callback_obj, evt, l);
 
 	} while (0);
 	return ret;
@@ -2503,12 +2507,14 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 			portname = (char *)"EMPTY";
 			l = strlen(portname);
 		}
-		evtenum = wrote ? SPSR_EVENT_WRITE_OK : SPSR_EVENT_WRITE_ERROR;
+		evtenum = wrote ? 
+			SPSR_EVENT_WRITE_OK : 
+			SPSR_EVENT_WRITE_ERROR;
 
 		memcpy(evt->data + evt->pc, portname, l);
 
-		spsr_invoke_cb(
-		    evtenum, hashobj->cb_evt_fn, hashobj->cb_obj, evt, l);
+		spsr_invoke_cb( evtenum, ret, 
+			hashobj->cb_evt_fn, hashobj->cb_obj, evt, l);
 	} while (0);
 
 	if (wrote) {
@@ -3095,7 +3101,8 @@ spsr_read_fd(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 				break;
 			}
 
-			spsr_invoke_cb(SPSR_EVENT_READ_BUF, temp->cb_evt_fn,
+			spsr_invoke_cb(SPSR_EVENT_READ_BUF, 
+				ret, temp->cb_evt_fn,
 			    temp->cb_obj, evtcb, didread);
 
 		} while (0);
@@ -3513,6 +3520,9 @@ spsr_err_txt_init()
 	__spsr_err_text__[SPSR_PX_READ] = "SPSR_PX_READ";
 	__spsr_err_text__[SPSR_PX_UNCONNECTED] = "SPSR_PX_UNCONNECTED";
 	__spsr_err_text__[SPSR_WIN32_UNCONNECTED] = "SPSR_WIN32_UNCONNECTED";
+	__spsr_err_text__[SPSR_PX_FD_CLOSED] = "SPSR_PX_FD_CLOSED";
+
+
 
 	__spsr_err_text__[SPSR_PORT_PEAK] = "SPSR_PORT_PEAK";
 }
