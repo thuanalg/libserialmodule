@@ -239,7 +239,7 @@ static int
 spsr_open_fd(char *port_name, int brate, int *);
 
 static int
-spsr_read_fd(int fd, SPSR_GENERIC_ST *pevt, char *chk_delay);
+spsr_px_read(int fd, SPSR_GENERIC_ST *pevt, char *chk_delay);
 
 #endif
 
@@ -1760,7 +1760,7 @@ spsr_init_cartridge_routine(void *obj)
 						continue;
 					}
 					if (fds[k].fd >= 0) {
-						spsr_read_fd(fds[k].fd,
+						spsr_px_read(fds[k].fd,
 						    ecb_buf, &chk_delay);
 					}
 				}
@@ -1818,7 +1818,7 @@ spsr_init_cartridge_routine(void *obj)
 						continue;
 					}
 					if (events[i].data.fd >= 0) {
-						spsr_read_fd(
+						spsr_px_read(
 						    events[i].data.fd, ecb_buf,
 						    &chk_delay);
 					}
@@ -3085,7 +3085,7 @@ spsr_open_fd(char *port_name, int baudrate, int *outfd)
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int
-spsr_read_fd(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
+spsr_px_read(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 {
 	int ret = 0;
 	int didread = 0;
