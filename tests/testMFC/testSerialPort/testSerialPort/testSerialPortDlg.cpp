@@ -394,6 +394,7 @@ void CtestSerialPortDlg::OnBnClickedButtonRemove()
 LRESULT CtestSerialPortDlg::OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam) {
 	SPSR_GENERIC_ST* evt = (SPSR_GENERIC_ST*)lParam;
 	char* p = evt->data + evt->pc;
+	char buff[1024];
 	if (evt->type == SPSR_EVENT_READ_BUF) {
 		
 		CString txt;
@@ -424,11 +425,16 @@ LRESULT CtestSerialPortDlg::OnSpSerialCustomMessage(WPARAM wParam, LPARAM lParam
 	else if (evt->type == SPSR_EVENT_WRITE_ERROR) {
 		CString txt;
 		p_Cdata->GetWindowText(txt);
-		CString nstr(p);
-		CString nstr1(" SPSR_EVENT_WRITE_ERROR ");
+		//CString nstr(p);
+		//CString nstr1(" SPSR_EVENT_WRITE_ERROR ");
+		//txt.Insert(0, nstr);
+		snprintf(buff, 1024, "\r\n%s|%s|%s", 
+			"SPSR_EVENT_WRITE_ERROR",
+			spsr_err_txt(evt->err_code),
+			p);
+		CString nstr(buff);
 		txt.Insert(0, nstr);
-		txt.Insert(0, nstr1);
-		txt.Insert(0, _T("\r\n"));
+		//txt.Insert(0, _T("\r\n"));
 		p_Cdata->SetWindowText(txt);
 	}
 	else if (evt->type == SPSR_EVENT_CLOSE_DEVICE_OK) {

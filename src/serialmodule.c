@@ -365,7 +365,9 @@ spsr_module_openport(void *obj)
 			ret = SPSR_PORT_INFO_NULL;
 			break;
 		}
-
+		if (p->handle) {
+			SPSR_CloseHandle(p->handle);
+		}
 		/*Open the serial port with FILE_FLAG_OVERLAPPED for
 		 * asynchronous operation*/
 		hSerial = CreateFile(p->port_name, GENERIC_READ | GENERIC_WRITE,
@@ -384,9 +386,11 @@ spsr_module_openport(void *obj)
 		}
 		p->handle = hSerial;
 		spsr_all("Create hSerial: 0x%p.", hSerial);
+		/*
 		if (p->is_retry) {
 			break;
 		}
+		*/
 		/* Set up the serial port parameters(baud rate, etc.) */
 		dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
 		if (!GetCommState(hSerial, &dcbSerialParams)) {
@@ -815,7 +819,7 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 
 		memcpy(tbuffer, p->port_name, portlen);
 
-		spsr_invoke_cb( evtcode, 0, 
+		spsr_invoke_cb( evtcode, ret, 
 			p->cb_evt_fn, p->cb_obj, ecb_buf, portlen);
 
 	} while (0);
@@ -856,6 +860,7 @@ spsr_thread_operating_routine(LPVOID arg)
 		BOOL wrs = FALSE;
 		int count = 0, cbInQue = 0;
 		COMSTAT csta = {0};
+		ret = 0;
 
 		flags = EV_RXCHAR | EV_BREAK | EV_RXFLAG | EV_DSR;
 
@@ -875,22 +880,23 @@ spsr_thread_operating_routine(LPVOID arg)
 		if (p->is_retry) {
 			spsr_all("retry");
 		}
-
-		ret = spsr_module_openport(p);
-
+		if (!p->is_retry) {
+			ret = spsr_module_openport(p);
+		}
 		portlen = (int)strlen(p->port_name);
 		do {
 			int eventcb = 0;
+			if (p->is_retry) {
+				break;
+			}
 			memcpy(tbuffer, p->port_name, portlen);
 
 			tbuffer[portlen] = 0;
 
 			eventcb = ret ? SPSR_EVENT_OPEN_DEVICE_ERROR
 				      : SPSR_EVENT_OPEN_DEVICE_OK;
-
-			spsr_invoke_cb( eventcb, ret, 
-				p->cb_evt_fn, p->cb_obj, ecb_buf, portlen);
-
+			spsr_invoke_cb(eventcb, ret, p->cb_evt_fn,
+				    p->cb_obj, ecb_buf, portlen);
 		} while (0);
 
 		if (ret) {
@@ -942,8 +948,14 @@ spsr_thread_operating_routine(LPVOID arg)
 				    p, buf, &bytesWrite, &olReadWrite, ecb_buf);
 				if (ret) {
 					spsr_err("spsr_win32_write");
+					p->is_retry++;
+					if (p->is_retry > 3) {
+						break;
+					}
+					/*
 					SPSR_CloseHandle(p->handle);
 					break;
+					*/
 				}
 			}
 
@@ -1004,7 +1016,10 @@ spsr_thread_operating_routine(LPVOID arg)
 			bytesRead = 0;
 		}
 
-		p->is_retry = 1;
+		p->is_retry++;
+		if (p->is_retry > 3) {
+			p->is_retry = 0;
+		}
 		if (isoff) {
 			break;
 		}
