@@ -1051,21 +1051,6 @@ spsr_thread_operating_routine(LPVOID arg)
 			ret = spsr_win32_read(
 			    p, &bytesRead, &olReadWrite, ecb_buf);
 			if (ret) {
-#if 0
-				const char *text = 0;
-				int len = 0;
-				char *tbuffer = 0;
-				tbuffer = ecb_buf->data + sizeof(void *);
-				text = spsr_err_txt(ret);
-
-				snprintf(tbuffer, ecb_buf->range, "%s|%s", text,
-				    p->port_name);
-
-				len = strlen(tbuffer);
-
-				spsr_invoke_cb(SPSR_EVENT_READ_ERROR, ret,
-				    p->cb_evt_fn, p->cb_obj, ecb_buf, len);
-#endif
 				spsr_err("spsr_win32_read");
 			}
 			spsr_dbg(" [[[ cbInQue: %d, bRead: %d ]]]", cbInQue,
