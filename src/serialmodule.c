@@ -714,7 +714,7 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 	int ret = 0;
 	BOOL wrs = FALSE;
 	char *tbuffer = 0;
-	int evtcode = 0;
+	int evtcode = SPSR_EVENT_WRITE_ERROR;
 	int portlen = 0;
 	DWORD wErr = 0;
 	DWORD dwWaitResult = 0;
@@ -811,17 +811,32 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 
 		buf->pl = 0;
 
-		evtcode =
-		    wroteRes ? SPSR_EVENT_WRITE_OK : SPSR_EVENT_WRITE_ERROR;
+		evtcode = wroteRes ? 
+			SPSR_EVENT_WRITE_OK : 
+			SPSR_EVENT_WRITE_ERROR;
 
 		portlen = (int)strlen(p->port_name);
 		tbuffer[portlen] = 0;
 
 		memcpy(tbuffer, p->port_name, portlen);
-
+#if 0
 		spsr_invoke_cb( evtcode, ret, 
 			p->cb_evt_fn, p->cb_obj, ecb_buf, portlen);
-
+#endif
+	} while (0);
+	do {
+		if (!p) {
+			break;
+		}
+		if (!ecb_buf) {
+			break;
+		}
+		if (!p->cb_evt_fn) {
+			break;
+		}
+		spsr_invoke_cb(evtcode, ret, 
+			p->cb_evt_fn, 
+			p->cb_obj, ecb_buf, portlen);
 	} while (0);
 	return ret;
 }
