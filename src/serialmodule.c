@@ -690,6 +690,7 @@ spsr_win32_read(SPSR_INFO_ST *p,
 	} while (0);
 	do {
 		int evtcode = 0; 
+		int err = 0;
 		if (!p) {
 			break;
 		}
@@ -714,9 +715,11 @@ spsr_win32_read(SPSR_INFO_ST *p,
 		evtcode = ret ?
 			SPSR_EVENT_READ_ERROR : 
 			SPSR_EVENT_READ_BUF;
-		spsr_invoke_cb(SPSR_EVENT_READ_BUF, ret, 
+		err = spsr_invoke_cb(
+		    evtcode, ret, 
 			p->cb_evt_fn, p->cb_obj,
 		    ecb_buf, len);
+		spsr_all("spsr_invoke_cb spsr_win32_read");
 	} while (0);
 	return ret;
 }
