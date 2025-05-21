@@ -614,7 +614,9 @@ spsr_module_isoff(SPSR_INFO_ST *obj)
 #ifndef UNIX_LINUX
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
-spsr_win32_read(SPSR_INFO_ST *p, DWORD *pbytesRead, OVERLAPPED *polReadWrite,
+spsr_win32_read(SPSR_INFO_ST *p, 
+	DWORD *pbytesRead, 
+	OVERLAPPED *polReadWrite,
     SPSR_GENERIC_ST *ecb_buf)
 {
 	char *tbuffer = 0;
@@ -623,6 +625,7 @@ spsr_win32_read(SPSR_INFO_ST *p, DWORD *pbytesRead, OVERLAPPED *polReadWrite,
 	COMSTAT csta = {0};
 	DWORD dwError = 0;
 	DWORD readErr = 0;
+	int len = 0;
 	do {
 		tbuffer = ecb_buf->data + sizeof(void *);
 		rs = ReadFile(p->handle, tbuffer, SPSR_BUFFER_SIZE, pbytesRead,
@@ -663,25 +666,58 @@ spsr_win32_read(SPSR_INFO_ST *p, DWORD *pbytesRead, OVERLAPPED *polReadWrite,
 			break;
 		}
 		spsr_dbg("bRead: %d", (int)*pbytesRead);
+		memset(&csta, 0, sizeof(csta));
+		rs = ClearCommError(p->handle, &dwError, &csta);
+		if (!rs) {
+			spsr_api_err("ClearCommError");
+			ret = SPSR_WIN32_CLEARCOMM;
+			break;
+		}
+		if (csta.cbInQue > 0) {
+			spsr_err("Read Com not finished!!!");
+			ret = SPSR_WIN32_STILL_INQUE;
+			break;
+		} else if (*pbytesRead > 0) {
+			len = *pbytesRead;
+			tbuffer[*pbytesRead] = 0;
+			spsr_all("[tbuffer: %s]!", tbuffer);
+#if 0
+			spsr_invoke_cb(SPSR_EVENT_READ_BUF, 0,
+				p->cb_evt_fn, p->cb_obj,
+			    ecb_buf, *pbytesRead);
+#endif
+		}
 	} while (0);
+	do {
+		int evtcode = 0; 
+		if (!p) {
+			break;
+		}
+		if (!ecb_buf) {
+			break;
+		}
+		if (!pbytesRead) {
+			break;
+		}
+		if (!p->cb_evt_fn) {
+			break;
+		}
+		if (ret) {
+			const char *text = 0;
+			text = spsr_err_txt(ret);
+			snprintf(tbuffer, 
+				ecb_buf->range, "%s|%s", 
+				text, p->port_name);
 
-	if (ret) {
-		return ret;
-	}
-
-	memset(&csta, 0, sizeof(csta));
-	ClearCommError(p->handle, &dwError, &csta);
-
-	if (csta.cbInQue > 0) {
-		spsr_err("Read Com not finished!!!");
-	} else if (*pbytesRead > 0) {
-		tbuffer[*pbytesRead] = 0;
-		spsr_all("[tbuffer: %s]!", tbuffer);
-		spsr_invoke_cb(SPSR_EVENT_READ_BUF, 0,
+			len = strlen(tbuffer);
+		}
+		evtcode = ret ?
+			SPSR_EVENT_READ_ERROR : 
+			SPSR_EVENT_READ_BUF;
+		spsr_invoke_cb(SPSR_EVENT_READ_BUF, ret, 
 			p->cb_evt_fn, p->cb_obj,
-		    ecb_buf, *pbytesRead);
-	}
-
+		    ecb_buf, len);
+	} while (0);
 	return ret;
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -3554,6 +3590,9 @@ spsr_err_txt_init()
 	__spsr_err_text__[SPSR_WIN32_UNCONNECTED] = "SPSR_WIN32_UNCONNECTED";
 	__spsr_err_text__[SPSR_PX_FD_CLOSED] = "SPSR_PX_FD_CLOSED";
 	__spsr_err_text__[SPSR_WIN32_FD_CLOSED] = "SPSR_WIN32_FD_CLOSED";
+	__spsr_err_text__[SPSR_WIN32_CLEARCOMM] = "SPSR_WIN32_CLEARCOMM";
+	__spsr_err_text__[SPSR_WIN32_STILL_INQUE] = "SPSR_WIN32_STILL_INQUE";
+
 
 
 
