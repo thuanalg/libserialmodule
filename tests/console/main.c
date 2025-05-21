@@ -29,6 +29,7 @@ spsr_test_callback(void *data)
 	int total = 0;
 	char *realdata = 0;
 	int datalen = 0;
+	
 	/* Data is borrowed from background thread, you should make a copy to use and delete. */
 	SPSR_GENERIC_ST *evt = (SPSR_GENERIC_ST *)data;
 	/*char *realdata: from evt->pc to evt->pl.*/
@@ -69,7 +70,8 @@ spsr_test_callback(void *data)
 		}
 		if (evt->type == SPSR_EVENT_WRITE_ERROR) {
 			/* Port name .*/
-			spllog(0, "SPSR_EVENT_WRITE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+			spllog(0, "SPSR_EVENT_WRITE_ERROR|%s, realdata: %s, datalen: %d", 
+				spsr_err_txt(evt->err_code), realdata, datalen);
 			break;
 		}
 		if (evt->type == SPSR_EVENT_OPEN_DEVICE_OK) {

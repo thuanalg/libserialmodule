@@ -231,7 +231,9 @@ gboolean update_ui(void* data) {
             }
             if (evt->type == SPSR_EVENT_WRITE_ERROR) {
                 /* Port name .*/
-                snprintf(text, GTK_TEST_BUF, "SPSR_EVENT_WRITE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+                snprintf(text, GTK_TEST_BUF, "SPSR_EVENT_WRITE_ERROR|%s, realdata: %s, datalen: %d", 
+                    spsr_err_txt(evt->err_code),
+                    realdata, datalen);
                 break;
             }
 
@@ -243,7 +245,10 @@ gboolean update_ui(void* data) {
             }
             if (evt->type == SPSR_EVENT_OPEN_DEVICE_ERROR) {
                 /* Port name .*/
-                snprintf(text, GTK_TEST_BUF, "SPSR_EVENT_OPEN_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+                snprintf(text, GTK_TEST_BUF, 
+                    "SPSR_EVENT_OPEN_DEVICE_ERROR|%s, realdata: %s, datalen: %d", 
+                    spsr_err_txt(evt->err_code),
+                    realdata, datalen);
                 break;
             }         
             if (evt->type == SPSR_EVENT_CLOSE_DEVICE_OK) {
@@ -253,7 +258,9 @@ gboolean update_ui(void* data) {
             }      
             if (evt->type == SPSR_EVENT_CLOSE_DEVICE_ERROR) {
                 /* Port name .*/
-                snprintf(text, GTK_TEST_BUF, "SPSR_EVENT_CLOSE_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+                snprintf(text, GTK_TEST_BUF, "SPSR_EVENT_CLOSE_DEVICE_ERROR|%s, realdata: %s, datalen: %d", 
+                    spsr_err_txt(evt->err_code),
+                    realdata, datalen);
                 break;
             }                   
         }   while(0);  

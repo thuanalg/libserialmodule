@@ -245,6 +245,11 @@ typedef enum {
 	SPSR_MINI_SIZE,
 	SPSR_PX_READ,
 	SPSR_PX_UNCONNECTED,
+	SPSR_WIN32_UNCONNECTED, 
+	SPSR_PX_FD_CLOSED,
+	SPSR_WIN32_FD_CLOSED,
+	SPSR_WIN32_CLEARCOMM,
+	SPSR_WIN32_STILL_INQUE,
 	
 
 	SPSR_PORT_PEAK,
@@ -269,6 +274,7 @@ typedef struct __SPSR_GENERIC_ST__ {
 	int pl;
 	int pc;
 	int type;
+	int err_code;
 	char data[0];
 } SPSR_GENERIC_ST;
 
