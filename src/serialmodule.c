@@ -1760,7 +1760,7 @@ spsr_init_cartridge_routine(void *obj)
 						continue;
 					}
 					if (fds[k].fd >= 0) {
-						ret = spsr_read_fd(fds[k].fd,
+						spsr_read_fd(fds[k].fd,
 						    ecb_buf, &chk_delay);
 					}
 				}
@@ -1818,7 +1818,7 @@ spsr_init_cartridge_routine(void *obj)
 						continue;
 					}
 					if (events[i].data.fd >= 0) {
-						ret = spsr_read_fd(
+						spsr_read_fd(
 						    events[i].data.fd, ecb_buf,
 						    &chk_delay);
 					}
@@ -3097,6 +3097,7 @@ spsr_read_fd(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 	int range = 0;
 	SPSR_GENERIC_ST *evtcb = 0;
 	char *buffer = 0;
+	int len = 0;
 	do {
 		if (!pevtcb) {
 			ret = SPSR_MEM_NULL;
@@ -3142,6 +3143,9 @@ spsr_read_fd(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 					 "errno: %d, text: %s.",
 				    fd, errno, strerror(errno));
 				ret = SPSR_PX_READ;
+				len = snprintf(buffer, range, "%s|%s", 
+					temp ? temp->port_name: "", 
+					spsr_err_txt(ret));
 				break;
 			}
 			/* } */
@@ -3149,7 +3153,7 @@ spsr_read_fd(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 			spsr_all("Didread: %d, data: \"%s\", "
 				 "fd: %d, temp->t_delay/timeout: %d",
 			    didread, buffer, fd, t_wait);
-
+			
 			if (!temp) {
 				ret = SPSR_HASH_NOTFOUND;
 				spsr_err("Didsee Cannot find obj in reading.");
@@ -3159,32 +3163,37 @@ spsr_read_fd(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 				spsr_dbg("cb_evt_fn, cb_evt_fn null.");
 				break;
 			}
-
+			len = didread;
+#if 0
 			spsr_invoke_cb(SPSR_EVENT_READ_BUF, 
 				ret, temp->cb_evt_fn,
 			    temp->cb_obj, evtcb, didread);
-
+#endif
+			break;
 		} while (0);
 
 	} while (0);
-#if 0
-	if(ret && temp->cb_evt_fn && buffer) {
-		const char *text = 0;
-		int len = 0;
-		text = spsr_err_txt(ret);
-		
-		snprintf(buffer, 
-			ecb_buf->range, "%s|%s", 
-			text, p->port_name);
-			
-		len = strlen(buffer);
-		
-		spsr_invoke_cb(
-			SPSR_EVENT_READ_ERROR, 
-			p->cb_evt_fn, p->cb_obj,
-			ecb_buf, len);								
-	}
-#endif
+
+	do {
+		int evtcode = 0;
+		if(!temp) {
+			break;
+		}
+		if(!temp->cb_evt_fn) {
+			break;
+		}
+		if(!evtcb) {
+			break;
+		}
+		evtcode = ret ? 
+			SPSR_EVENT_READ_ERROR: 
+			SPSR_EVENT_READ_BUF;
+
+		spsr_invoke_cb(evtcode, 
+			ret, temp->cb_evt_fn,
+			temp->cb_obj, evtcb, len);		
+
+	} while(0);
 	return ret;
 }
 
