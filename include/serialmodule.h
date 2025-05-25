@@ -26,7 +26,7 @@ spsr_module_finish, spsr_inst_open, spsr_inst_close, spsr_inst_write].
 #include <stdlib.h>
 #include <simplelog.h>
 
-#if 0
+#if 1
 #ifndef UNIX_LINUX
 #define UNIX_LINUX                
 #endif
@@ -280,6 +280,7 @@ typedef struct __SPSR_GENERIC_ST__ {
 
 typedef struct __SPSR_INPUT_ST__ {
 	int baudrate;
+	char checkDSR;
 	char port_name[SPSR_PORT_LEN];
 	SPSR_module_cb cb_evt_fn;
 	void *cb_obj;
@@ -293,6 +294,7 @@ typedef struct __SPSR_INFO_ST__ {
 	char isoff;
 	char is_retry;
 	int baudrate;
+	char checkDSR;
 	char port_name[SPSR_PORT_LEN];
 
 #ifndef UNIX_LINUX

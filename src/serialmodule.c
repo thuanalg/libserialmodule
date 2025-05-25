@@ -222,11 +222,13 @@ static void *spsr_hash_fd_arr[SPSR_MAX_NUMBER_OF_PORT];
 
 typedef struct __SPSR_HASH_FD_NAME__ {
 	int fd;
+	int t_delay;
+	char checkDSR;	
 	char port_name[SPSR_PORT_LEN];
 	SPSR_module_cb cb_evt_fn;
 	void *cb_obj;
 	struct __SPSR_HASH_FD_NAME__ *next;
-	int t_delay;
+
 } SPSR_HASH_FD_NAME;
 
 #define SPSR_HASH_FD(__fd__) (__fd__ % SPSR_MAX_NUMBER_OF_PORT)
@@ -2075,6 +2077,8 @@ spsr_px_hash_add(SPSR_ARR_LIST_LINED *temp, SPSR_GENERIC_ST *evt)
 		hashobj->cb_evt_fn = temp->item->cb_evt_fn;
 		hashobj->cb_obj = temp->item->cb_obj;
 		hashobj->t_delay = temp->item->t_delay;
+		hashobj->checkDSR = temp->item->checkDSR;
+
 		hashid = SPSR_HASH_FD(fd);
 		hashitem = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
 		if (!hashitem) {
@@ -2528,7 +2532,9 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 		wlen = item->pl - item->pc;
 
 		hashobj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
-		connected = spsr_remote_connected(fd);
+		
+		connected = (hashobj->checkDSR) ? spsr_remote_connected(fd) : 1; 
+
 		if (!connected) {
 			spsr_err("Remote unconnected!");
 			ret = SPSR_PX_UNCONNECTED;
@@ -2849,6 +2855,7 @@ spsr_verify_info(SPSR_INPUT_ST *p)
 
 		snprintf(item->port_name, SPSR_PORT_LEN, "%s", p->port_name);
 		item->baudrate = p->baudrate;
+		item->checkDSR = p->checkDSR;
 		item->cb_evt_fn = p->cb_evt_fn;
 		item->cb_obj = p->cb_obj;
 		item->t_delay = p->t_delay;
