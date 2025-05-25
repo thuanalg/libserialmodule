@@ -786,7 +786,10 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 			break;
 		}
 		tbuffer = ecb_buf->data + sizeof(void *);
+		connected = p->checkDSR ? spsr_win32_connected(p->handle) : 1;
+#if 0
 		connected = spsr_win32_connected(p->handle);
+#endif
 		while (buf->pl > 0) {
 			if (!connected) {
 				spsr_err("Not connected [%s].", p->port_name);
