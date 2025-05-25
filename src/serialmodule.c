@@ -414,7 +414,7 @@ spsr_module_openport(void *obj)
 		dcbSerialParams.fOutxCtsFlow = TRUE;
 		/* Enable CTS output flow control */
 		/* dcbSerialParams.fCtsHandshake = TRUE; */
-		dcbSerialParams.fOutxDsrFlow = p->checkDSR ? 1:0;
+		dcbSerialParams.fOutxDsrFlow = p->checkDSR ? 1 : 0;
 		/* Disable DSR output flow control */
 		dcbSerialParams.fDsrSensitivity = FALSE;
 		/* DSR sensitivity disabled */

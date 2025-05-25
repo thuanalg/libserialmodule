@@ -203,6 +203,7 @@ main(int argc, char *argv[])
 
 		obj.baudrate = baudrate;
 		obj.t_delay = 100;
+		obj.checkDSR = 1;
 		/* The callback will receive data from reading a port. */
 		obj.cb_evt_fn = spsr_test_callback;
 		obj.cb_obj = &TEST_CALLBACK_OBJ;
