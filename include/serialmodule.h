@@ -280,11 +280,11 @@ typedef struct __SPSR_GENERIC_ST__ {
 typedef struct __SPSR_INPUT_ST__ {
 	int baudrate;
 	char checkDSR;
+	int t_delay;
 	char port_name[SPSR_PORT_LEN];
+
 	SPSR_module_cb cb_evt_fn;
 	void *cb_obj;
-
-	int t_delay;
 
 } SPSR_INPUT_ST;
 
