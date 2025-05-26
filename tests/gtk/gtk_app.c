@@ -45,6 +45,7 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
     obj->cb_evt_fn = spsr_test_callback;
     obj->cb_obj = entries[4];
     obj->t_delay = 55;
+    obj->checkDSR = 1;
     
     spllog(0, "baudrate:=========================++++++++++++> %d, portname: %s", 
         obj->baudrate, obj->port_name);
@@ -86,9 +87,9 @@ int main(int argc, char *argv[]) {
     int i = 0;
     int k = 0;
 #ifndef UNIX_LINUX
-	snprintf(cfgpath, 1024, "C:/z/serialmodule/win32/Debug/simplelog.cfg");
+	snprintf(cfgpath, 1024, "simplelog.cfg");
 #else
-	snprintf(cfgpath, 1024, "/home/thuannt/x/serialmodule/src/linux/simplelog.cfg");
+	snprintf(cfgpath, 1024, "simplelog.cfg");
 #endif
 	snprintf(is_port, 32,"%s", "COM2");
 	baudrate = 9600;
