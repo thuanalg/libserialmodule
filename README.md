@@ -43,3 +43,5 @@ Contributions are welcome! Feel free to submit issues or pull requests to enhanc
 ### Contact:
 - [Email](mailto:nguyenthaithuanalg@gmail.com)
 
+### Used by:
+- [meta-voltumna](https://layers.openembedded.org/layerindex/branch/master/layer/meta-voltumna/) from [Elettra-Sincrotrone Trieste](https://www.elettra.eu/)
