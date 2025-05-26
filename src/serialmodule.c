@@ -793,7 +793,9 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 		while (buf->pl > 0) {
 			if (!connected) {
 				spsr_err("Remote unconnected! "
-					"Turn off checkDSR for half-duplex! [%s].", 
+					"Turn off checkDSR for half-duplex!." 
+					"Turn on checkDSR for full-duplex!." 
+					"Port [%s].", 
 					p->port_name);
 				ret = SPSR_WIN32_UNCONNECTED;
 				break;
@@ -2527,7 +2529,9 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 		if (!connected) {
 			spsr_err(
 				"Remote unconnected! "
-				"Turn off checkDSR for half-duplex! Port: %s.",
+				"Turn off checkDSR for half-duplex! ."
+				"Turn on checkDSR for full-duplex!"
+				"Port: %s.",
 				hashobj->port_name);
 			ret = SPSR_PX_UNCONNECTED;
 			break;
