@@ -738,7 +738,7 @@ spsr_win32_connected(HANDLE hd)
 			spsr_wrn("DSR is NOT set.");
 			break;
 		}
-		spsr_wrn("DSR is set.");
+		spsr_dbg("DSR is set.");
 		ret = 1;
 	} while (0);
 	return ret;
