@@ -414,7 +414,7 @@ spsr_module_openport(void *obj)
 		dcbSerialParams.fOutxCtsFlow = TRUE;
 		/* Enable CTS output flow control */
 		/* dcbSerialParams.fCtsHandshake = TRUE; */
-#if 0
+#if 1
 		dcbSerialParams.fOutxDsrFlow = p->checkDSR ? 1 : 0;
 #else
 		dcbSerialParams.fOutxDsrFlow = FALSE;
@@ -797,10 +797,10 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 		while (buf->pl > 0) {
 			if (!connected) {
 				spsr_err("Remote unconnected! "
-					"Turn off checkDSR for half-duplex!." 
-					"Turn on checkDSR for full-duplex!." 
-					"Port [%s].", 
-					p->port_name);
+					 "Turn off checkDSR for half-duplex!."
+					 "Turn on checkDSR for full-duplex!."
+					 "Port [%s].",
+				    p->port_name);
 				ret = SPSR_WIN32_UNCONNECTED;
 				break;
 			}
@@ -2000,8 +2000,6 @@ spsr_fetch_commands(int epollfd, char *info, int n, SPSR_GENERIC_ST *evt)
 	int ret = 0;
 	SPSR_GENERIC_ST *item = 0;
 
-	int fd = 0;
-
 #ifndef __SPSR_EPOLL__
 	struct pollfd *fds = (struct pollfd *)mp;
 #else
@@ -2040,12 +2038,6 @@ spsr_fetch_commands(int epollfd, char *info, int n, SPSR_GENERIC_ST *evt)
 		}
 		if (ret) {
 			break;
-		}
-	}
-
-	if (ret) {
-		if (fd >= 0) {
-			close(fd);
 		}
 	}
 
@@ -2531,12 +2523,11 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 		connected = (hashobj->checkDSR) ? spsr_remote_connected(fd) : 1;
 
 		if (!connected) {
-			spsr_err(
-				"Remote unconnected! "
-				"Turn off checkDSR for half-duplex! ."
-				"Turn on checkDSR for full-duplex!"
-				"Port: %s.",
-				hashobj->port_name);
+			spsr_err("Remote unconnected! "
+				 "Turn off checkDSR for half-duplex! "
+				 "Turn on checkDSR for full-duplex!"
+				 "Port: %s.",
+			    hashobj->port_name);
 			ret = SPSR_PX_UNCONNECTED;
 			break;
 		}
