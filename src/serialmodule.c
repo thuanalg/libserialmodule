@@ -222,11 +222,13 @@ static void *spsr_hash_fd_arr[SPSR_MAX_NUMBER_OF_PORT];
 
 typedef struct __SPSR_HASH_FD_NAME__ {
 	int fd;
+	int t_delay;
+	char checkDSR;
 	char port_name[SPSR_PORT_LEN];
 	SPSR_module_cb cb_evt_fn;
 	void *cb_obj;
 	struct __SPSR_HASH_FD_NAME__ *next;
-	int t_delay;
+
 } SPSR_HASH_FD_NAME;
 
 #define SPSR_HASH_FD(__fd__) (__fd__ % SPSR_MAX_NUMBER_OF_PORT)
@@ -278,8 +280,7 @@ static int
 spsr_wait_sem(void *sem);
 
 static int
-spsr_invoke_cb(int evttype, int err_code, 
-	SPSR_module_cb fn_cb, void *obj_cb,
+spsr_invoke_cb(int evttype, int err_code, SPSR_module_cb fn_cb, void *obj_cb,
     SPSR_GENERIC_ST *evt, int lendata);
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
@@ -413,7 +414,7 @@ spsr_module_openport(void *obj)
 		dcbSerialParams.fOutxCtsFlow = TRUE;
 		/* Enable CTS output flow control */
 		/* dcbSerialParams.fCtsHandshake = TRUE; */
-		dcbSerialParams.fOutxDsrFlow = TRUE;
+		dcbSerialParams.fOutxDsrFlow = p->checkDSR ? 1 : 0;
 		/* Disable DSR output flow control */
 		dcbSerialParams.fDsrSensitivity = FALSE;
 		/* DSR sensitivity disabled */
@@ -614,9 +615,7 @@ spsr_module_isoff(SPSR_INFO_ST *obj)
 #ifndef UNIX_LINUX
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
-spsr_win32_read(SPSR_INFO_ST *p, 
-	DWORD *pbytesRead, 
-	OVERLAPPED *polReadWrite,
+spsr_win32_read(SPSR_INFO_ST *p, DWORD *pbytesRead, OVERLAPPED *polReadWrite,
     SPSR_GENERIC_ST *ecb_buf)
 {
 	char *tbuffer = 0;
@@ -689,7 +688,7 @@ spsr_win32_read(SPSR_INFO_ST *p,
 		}
 	} while (0);
 	do {
-		int evtcode = 0; 
+		int evtcode = 0;
 		int err = 0;
 		if (!p) {
 			break;
@@ -706,19 +705,14 @@ spsr_win32_read(SPSR_INFO_ST *p,
 		if (ret) {
 			const char *text = 0;
 			text = spsr_err_txt(ret);
-			snprintf(tbuffer, 
-				ecb_buf->range, "%s|%s", 
-				text, p->port_name);
+			snprintf(tbuffer, ecb_buf->range, "%s|%s", text,
+			    p->port_name);
 
 			len = strlen(tbuffer);
 		}
-		evtcode = ret ?
-			SPSR_EVENT_READ_ERROR : 
-			SPSR_EVENT_READ_BUF;
+		evtcode = ret ? SPSR_EVENT_READ_ERROR : SPSR_EVENT_READ_BUF;
 		err = spsr_invoke_cb(
-		    evtcode, ret, 
-			p->cb_evt_fn, p->cb_obj,
-		    ecb_buf, len);
+		    evtcode, ret, p->cb_evt_fn, p->cb_obj, ecb_buf, len);
 		spsr_all("spsr_invoke_cb spsr_win32_read");
 	} while (0);
 	return ret;
@@ -792,11 +786,13 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 			break;
 		}
 		tbuffer = ecb_buf->data + sizeof(void *);
+		connected = p->checkDSR ? spsr_win32_connected(p->handle) : 1;
+#if 0
 		connected = spsr_win32_connected(p->handle);
+#endif
 		while (buf->pl > 0) {
 			if (!connected) {
-				spsr_err("Not connected [%s].", 
-					p->port_name);
+				spsr_err("Not connected [%s].", p->port_name);
 				ret = SPSR_WIN32_UNCONNECTED;
 				break;
 			}
@@ -850,9 +846,8 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 
 		buf->pl = 0;
 
-		evtcode = wroteRes ? 
-			SPSR_EVENT_WRITE_OK : 
-			SPSR_EVENT_WRITE_ERROR;
+		evtcode =
+		    wroteRes ? SPSR_EVENT_WRITE_OK : SPSR_EVENT_WRITE_ERROR;
 
 		portlen = (int)strlen(p->port_name);
 		tbuffer[portlen] = 0;
@@ -873,9 +868,8 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 		if (!p->cb_evt_fn) {
 			break;
 		}
-		spsr_invoke_cb(evtcode, ret, 
-			p->cb_evt_fn, 
-			p->cb_obj, ecb_buf, portlen);
+		spsr_invoke_cb(
+		    evtcode, ret, p->cb_evt_fn, p->cb_obj, ecb_buf, portlen);
 	} while (0);
 	return ret;
 }
@@ -949,8 +943,8 @@ spsr_thread_operating_routine(LPVOID arg)
 
 			eventcb = ret ? SPSR_EVENT_OPEN_DEVICE_ERROR
 				      : SPSR_EVENT_OPEN_DEVICE_OK;
-			spsr_invoke_cb(eventcb, ret, p->cb_evt_fn,
-				    p->cb_obj, ecb_buf, portlen);
+			spsr_invoke_cb(eventcb, ret, p->cb_evt_fn, p->cb_obj,
+			    ecb_buf, portlen);
 		} while (0);
 
 		if (ret) {
@@ -1462,11 +1456,10 @@ spsr_clear_node(SPSR_ARR_LIST_LINED *node)
 			l = (int)strlen(node->item->port_name);
 
 			memcpy(tbuffer, node->item->port_name, l);
-			if(eventcb) {
+			if (eventcb) {
 				ret = SPSR_WIN32_FD_CLOSED;
 			}
-			spsr_invoke_cb(eventcb, ret, 
-					cb_fn, cb_obj, ecb_buf, l);
+			spsr_invoke_cb(eventcb, ret, cb_fn, cb_obj, ecb_buf, l);
 		}
 		spsr_free(node->item->buff);
 
@@ -1760,8 +1753,8 @@ spsr_init_cartridge_routine(void *obj)
 						continue;
 					}
 					if (fds[k].fd >= 0) {
-						spsr_px_read(fds[k].fd,
-						    ecb_buf, &chk_delay);
+						spsr_px_read(fds[k].fd, ecb_buf,
+						    &chk_delay);
 					}
 				}
 			}
@@ -1818,9 +1811,8 @@ spsr_init_cartridge_routine(void *obj)
 						continue;
 					}
 					if (events[i].data.fd >= 0) {
-						spsr_px_read(
-						    events[i].data.fd, ecb_buf,
-						    &chk_delay);
+						spsr_px_read(events[i].data.fd,
+						    ecb_buf, &chk_delay);
 					}
 					/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 				}
@@ -2075,6 +2067,8 @@ spsr_px_hash_add(SPSR_ARR_LIST_LINED *temp, SPSR_GENERIC_ST *evt)
 		hashobj->cb_evt_fn = temp->item->cb_evt_fn;
 		hashobj->cb_obj = temp->item->cb_obj;
 		hashobj->t_delay = temp->item->t_delay;
+		hashobj->checkDSR = temp->item->checkDSR;
+
 		hashid = SPSR_HASH_FD(fd);
 		hashitem = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
 		if (!hashitem) {
@@ -2092,10 +2086,8 @@ spsr_px_hash_add(SPSR_ARR_LIST_LINED *temp, SPSR_GENERIC_ST *evt)
 			char *tbuff = evt->data + sizeof(void *);
 			memcpy(tbuff, temp->item->port_name,
 			    strlen(temp->item->port_name));
-			spsr_invoke_cb(
-				SPSR_EVENT_OPEN_DEVICE_OK,
-			    0, hashobj->cb_evt_fn, 
-				hashobj->cb_obj, evt,
+			spsr_invoke_cb(SPSR_EVENT_OPEN_DEVICE_OK, 0,
+			    hashobj->cb_evt_fn, hashobj->cb_obj, evt,
 			    strlen(hashobj->port_name));
 		}
 	} while (0);
@@ -2144,8 +2136,7 @@ spsr_px_add(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 			if (ret) {
 				if (input->cb_evt_fn) {
 					spsr_invoke_cb(
-						SPSR_EVENT_OPEN_DEVICE_ERROR, 
-						ret,
+					    SPSR_EVENT_OPEN_DEVICE_ERROR, ret,
 					    input->cb_evt_fn, input->cb_obj,
 					    evt, l);
 				}
@@ -2402,7 +2393,7 @@ spsr_px_rem(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 					 "fd: %d, "
 					 "errno: %d, text: %s.",
 				    fd, errno, strerror(errno));
-					ret = SPSR_PX_FD_CLOSED;
+				ret = SPSR_PX_FD_CLOSED;
 			} else {
 				callback_evt = SPSR_EVENT_CLOSE_DEVICE_OK;
 				spsr_dbg("close, fd: %d, DONE", fd);
@@ -2435,8 +2426,8 @@ spsr_px_rem(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 
 		memcpy(evt->data + evt->pc, portname, l);
 
-		ret = spsr_invoke_cb( callback_evt, 
-			ret, callback_fn, callback_obj, evt, l);
+		ret = spsr_invoke_cb(
+		    callback_evt, ret, callback_fn, callback_obj, evt, l);
 
 	} while (0);
 	return ret;
@@ -2528,7 +2519,9 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 		wlen = item->pl - item->pc;
 
 		hashobj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
-		connected = spsr_remote_connected(fd);
+
+		connected = (hashobj->checkDSR) ? spsr_remote_connected(fd) : 1;
+
 		if (!connected) {
 			spsr_err("Remote unconnected!");
 			ret = SPSR_PX_UNCONNECTED;
@@ -2566,14 +2559,12 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 			portname = (char *)"EMPTY";
 			l = strlen(portname);
 		}
-		evtenum = wrote ? 
-			SPSR_EVENT_WRITE_OK : 
-			SPSR_EVENT_WRITE_ERROR;
+		evtenum = wrote ? SPSR_EVENT_WRITE_OK : SPSR_EVENT_WRITE_ERROR;
 
 		memcpy(evt->data + evt->pc, portname, l);
 
-		spsr_invoke_cb( evtenum, ret, 
-			hashobj->cb_evt_fn, hashobj->cb_obj, evt, l);
+		spsr_invoke_cb(
+		    evtenum, ret, hashobj->cb_evt_fn, hashobj->cb_obj, evt, l);
 	} while (0);
 
 	if (wrote) {
@@ -2849,6 +2840,7 @@ spsr_verify_info(SPSR_INPUT_ST *p)
 
 		snprintf(item->port_name, SPSR_PORT_LEN, "%s", p->port_name);
 		item->baudrate = p->baudrate;
+		item->checkDSR = p->checkDSR;
 		item->cb_evt_fn = p->cb_evt_fn;
 		item->cb_obj = p->cb_obj;
 		item->t_delay = p->t_delay;
@@ -3143,9 +3135,9 @@ spsr_px_read(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 					 "errno: %d, text: %s.",
 				    fd, errno, strerror(errno));
 				ret = SPSR_PX_READ;
-				len = snprintf(buffer, range, "%s|%s", 
-					temp ? temp->port_name: "", 
-					spsr_err_txt(ret));
+				len = snprintf(buffer, range, "%s|%s",
+				    temp ? temp->port_name : "",
+				    spsr_err_txt(ret));
 				break;
 			}
 			/* } */
@@ -3153,7 +3145,7 @@ spsr_px_read(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 			spsr_all("Didread: %d, data: \"%s\", "
 				 "fd: %d, temp->t_delay/timeout: %d",
 			    didread, buffer, fd, t_wait);
-			
+
 			if (!temp) {
 				ret = SPSR_HASH_NOTFOUND;
 				spsr_err("Didsee Cannot find obj in reading.");
@@ -3176,24 +3168,21 @@ spsr_px_read(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 
 	do {
 		int evtcode = 0;
-		if(!temp) {
+		if (!temp) {
 			break;
 		}
-		if(!temp->cb_evt_fn) {
+		if (!temp->cb_evt_fn) {
 			break;
 		}
-		if(!evtcb) {
+		if (!evtcb) {
 			break;
 		}
-		evtcode = ret ? 
-			SPSR_EVENT_READ_ERROR: 
-			SPSR_EVENT_READ_BUF;
+		evtcode = ret ? SPSR_EVENT_READ_ERROR : SPSR_EVENT_READ_BUF;
 
-		spsr_invoke_cb(evtcode, 
-			ret, temp->cb_evt_fn,
-			temp->cb_obj, evtcb, len);		
+		spsr_invoke_cb(
+		    evtcode, ret, temp->cb_evt_fn, temp->cb_obj, evtcb, len);
 
-	} while(0);
+	} while (0);
 	return ret;
 }
 
@@ -3414,8 +3403,7 @@ spsr_sem_delete(void *sem, char *sem_name)
 }
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
-spsr_invoke_cb(int evttype, int err_code,
-	SPSR_module_cb fn_cb, void *obj_cb,
+spsr_invoke_cb(int evttype, int err_code, SPSR_module_cb fn_cb, void *obj_cb,
     SPSR_GENERIC_ST *evt, int lendata)
 {
 	int ret = 0;
@@ -3592,9 +3580,6 @@ spsr_err_txt_init()
 	__spsr_err_text__[SPSR_WIN32_FD_CLOSED] = "SPSR_WIN32_FD_CLOSED";
 	__spsr_err_text__[SPSR_WIN32_CLEARCOMM] = "SPSR_WIN32_CLEARCOMM";
 	__spsr_err_text__[SPSR_WIN32_STILL_INQUE] = "SPSR_WIN32_STILL_INQUE";
-
-
-
 
 	__spsr_err_text__[SPSR_PORT_PEAK] = "SPSR_PORT_PEAK";
 }

@@ -19,7 +19,8 @@ int TEST_CALLBACK_OBJ = 179;
 int
 spsr_test_callback(void *data)
 {
-	/* Data is borrowed from background thread, you should make a copy to use and delete. */
+	/* Data is borrowed from background thread, you should make a copy to
+	 * use and delete. */
 	/* Here, please note data type. */
 	if (!data) {
 		spllog(SPL_LOG_DEBUG, "Data is empty");
@@ -29,8 +30,9 @@ spsr_test_callback(void *data)
 	int total = 0;
 	char *realdata = 0;
 	int datalen = 0;
-	
-	/* Data is borrowed from background thread, you should make a copy to use and delete. */
+
+	/* Data is borrowed from background thread, you should make a copy to
+	 * use and delete. */
 	SPSR_GENERIC_ST *evt = (SPSR_GENERIC_ST *)data;
 	/*char *realdata: from evt->pc to evt->pl.*/
 	/* SPSR_MODULE_EVENT evt->type */
@@ -51,47 +53,67 @@ spsr_test_callback(void *data)
 		obj = (void *)(*temp);
 	} else if (sizeof(void *) == sizeof(unsigned long long int)) {
 		/* 64 bit */
-		unsigned long long int *temp = (unsigned long long int *)evt->data;
+		unsigned long long int *temp =
+		    (unsigned long long int *)evt->data;
 		obj = (void *)(*temp);
 	}
 	spllog(0, "obj: 0x%p, value: %d", obj, *((int *)obj));
 	do {
 		datalen = evt->pl - evt->pc; /*datalen.*/
-		realdata = evt->data + evt->pc; /*char *realdata: from evt->pc to evt->pl.*/
+		realdata = evt->data +
+			   evt->pc; /*char *realdata: from evt->pc to evt->pl.*/
 		if (evt->type == SPSR_EVENT_READ_BUF) {
 			/* Read data.*/
-			spllog(0, "SPSR_EVENT_READ_BUF, realdata: %s, datalen: %d", realdata, datalen);
+			spllog(0,
+			    "SPSR_EVENT_READ_BUF, realdata: %s, datalen: %d",
+			    realdata, datalen);
 			break;
 		}
 		if (evt->type == SPSR_EVENT_WRITE_OK) {
 			/* Port name .*/
-			spllog(0, "SPSR_EVENT_WRITE_OK, realdata: %s, datalen: %d", realdata, datalen);
+			spllog(0,
+			    "SPSR_EVENT_WRITE_OK, realdata: %s, datalen: %d",
+			    realdata, datalen);
 			break;
 		}
 		if (evt->type == SPSR_EVENT_WRITE_ERROR) {
 			/* Port name .*/
-			spllog(0, "SPSR_EVENT_WRITE_ERROR|%s, realdata: %s, datalen: %d", 
-				spsr_err_txt(evt->err_code), realdata, datalen);
+			spllog(0,
+			    "SPSR_EVENT_WRITE_ERROR|%s, realdata: %s, datalen: "
+			    "%d",
+			    spsr_err_txt(evt->err_code), realdata, datalen);
 			break;
 		}
 		if (evt->type == SPSR_EVENT_OPEN_DEVICE_OK) {
 			/* Port name .*/
-			spllog(0, "SPSR_EVENT_OPEN_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
+			spllog(0,
+			    "SPSR_EVENT_OPEN_DEVICE_OK, realdata: %s, datalen: "
+			    "%d",
+			    realdata, datalen);
 			break;
 		}
 		if (evt->type == SPSR_EVENT_OPEN_DEVICE_ERROR) {
 			/* Port name .*/
-			spllog(0, "SPSR_EVENT_OPEN_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+			spllog(0,
+			    "SPSR_EVENT_OPEN_DEVICE_ERROR, realdata: %s, "
+			    "datalen: %d",
+			    realdata, datalen);
 			break;
 		}
 		if (evt->type == SPSR_EVENT_CLOSE_DEVICE_OK) {
 			/* Port name .*/
-			spllog(0, "SPSR_EVENT_CLOSE_DEVICE_OK, realdata: %s, datalen: %d", realdata, datalen);
+			spllog(0,
+			    "SPSR_EVENT_CLOSE_DEVICE_OK, realdata: %s, "
+			    "datalen: %d",
+			    realdata, datalen);
 			break;
 		}
 		if (evt->type == SPSR_EVENT_CLOSE_DEVICE_ERROR) {
 			/* Port name .*/
-			spllog(0, "SPSR_EVENT_CLOSE_DEVICE_ERROR, realdata: %s, datalen: %d", realdata, datalen);
+			spllog(0,
+			    "SPSR_EVENT_CLOSE_DEVICE_ERROR, realdata: %s, "
+			    "datalen: %d",
+			    realdata, datalen);
 			break;
 		}
 	} while (0);
@@ -112,7 +134,8 @@ test_try_to_write(void *);
 #endif
 
 #define TESTTEST       "1234567"
-/* --is_port=COM2  --is_cfg=C:/z/serialmodule/win32/Debug/simplelog.cfg --is_baudrate=115200*/
+/* --is_port=COM2  --is_cfg=C:/z/serialmodule/win32/Debug/simplelog.cfg
+ * --is_baudrate=115200*/
 int
 main(int argc, char *argv[])
 {
@@ -180,6 +203,7 @@ main(int argc, char *argv[])
 
 		obj.baudrate = baudrate;
 		obj.t_delay = 100;
+		obj.checkDSR = 1;
 		/* The callback will receive data from reading a port. */
 		obj.cb_evt_fn = spsr_test_callback;
 		obj.cb_obj = &TEST_CALLBACK_OBJ;
@@ -192,16 +216,18 @@ main(int argc, char *argv[])
 		ret = spsr_inst_open(&obj);
 
 		p = strtok(NULL, ",");
-		//spl_sleep(5);
+		// spl_sleep(5);
 		++i;
 	}
 	/* Create a thread to writing. . */
 #ifndef UNIX_LINUX
 
-	hThread_test = CreateThread(NULL, 0, test_try_to_write, 0, 0, &dwThreadId_test);
+	hThread_test =
+	    CreateThread(NULL, 0, test_try_to_write, 0, 0, &dwThreadId_test);
 	if (!hThread_test) {
 		ret = SPSR_THREAD_W32_CREATE;
-		spllog(SPL_LOG_DEBUG, "CreateThread error: %d", (int)GetLastError());
+		spllog(SPL_LOG_DEBUG, "CreateThread error: %d",
+		    (int)GetLastError());
 	}
 #else
 	ret = pthread_create(&pthreadid, 0, test_try_to_write, 0);
@@ -254,17 +280,19 @@ test_try_to_write(void *arg)
 			if (!test_spsr_list_ports[i]) {
 				continue;
 			}
-			#if 0
+#if 0
 				spl_sleep(1);
-			#endif
+#endif
 			memset(text_data, 0, sizeof(text_data));
-			snprintf(text_data, 1024, "%s-%d, port: %s", SPSR_TEST_TEXT, i, test_spsr_list_ports[i]);
+			snprintf(text_data, 1024, "%s-%d, port: %s",
+			    SPSR_TEST_TEXT, i, test_spsr_list_ports[i]);
 			spllog(0, "text_data: %s", text_data);
-			spsr_inst_write(test_spsr_list_ports[i], text_data, (int)strlen(text_data));
+			spsr_inst_write(test_spsr_list_ports[i], text_data,
+			    (int)strlen(text_data));
 		}
-#if 1		
+#if 1
 		spl_sleep(1);
-#endif		
+#endif
 	}
 	return 0;
 }

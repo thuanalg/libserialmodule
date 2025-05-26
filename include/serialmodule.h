@@ -245,12 +245,11 @@ typedef enum {
 	SPSR_MINI_SIZE,
 	SPSR_PX_READ,
 	SPSR_PX_UNCONNECTED,
-	SPSR_WIN32_UNCONNECTED, 
+	SPSR_WIN32_UNCONNECTED,
 	SPSR_PX_FD_CLOSED,
 	SPSR_WIN32_FD_CLOSED,
 	SPSR_WIN32_CLEARCOMM,
 	SPSR_WIN32_STILL_INQUE,
-	
 
 	SPSR_PORT_PEAK,
 } SPSR_PORT_ERR;
@@ -279,20 +278,29 @@ typedef struct __SPSR_GENERIC_ST__ {
 } SPSR_GENERIC_ST;
 
 typedef struct __SPSR_INPUT_ST__ {
+	int t_delay; /* It depends on a specific case. */
 	int baudrate;
+	/*checkDSR.
+	- Set 1 (full-duplex): UART, RS-232.
+	- Set 0 (half-duplex): RS-485.*/
+	char checkDSR;
 	char port_name[SPSR_PORT_LEN];
+
 	SPSR_module_cb cb_evt_fn;
 	void *cb_obj;
-
-	int t_delay;
 
 } SPSR_INPUT_ST;
 
 typedef struct __SPSR_INFO_ST__ {
-	int t_delay;
 	char isoff;
 	char is_retry;
+
+	int t_delay; /* It depends on a specific case. */
 	int baudrate;
+	/*checkDSR.
+	- Set 1 (full-duplex): UART, RS-232.
+	- Set 0 (half-duplex): RS-485.*/
+	char checkDSR;
 	char port_name[SPSR_PORT_LEN];
 
 #ifndef UNIX_LINUX
