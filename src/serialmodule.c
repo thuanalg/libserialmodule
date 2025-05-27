@@ -239,7 +239,7 @@ static void *spsr_hash_fd_arr[SPSR_MAX_NUMBER_OF_PORT];
 typedef struct __SPSR_HASH_FD_NAME__ {
 	int fd;
 	int t_delay;
-	char checkDSR;
+	char offDSR;
 	char port_name[SPSR_PORT_LEN];
 	SPSR_module_cb cb_evt_fn;
 	void *cb_obj;
@@ -431,7 +431,7 @@ spsr_module_openport(void *obj)
 		/* Enable CTS output flow control */
 		/* dcbSerialParams.fCtsHandshake = TRUE; */
 #if 1
-		dcbSerialParams.fOutxDsrFlow = p->checkDSR ? 1 : 0;
+		dcbSerialParams.fOutxDsrFlow = p->offDSR ? 0 : 1;
 #else
 		dcbSerialParams.fOutxDsrFlow = FALSE;
 #endif
@@ -806,15 +806,15 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 			break;
 		}
 		tbuffer = ecb_buf->data + sizeof(void *);
-		connected = p->checkDSR ? spsr_win32_connected(p->handle) : 1;
+		connected = p->offDSR ? 1 : spsr_win32_connected(p->handle);
 #if 0
 		connected = spsr_win32_connected(p->handle);
 #endif
 		while (buf->pl > 0) {
 			if (!connected) {
 				spsr_err("Remote unconnected! "
-					 "Turn off checkDSR for half-duplex!."
-					 "Turn on checkDSR for full-duplex!."
+					 "Turn on offDSR for half-duplex!."
+					 "Turn off offDSR for full-duplex!."
 					 "Port [%s].",
 				    p->port_name);
 				ret = SPSR_WIN32_UNCONNECTED;
@@ -2074,7 +2074,7 @@ spsr_px_hash_add(SPSR_ARR_LIST_LINED *temp, SPSR_GENERIC_ST *evt)
 		hashobj->cb_evt_fn = temp->item->cb_evt_fn;
 		hashobj->cb_obj = temp->item->cb_obj;
 		hashobj->t_delay = temp->item->t_delay;
-		hashobj->checkDSR = temp->item->checkDSR;
+		hashobj->offDSR = temp->item->offDSR;
 
 		hashid = SPSR_HASH_FD(fd);
 		hashitem = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
@@ -2524,12 +2524,12 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 
 		hashobj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
 
-		connected = (hashobj->checkDSR) ? spsr_remote_connected(fd) : 1;
+		connected = (hashobj->offDSR) ? 1: spsr_remote_connected(fd);
 
 		if (!connected) {
 			spsr_err("Remote unconnected! "
-				 "Turn off checkDSR for half-duplex! "
-				 "Turn on checkDSR for full-duplex!"
+				 "Turn on offDSR for half-duplex! "
+				 "Turn off offDSR for full-duplex!"
 				 "Port: %s.",
 			    hashobj->port_name);
 			ret = SPSR_PX_UNCONNECTED;
@@ -2848,7 +2848,7 @@ spsr_verify_info(SPSR_INPUT_ST *p)
 
 		snprintf(item->port_name, SPSR_PORT_LEN, "%s", p->port_name);
 		item->baudrate = p->baudrate;
-		item->checkDSR = p->checkDSR;
+		item->offDSR = p->offDSR;
 		item->cb_evt_fn = p->cb_evt_fn;
 		item->cb_obj = p->cb_obj;
 		item->t_delay = p->t_delay;

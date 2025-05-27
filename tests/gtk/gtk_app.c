@@ -45,7 +45,6 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
     obj->cb_evt_fn = spsr_test_callback;
     obj->cb_obj = entries[4];
     obj->t_delay = 55;
-    obj->checkDSR = 1;
     
     spllog(0, "baudrate:=========================++++++++++++> %d, portname: %s", 
         obj->baudrate, obj->port_name);
