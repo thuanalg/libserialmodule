@@ -856,10 +856,14 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 
 			if (!rsOverlap) {
 				spsr_api_err("GetOverlappedResult.");
+				ret = SPSR_WIN32_GETOVERLAP;
 				break;
 			}
 			if (buf->pl != (int)(*pbytesWrite)) {
-				spsr_err("Write Error, %d.", buf->pl);
+				spsr_err("Write Error, %d<>%d.", 
+					buf->pl,
+				    (int)(*pbytesWrite));
+				ret = SPSR_WIN32_BYTEWRITE;
 				break;
 			}
 			spsr_dbg("Write DONE, %d.", buf->pl);
@@ -3587,6 +3591,8 @@ spsr_err_txt_init()
 	__spsr_err_text__[SPSR_WIN32_CLEARCOMM] = "SPSR_WIN32_CLEARCOMM";
 	__spsr_err_text__[SPSR_WIN32_STILL_INQUE] = "SPSR_WIN32_STILL_INQUE";
 	__spsr_err_text__[SPSR_PX_CLOSE] = "SPSR_PX_CLOSE";
+	__spsr_err_text__[SPSR_WIN32_GETOVERLAP] = "SPSR_WIN32_GETOVERLAP";
+	__spsr_err_text__[SPSR_WIN32_BYTEWRITE] = "SPSR_WIN32_BYTEWRITE";
 
 	__spsr_err_text__[SPSR_PORT_PEAK] = "SPSR_PORT_PEAK";
 }
