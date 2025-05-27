@@ -16,10 +16,14 @@
 		<2025-May-03>
 		<2025-May-06>
 		<2025-May-13>
-		* Decription:
-*		The (only) main header file to export 5 APIs:
-[spsr_module_init, spsr_module_finish, spsr_inst_open, spsr_inst_close,
-spsr_inst_write].
+		<2025-May-27>
+* Decription: The (only) main header file to export 5 APIs:
+	[ spsr_module_init,
+	 spsr_module_finish,
+	 spsr_inst_open,
+	 spsr_inst_close,
+	 spsr_inst_write
+	].
 */
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef ___SIMPLE_SERIAL_MODULE__
@@ -251,6 +255,7 @@ typedef enum {
 	SPSR_WIN32_FD_CLOSED,
 	SPSR_WIN32_CLEARCOMM,
 	SPSR_WIN32_STILL_INQUE,
+	SPSR_PX_CLOSE,
 
 	SPSR_PORT_PEAK,
 } SPSR_PORT_ERR;

@@ -1855,10 +1855,7 @@ spsr_init_cartridge_routine(void *obj)
 	if (sockfd > 0) {
 		SPSR_PXCLOSE(sockfd, err);
 		if (err) {
-			spsr_api_err("close socket.");
 			ret = SPSR_CLOSE_SOCK;
-		} else {
-			spsr_dbg("close socket: %d", sockfd);
 		}
 	}
 
@@ -1984,12 +1981,7 @@ spsr_init_trigger(void *obj)
 		}
 		SPSR_PXCLOSE(sockfd, ret);
 		if (ret) {
-			spsr_err("Close socket, ret: %d, "
-				 "errno: %d, text: %s.",
-			    ret, errno, strerror(errno));
 			ret = SPSR_CLOSE_SOCK;
-		} else {
-			spsr_dbg("Close socket DONE: %d.", sockfd);
 		}
 
 	} while (0);
@@ -2406,14 +2398,9 @@ spsr_px_rem(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 
 			if (errr) {
 				callback_evt = SPSR_EVENT_CLOSE_DEVICE_ERROR;
-				spsr_err("close error, "
-					 "fd: %d, "
-					 "errno: %d, text: %s.",
-				    fd, errno, strerror(errno));
 				ret = SPSR_PX_FD_CLOSED;
 			} else {
 				callback_evt = SPSR_EVENT_CLOSE_DEVICE_OK;
-				spsr_dbg("close, fd: %d, DONE", fd);
 			}
 			/* Remove out of root list*/
 			if (t->count < 2) {
@@ -2951,9 +2938,7 @@ spsr_clear_all()
 		fd = tnode->item->handle;
 		SPSR_PXCLOSE(fd, ret);
 		if (ret) {
-			spsr_api_err("close");
-		} else {
-			spsr_dbg("closed fd: %d.", fd);
+			ret = SPSR_PX_CLOSE;
 		}
 		spsr_free(tnode->item);
 		spsr_free(tnode);
@@ -3601,6 +3586,7 @@ spsr_err_txt_init()
 	__spsr_err_text__[SPSR_WIN32_FD_CLOSED] = "SPSR_WIN32_FD_CLOSED";
 	__spsr_err_text__[SPSR_WIN32_CLEARCOMM] = "SPSR_WIN32_CLEARCOMM";
 	__spsr_err_text__[SPSR_WIN32_STILL_INQUE] = "SPSR_WIN32_STILL_INQUE";
+	__spsr_err_text__[SPSR_PX_CLOSE] = "SPSR_PX_CLOSE";
 
 	__spsr_err_text__[SPSR_PORT_PEAK] = "SPSR_PORT_PEAK";
 }
