@@ -1,4 +1,4 @@
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* Email:
 *		<nguyenthaithuanalg@gmail.com> - Nguyễn Thái Thuận
 * Mobile:
@@ -22,7 +22,7 @@
 		5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
 spsr_inst_close, spsr_inst_write].
 */
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #include "serialmodule.h"
 #include <stdio.h>
@@ -57,7 +57,7 @@ spsr_inst_close, spsr_inst_write].
 /* https://gist.github.com/reterVision/8300781 */
 #endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #define SPSR_CloseHandle(__o0bj__)                                             \
 	{                                                                      \
@@ -85,7 +85,7 @@ spsr_inst_close, spsr_inst_write].
 #define SPSR_PORT_CARTRIDGE        (SPSR_PORT_TRIGGER + 10)
 #endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #define spsr_all(__fmt_____, ...)                                              \
 	spllog(SPL_LOG_BASE, __fmt_____, ##__VA_ARGS__)
 #define spsr_dbg(__fmt_____, ...)                                              \
@@ -98,7 +98,9 @@ spsr_inst_close, spsr_inst_write].
 	spllog(SPL_LOG_ERROR, __fmt_____, ##__VA_ARGS__)
 #define spsr_ftl(__fmt_____, ...)                                              \
 	spllog(SPL_LOG_FATAL, __fmt_____, ##__VA_ARGS__)
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #define spsr_api_err(___api__)                                                 \
 	{                                                                      \
@@ -110,8 +112,22 @@ spsr_inst_close, spsr_inst_write].
 		spsr_err("%s, errno: %d: \"%s\".", ___api__, errno,            \
 		    strerror(errno));                                          \
 	}
+
+#define SPSR_PXCLOSE(__xfd__, __xret__)                                        \
+	do {                                                                   \
+		if ((__xfd__) < 1) {                                           \
+			spsr_err("Wrong pxfd: %d.", (__xfd__));                \
+			break;                                                 \
+		}                                                              \
+		(__xret__) = close(__xfd__);                                   \
+		if (__xret__) {                                                \
+			spsr_api_err("close");                                 \
+			break;                                                 \
+		};                                                             \
+		spsr_all("Close DONE, fd: %d", (__xfd__));                     \
+	} while (0);
 #endif
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #define SPSR_MAX_AB(__a__, __b__) ((__a__) > (__b__)) ? (__a__) : (__b__)
 #define SPSR_STEP_MEM              2048
@@ -223,7 +239,7 @@ static void *spsr_hash_fd_arr[SPSR_MAX_NUMBER_OF_PORT];
 typedef struct __SPSR_HASH_FD_NAME__ {
 	int fd;
 	int t_delay;
-	char checkDSR;
+	char offDSR;
 	char port_name[SPSR_PORT_LEN];
 	SPSR_module_cb cb_evt_fn;
 	void *cb_obj;
@@ -245,11 +261,11 @@ spsr_px_read(int fd, SPSR_GENERIC_ST *pevt, char *chk_delay);
 
 #endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 static SPSR_ROOT_TYPE spsr_root_node;
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 static int
 spsr_resize_obj(int sz, SPSR_GENERIC_ST **obj);
 static int
@@ -260,7 +276,7 @@ static int
 spsr_is_existed(char *port, int *);
 static void
 spsr_err_txt_init();
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* Group of sync tool. */
 static void *
 spsr_mutex_create();
@@ -282,7 +298,7 @@ spsr_wait_sem(void *sem);
 static int
 spsr_invoke_cb(int evttype, int err_code, SPSR_module_cb fn_cb, void *obj_cb,
     SPSR_GENERIC_ST *evt, int lendata);
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int
 spsr_inst_open(SPSR_INPUT_ST *p)
@@ -415,7 +431,7 @@ spsr_module_openport(void *obj)
 		/* Enable CTS output flow control */
 		/* dcbSerialParams.fCtsHandshake = TRUE; */
 #if 1
-		dcbSerialParams.fOutxDsrFlow = p->checkDSR ? 1 : 0;
+		dcbSerialParams.fOutxDsrFlow = p->offDSR ? 0 : 1;
 #else
 		dcbSerialParams.fOutxDsrFlow = FALSE;
 #endif
@@ -516,7 +532,7 @@ spsr_module_openport(void *obj)
 	/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void *
 spsr_sem_create(char *name_key)
 {
@@ -576,7 +592,7 @@ spsr_sem_create(char *name_key)
 	return obj;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 void *
 spsr_mutex_create()
@@ -604,7 +620,7 @@ spsr_mutex_create()
 	return obj;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int
 spsr_module_isoff(SPSR_INFO_ST *obj)
@@ -617,7 +633,7 @@ spsr_module_isoff(SPSR_INFO_ST *obj)
 }
 
 #ifndef UNIX_LINUX
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_win32_read(SPSR_INFO_ST *p, DWORD *pbytesRead, OVERLAPPED *polReadWrite,
     SPSR_GENERIC_ST *ecb_buf)
@@ -721,7 +737,7 @@ spsr_win32_read(SPSR_INFO_ST *p, DWORD *pbytesRead, OVERLAPPED *polReadWrite,
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 static int
 spsr_win32_connected(HANDLE hd)
 {
@@ -790,15 +806,15 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 			break;
 		}
 		tbuffer = ecb_buf->data + sizeof(void *);
-		connected = p->checkDSR ? spsr_win32_connected(p->handle) : 1;
+		connected = p->offDSR ? 1 : spsr_win32_connected(p->handle);
 #if 0
 		connected = spsr_win32_connected(p->handle);
 #endif
 		while (buf->pl > 0) {
 			if (!connected) {
 				spsr_err("Remote unconnected! "
-					 "Turn off checkDSR for half-duplex!."
-					 "Turn on checkDSR for full-duplex!."
+					 "Turn on offDSR for half-duplex!."
+					 "Turn off offDSR for full-duplex!."
 					 "Port [%s].",
 				    p->port_name);
 				ret = SPSR_WIN32_UNCONNECTED;
@@ -881,7 +897,7 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 DWORD WINAPI
 spsr_thread_operating_routine(LPVOID arg)
 {
@@ -1077,7 +1093,7 @@ spsr_thread_operating_routine(LPVOID arg)
 #else
 
 #endif
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_module_init()
 {
@@ -1152,7 +1168,7 @@ spsr_module_init()
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_module_finish()
 {
@@ -1202,7 +1218,7 @@ spsr_module_finish()
 	return 0;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_mutex_lock(void *obj)
 {
@@ -1237,7 +1253,7 @@ spsr_mutex_lock(void *obj)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_mutex_unlock(void *obj)
 {
@@ -1272,7 +1288,7 @@ spsr_mutex_unlock(void *obj)
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int
 spsr_rel_sem(void *sem)
@@ -1308,7 +1324,7 @@ spsr_rel_sem(void *sem)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_wait_sem(void *sem)
 {
@@ -1342,7 +1358,7 @@ spsr_wait_sem(void *sem)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 int
 spsr_get_obj(char *portname, void **obj, int takeoff)
@@ -1398,7 +1414,7 @@ spsr_get_obj(char *portname, void **obj, int takeoff)
 #else
 #endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef UNIX_LINUX
 int
@@ -1416,7 +1432,7 @@ spsr_create_thread(SPSR_THREAD_ROUTINE f, void *arg)
 }
 #else
 #endif
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 int
 spsr_clear_node(SPSR_ARR_LIST_LINED *node)
@@ -1475,7 +1491,7 @@ spsr_clear_node(SPSR_ARR_LIST_LINED *node)
 	return ret;
 }
 #endif
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_inst_write(char *portname, char *data, int sz)
 {
@@ -1571,7 +1587,7 @@ spsr_inst_write(char *portname, char *data, int sz)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #ifndef UNIX_LINUX
 #else
 #define SPSR_SIZE_CARTRIDGE        10
@@ -1579,14 +1595,14 @@ spsr_inst_write(char *portname, char *data, int sz)
 #define SPSR_SIZE_MAX_EVENTS       10
 /*#define SPSR_MSG_OFF               "SPSR_MSG_OFF"*/
 #define SPSR_MILLION               1000000
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void *
 spsr_init_trigger_routine(void *obj)
 {
 	spsr_init_trigger(obj);
 	return 0;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 void *
 spsr_init_cartridge_routine(void *obj)
@@ -1837,12 +1853,9 @@ spsr_init_cartridge_routine(void *obj)
 	spsr_mutex_unlock(t->mutex);
 	spsr_clear_hash();
 	if (sockfd > 0) {
-		err = close(sockfd);
+		SPSR_PXCLOSE(sockfd, err);
 		if (err) {
-			spsr_api_err("close socket.");
 			ret = SPSR_CLOSE_SOCK;
-		} else {
-			spsr_dbg("close socket: %d", sockfd);
 		}
 	}
 
@@ -1861,7 +1874,7 @@ spsr_init_cartridge_routine(void *obj)
 	return 0;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int
 spsr_init_trigger(void *obj)
@@ -1966,15 +1979,9 @@ spsr_init_trigger(void *obj)
 			had_cmd = 0;
 			/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 		}
-
-		ret = close(sockfd);
+		SPSR_PXCLOSE(sockfd, ret);
 		if (ret) {
-			spsr_err("Close socket, ret: %d, "
-				 "errno: %d, text: %s.",
-			    ret, errno, strerror(errno));
 			ret = SPSR_CLOSE_SOCK;
-		} else {
-			spsr_dbg("Close socket DONE: %d.", sockfd);
 		}
 
 	} while (0);
@@ -1986,7 +1993,7 @@ spsr_init_trigger(void *obj)
 	spsr_mutex_unlock(t->mutex);
 	return 0;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef __SPSR_EPOLL__
 int
@@ -2043,7 +2050,7 @@ spsr_fetch_commands(int epollfd, char *info, int n, SPSR_GENERIC_ST *evt)
 
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*SPSR_CMD_ADD*/
 int
 spsr_px_hash_add(SPSR_ARR_LIST_LINED *temp, SPSR_GENERIC_ST *evt)
@@ -2067,7 +2074,7 @@ spsr_px_hash_add(SPSR_ARR_LIST_LINED *temp, SPSR_GENERIC_ST *evt)
 		hashobj->cb_evt_fn = temp->item->cb_evt_fn;
 		hashobj->cb_obj = temp->item->cb_obj;
 		hashobj->t_delay = temp->item->t_delay;
-		hashobj->checkDSR = temp->item->checkDSR;
+		hashobj->offDSR = temp->item->offDSR;
 
 		hashid = SPSR_HASH_FD(fd);
 		hashitem = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
@@ -2093,7 +2100,7 @@ spsr_px_hash_add(SPSR_ARR_LIST_LINED *temp, SPSR_GENERIC_ST *evt)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*SPSR_CMD_ADD*/
 #ifndef __SPSR_EPOLL__
 int
@@ -2191,7 +2198,7 @@ spsr_px_add(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 	spsr_mutex_unlock(t->mutex);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*SPSR_CMD_REM*/
 static
 #ifndef __SPSR_EPOLL__
@@ -2245,7 +2252,7 @@ static
 #endif
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 static int
 spsr_px_off_hash(int fd)
 {
@@ -2295,7 +2302,7 @@ spsr_px_off_hash(int fd)
 	}
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*SPSR_CMD_REM*/
 #ifndef __SPSR_EPOLL__
 int
@@ -2386,17 +2393,14 @@ spsr_px_rem(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 			}
 			ret = spsr_px_off_hash(fd);
 			/* Close handle*/
-			errr = close(fd);
+
+			SPSR_PXCLOSE(fd, errr);
+
 			if (errr) {
 				callback_evt = SPSR_EVENT_CLOSE_DEVICE_ERROR;
-				spsr_err("close error, "
-					 "fd: %d, "
-					 "errno: %d, text: %s.",
-				    fd, errno, strerror(errno));
 				ret = SPSR_PX_FD_CLOSED;
 			} else {
 				callback_evt = SPSR_EVENT_CLOSE_DEVICE_OK;
-				spsr_dbg("close, fd: %d, DONE", fd);
 			}
 			/* Remove out of root list*/
 			if (t->count < 2) {
@@ -2432,7 +2436,7 @@ spsr_px_rem(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /* SPSR_CMD_WRITE */
 
 static int
@@ -2520,12 +2524,12 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 
 		hashobj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
 
-		connected = (hashobj->checkDSR) ? spsr_remote_connected(fd) : 1;
+		connected = (hashobj->offDSR) ? 1: spsr_remote_connected(fd);
 
 		if (!connected) {
 			spsr_err("Remote unconnected! "
-				 "Turn off checkDSR for half-duplex! "
-				 "Turn on checkDSR for full-duplex!"
+				 "Turn on offDSR for half-duplex! "
+				 "Turn off offDSR for full-duplex!"
 				 "Port: %s.",
 			    hashobj->port_name);
 			ret = SPSR_PX_UNCONNECTED;
@@ -2581,7 +2585,7 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_send_cmd(int cmd, char *portname, void *data, int datasz)
 {
@@ -2688,10 +2692,10 @@ spsr_send_cmd(int cmd, char *portname, void *data, int datasz)
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 #endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_is_existed(char *port, int *isExisted)
 {
@@ -2735,7 +2739,7 @@ spsr_is_existed(char *port, int *isExisted)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_verify_info(SPSR_INPUT_ST *p)
 {
@@ -2816,7 +2820,7 @@ spsr_verify_info(SPSR_INPUT_ST *p)
 		spsr_dbg("open portname: %s, "
 			 "fd: %d.",
 		    p->port_name, fd);
-		ret = close(fd);
+		SPSR_PXCLOSE(fd, ret);
 		if (ret) {
 			ret = SPSR_PORT_CLOSE_UNIX;
 			spsr_err("close port fd: %d, "
@@ -2844,7 +2848,7 @@ spsr_verify_info(SPSR_INPUT_ST *p)
 
 		snprintf(item->port_name, SPSR_PORT_LEN, "%s", p->port_name);
 		item->baudrate = p->baudrate;
-		item->checkDSR = p->checkDSR;
+		item->offDSR = p->offDSR;
 		item->cb_evt_fn = p->cb_evt_fn;
 		item->cb_obj = p->cb_obj;
 		item->t_delay = p->t_delay;
@@ -2882,7 +2886,7 @@ spsr_verify_info(SPSR_INPUT_ST *p)
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int
 spsr_clear_all()
@@ -2932,11 +2936,9 @@ spsr_clear_all()
 			continue;
 		}
 		fd = tnode->item->handle;
-		ret = close(fd);
+		SPSR_PXCLOSE(fd, ret);
 		if (ret) {
-			spsr_api_err("close");
-		} else {
-			spsr_dbg("closed fd: %d.", fd);
+			ret = SPSR_PX_CLOSE;
 		}
 		spsr_free(tnode->item);
 		spsr_free(tnode);
@@ -2979,7 +2981,7 @@ spsr_fmt_name(char *input, char *output, int l)
 }
 #else
 #endif
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int
 spsr_clear_hash()
@@ -3003,7 +3005,7 @@ spsr_clear_hash()
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int
 spsr_open_fd(char *port_name, int baudrate, int *outfd)
@@ -3078,7 +3080,7 @@ spsr_open_fd(char *port_name, int baudrate, int *outfd)
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 int
 spsr_px_read(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
@@ -3190,7 +3192,7 @@ spsr_px_read(int fd, SPSR_GENERIC_ST *pevtcb, char *chk_delay)
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 static int
 spsr_check_resz(int lenp, SPSR_GENERIC_ST **pcart_buff)
@@ -3214,7 +3216,7 @@ spsr_check_resz(int lenp, SPSR_GENERIC_ST **pcart_buff)
 	return ret;
 }
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 #ifndef __SPSR_EPOLL__
 int
@@ -3351,7 +3353,7 @@ spsr_ctrl_sock(int epollfd, int sockfd, SPSR_GENERIC_ST *evt, int *chk_off,
 }
 #endif
 
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_mutex_delete(void *mtx)
 {
@@ -3367,7 +3369,7 @@ spsr_mutex_delete(void *mtx)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_sem_delete(void *sem, char *sem_name)
 {
@@ -3405,7 +3407,7 @@ spsr_sem_delete(void *sem, char *sem_name)
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_invoke_cb(int evttype, int err_code, SPSR_module_cb fn_cb, void *obj_cb,
     SPSR_GENERIC_ST *evt, int lendata)
@@ -3439,7 +3441,7 @@ spsr_invoke_cb(int evttype, int err_code, SPSR_module_cb fn_cb, void *obj_cb,
 	} while (0);
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_resize_obj(int sz, SPSR_GENERIC_ST **obj)
 {
@@ -3484,7 +3486,7 @@ spsr_resize_obj(int sz, SPSR_GENERIC_ST **obj)
 
 	return ret;
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 static const char *__spsr_err_text__[SPSR_PORT_PEAK + 1];
 
 void
@@ -3584,10 +3586,11 @@ spsr_err_txt_init()
 	__spsr_err_text__[SPSR_WIN32_FD_CLOSED] = "SPSR_WIN32_FD_CLOSED";
 	__spsr_err_text__[SPSR_WIN32_CLEARCOMM] = "SPSR_WIN32_CLEARCOMM";
 	__spsr_err_text__[SPSR_WIN32_STILL_INQUE] = "SPSR_WIN32_STILL_INQUE";
+	__spsr_err_text__[SPSR_PX_CLOSE] = "SPSR_PX_CLOSE";
 
 	__spsr_err_text__[SPSR_PORT_PEAK] = "SPSR_PORT_PEAK";
 }
-/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 const char *
 spsr_err_txt(int i)
 {
