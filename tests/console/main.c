@@ -79,7 +79,8 @@ spsr_test_callback(void *data)
 		if (evt->type == SPSR_EVENT_WRITE_ERROR) {
 			/* Port name .*/
 			spllog(0,
-			    "SPSR_EVENT_WRITE_ERROR|%s, realdata: %s, datalen: "
+			    "SPSR_EVENT_WRITE_ERROR|%s, realdata: %s, "
+			    "datalen: "
 			    "%d",
 			    spsr_err_txt(evt->err_code), realdata, datalen);
 			break;
@@ -87,7 +88,8 @@ spsr_test_callback(void *data)
 		if (evt->type == SPSR_EVENT_OPEN_DEVICE_OK) {
 			/* Port name .*/
 			spllog(0,
-			    "SPSR_EVENT_OPEN_DEVICE_OK, realdata: %s, datalen: "
+			    "SPSR_EVENT_OPEN_DEVICE_OK, realdata: %s, "
+			    "datalen: "
 			    "%d",
 			    realdata, datalen);
 			break;
