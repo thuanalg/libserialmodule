@@ -833,6 +833,7 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 					buf->pl = 0;
 				} else {
 					spsr_api_err("WriteFile");
+					ret = SPSR_WIN32_BYTEWRITE;
 				}
 				break;
 			}
@@ -841,12 +842,14 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 			spsr_dbg("WriteFile: %d", (int)wErr);
 			if (wErr != ERROR_IO_PENDING) {
 				spsr_err("!IO_PENDING, %d.", (int)wErr);
+				ret = SPSR_WIN32_NOTPENDING;
 				break;
 			}
 
 			dwWaitResult = WaitForSingleObject(p->hEvent, INFINITE);
 			if (dwWaitResult != WAIT_OBJECT_0) {
 				spsr_api_err("WaitForSingleObject.");
+				ret = SPSR_WIN32_WOBJ;
 				break;
 			}
 			*pbytesWrite = 0;
@@ -856,10 +859,14 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 
 			if (!rsOverlap) {
 				spsr_api_err("GetOverlappedResult.");
+				ret = SPSR_WIN32_GETOVERLAP;
 				break;
 			}
 			if (buf->pl != (int)(*pbytesWrite)) {
-				spsr_err("Write Error, %d.", buf->pl);
+				spsr_err("Write Error, %d<>%d.", 
+					buf->pl,
+				    (int)(*pbytesWrite));
+				ret = SPSR_WIN32_BYTEWRITE;
 				break;
 			}
 			spsr_dbg("Write DONE, %d.", buf->pl);
@@ -3587,6 +3594,12 @@ spsr_err_txt_init()
 	__spsr_err_text__[SPSR_WIN32_CLEARCOMM] = "SPSR_WIN32_CLEARCOMM";
 	__spsr_err_text__[SPSR_WIN32_STILL_INQUE] = "SPSR_WIN32_STILL_INQUE";
 	__spsr_err_text__[SPSR_PX_CLOSE] = "SPSR_PX_CLOSE";
+	__spsr_err_text__[SPSR_WIN32_GETOVERLAP] = "SPSR_WIN32_GETOVERLAP";
+	__spsr_err_text__[SPSR_WIN32_BYTEWRITE] = "SPSR_WIN32_BYTEWRITE";
+	__spsr_err_text__[SPSR_WIN32_NOTPENDING] = "SPSR_WIN32_NOTPENDING";
+	__spsr_err_text__[SPSR_WIN32_WOBJ] = "SPSR_WIN32_WOBJ";
+
+
 
 	__spsr_err_text__[SPSR_PORT_PEAK] = "SPSR_PORT_PEAK";
 }
