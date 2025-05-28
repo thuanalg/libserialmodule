@@ -863,8 +863,7 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 				break;
 			}
 			if (buf->pl != (int)(*pbytesWrite)) {
-				spsr_err("Write Error, %d<>%d.", 
-					buf->pl,
+				spsr_err("Write Error, %d<>%d.", buf->pl,
 				    (int)(*pbytesWrite));
 				ret = SPSR_WIN32_BYTEWRITE;
 				break;
@@ -2531,7 +2530,7 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 
 		hashobj = (SPSR_HASH_FD_NAME *)spsr_hash_fd_arr[hashid];
 
-		connected = (hashobj->offDSR) ? 1: spsr_remote_connected(fd);
+		connected = (hashobj->offDSR) ? 1 : spsr_remote_connected(fd);
 
 		if (!connected) {
 			spsr_err("Remote unconnected! "
@@ -3598,8 +3597,6 @@ spsr_err_txt_init()
 	__spsr_err_text__[SPSR_WIN32_BYTEWRITE] = "SPSR_WIN32_BYTEWRITE";
 	__spsr_err_text__[SPSR_WIN32_NOTPENDING] = "SPSR_WIN32_NOTPENDING";
 	__spsr_err_text__[SPSR_WIN32_WOBJ] = "SPSR_WIN32_WOBJ";
-
-
 
 	__spsr_err_text__[SPSR_PORT_PEAK] = "SPSR_PORT_PEAK";
 }
