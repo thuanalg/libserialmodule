@@ -151,8 +151,8 @@ extern "C" {
 #ifndef SPSR_LLU
 #define SPSR_LLU                  unsigned long long
 #endif
-#ifndef SPSR_UNIT
-#define SPSR_UNIT                 unsigned int
+#ifndef SPSR_UINT
+#define SPSR_UINT                 unsigned int
 #endif
 
 typedef enum {
