@@ -13,9 +13,12 @@ int number_of_ports = 0;
 #define __ISPORT__     "--is_port="
 #define __ISCFG__      "--is_cfg="
 #define __ISBAUDRATE__ "--is_baudrate="
+#define __IS_OFFDSR__  "--is_offdsr="
 
 char *test_spsr_list_ports[100];
 int TEST_CALLBACK_OBJ = 179;
+int is_offDSR = 0;
+
 int
 spsr_test_callback(void *data)
 {
@@ -180,6 +183,12 @@ main(int argc, char *argv[])
 			spl_console_log("k = %d, baudrate: %d.", k, baudrate);
 			continue;
 		}
+		if (strstr(argv[i], __IS_OFFDSR__)) {
+			k = sscanf(argv[i], __IS_OFFDSR__ "%d", &is_offDSR);
+			spl_console_log("k = %d, is_offDSR: %d.", k, is_offDSR);
+			continue;
+		}
+
 	}
 
 	/*You MUST init the logger first. */
@@ -205,6 +214,7 @@ main(int argc, char *argv[])
 
 		obj.baudrate = baudrate;
 		obj.t_delay = 100;
+		obj.offDSR = (!!is_offDSR);
 		/* The callback will receive data from reading a port. */
 		obj.cb_evt_fn = spsr_test_callback;
 		obj.cb_obj = &TEST_CALLBACK_OBJ;
