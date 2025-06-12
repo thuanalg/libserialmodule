@@ -98,6 +98,7 @@ endif()
 # === Installation section for Unix/Linux ===
 if(DEFINED UNIX_LINUX)
 	install(TARGETS serialmodule LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+	install(TARGETS test_serial_module RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 	install(FILES include/serialmodule.h DESTINATION include)
 endif()
 

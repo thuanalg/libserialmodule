@@ -3431,9 +3431,9 @@ spsr_invoke_cb(int evttype, int err_code, SPSR_module_cb fn_cb, void *obj_cb,
 		evt->type = evttype;
 		evt->pc = sizeof(void *);
 
-		if (sizeof(void *) == sizeof(SPSR_UNIT)) {
-			SPSR_UNIT *pt = (SPSR_UNIT *)evt->data;
-			*pt = (SPSR_UNIT)obj_cb;
+		if (sizeof(void *) == sizeof(SPSR_UINT)) {
+			SPSR_UINT *pt = (SPSR_UINT *)evt->data;
+			*pt = (SPSR_UINT)obj_cb;
 			spsr_dbg("With 32 bit.");
 		} else if (sizeof(void *) == sizeof(SPSR_LLU)) {
 			SPSR_LLU *pt = (SPSR_LLU *)evt->data;
