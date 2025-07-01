@@ -50,7 +50,12 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
     obj->cb_obj = gbtextview;
     obj->t_delay = 100;
     obj->offDSR = 1;
-    
+    obj->rts = 1;
+    obj->dtr = 1;
+    /*
+  	char rts;
+	char dtr;  
+    */
     spllog(0, "baudrate:=========================++++++++++++> %d, portname: %s", 
         obj->baudrate, obj->port_name);
     ret = spsr_inst_open(obj);
@@ -73,8 +78,14 @@ void on_button_clicked_02(GtkWidget *widget, gpointer data) {
     char *portname = (char*)gtk_entry_get_text(GTK_ENTRY(entries[2])); 
     spllog(0, "Button %s clicked, portname: %s, data: %s!\n", (char *)data, portname, datawrtite);
     //ret = spsr_inst_del((char*)portname);
-    snprintf(commandd, 1024, "%s\n", datawrtite);
-    n = strlen(commandd);
+    n = strlen(datawrtite);
+    if(n > 0) {
+        snprintf(commandd, 1024, "%s", datawrtite);
+        n = strlen(commandd);
+    } else {
+        snprintf(commandd, 1024, "\n");
+        n = strlen(commandd);
+    }
     spllog(2, "commd: %s", commandd);
     if(myusleep > 0) {
         for(i = 0; i < n; ++i) 
@@ -86,7 +97,23 @@ void on_button_clicked_02(GtkWidget *widget, gpointer data) {
     } 
     else {
         //snprintf(commandd, 1024, "%s\n", datawrtite);
-        ret = spsr_inst_write(portname, commandd, n);
+        if(n < 2) {
+            ret = spsr_inst_write(portname, commandd, n);
+        } else {
+            int step = 10;
+            int start = 0;
+            int len = 0;
+            for(start = 0; start <= n; start += 10) {
+                len = 10;
+                if(start + 10 > n)  {
+                    len = n - start;
+                }
+                ret = spsr_inst_write(portname, commandd + start, len);
+                usleep(1000 * 100);
+            }
+            usleep(1000 * 100);
+            ret = spsr_inst_write(portname, "\n\n ", 3);
+        }
     }
 
     spllog(0, "ret %d!\n", ret);

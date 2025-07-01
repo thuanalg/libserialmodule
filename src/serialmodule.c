@@ -2153,7 +2153,7 @@ spsr_px_add(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 			    input->port_name, input->baudrate, &fd);
 			if(input->rts || input->dtr) {
 				char rts_dtr = 0;
-				rts_dtr |= (!!input->rts) ? 0x02 : 0x00;
+				rts_dtr |= (!!input->rts) ? 0x01 : 0x00;
 				rts_dtr |= (!!input->dtr) ? 0x02 : 0x00;
 				set_rts_dtr(fd, rts_dtr);
 			}
@@ -2869,6 +2869,10 @@ spsr_verify_info(SPSR_INPUT_ST *p)
 		item->cb_evt_fn = p->cb_evt_fn;
 		item->cb_obj = p->cb_obj;
 		item->t_delay = p->t_delay;
+
+		item->rts = p->rts;
+		item->dtr = p->dtr;
+
 		node->item = item;
 
 		/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -3025,7 +3029,7 @@ spsr_clear_hash()
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void set_rts_dtr(int fd, char rts_dtr)
 {
-    int status;
+    int status = 0;
     if (ioctl(fd, TIOCMGET, &status) == -1) {
         spsr_err("ioctl TIOCMGET");
         return;
