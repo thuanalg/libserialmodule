@@ -1,12 +1,12 @@
 #target_1=libsimplelog.so
-target_2=libspserial.so
+target_2=libserialmodule.so
 #debugFlag=-g -fPIC -Wall -shared 
 debugFlag=-g -fPIC -shared 
 #releaseFlag=-fPIC -Wall -shared
 releaseFlag=-fPIC -shared
 LIBS+=-lpthread -lsimplelog
 #LIBS_1+=-L./ -lsimplelog
-LIBS_2+=-L./ -lspserial
+LIBS_2+=-L./ -lserialmodule
 src=../simplelog.c 
 src1=../serialmodule.c 
 INC=-I../ -I../../include

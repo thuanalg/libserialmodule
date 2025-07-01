@@ -826,9 +826,11 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 
 			wrs = WriteFile(p->handle, buf->data, buf->pl,
 			    pbytesWrite, polReadWrite);
+			
 			if (wrs) {
 				if (buf->pl == (int)(*pbytesWrite)) {
-					spsr_dbg("Write DONE, %d.", buf->pl);
+					spsr_inf("Write DONE, %d, data: %s.", 
+						buf->pl, buf->data);
 					wroteRes = 1;
 					buf->pl = 0;
 				} else {
@@ -2556,8 +2558,8 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 			break;
 		}
 		wrote = 1;
-		spsr_dbg("write DONE, fd: %d, nwrote: %d, wlen: %d.", fd,
-		    nwrote, wlen);
+		spsr_inf("write DONE, fd: %d, nwrote: %d, wlen: %d, data: %s.", fd,
+		    nwrote, wlen, p);
 		break;
 
 	} while (0);
