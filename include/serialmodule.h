@@ -17,6 +17,7 @@
 		<2025-May-06>
 		<2025-May-13>
 		<2025-May-27>
+		<2025-Jul-01>
 * Decription: The (only) main header file to export 5 APIs:
 	[ spsr_module_init,
 	 spsr_module_finish,
@@ -294,6 +295,8 @@ typedef struct __SPSR_INPUT_ST__ {
 	- Set 0 (full-duplex): UART, RS-232.
 	- Set 1 (half-duplex): RS-485.*/
 	char offDSR;
+	char rts;
+	char dtr;
 	char port_name[SPSR_PORT_LEN];
 
 	SPSR_module_cb cb_evt_fn;
@@ -311,6 +314,8 @@ typedef struct __SPSR_INFO_ST__ {
 	- Set 0 (full-duplex): UART, RS-232.
 	- Set 1 (half-duplex): RS-485.*/
 	char offDSR;
+	char rts;
+	char dtr;	
 	char port_name[SPSR_PORT_LEN];
 
 #ifndef UNIX_LINUX

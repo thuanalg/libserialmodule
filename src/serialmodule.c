@@ -17,6 +17,7 @@
 		<2025-May-06>
 		<2025-May-13>
 		<2025-May-20>
+		<2025-Jul-01>		
 * Decription:
 *		The (only) main header file to export
 		5 APIs: [spsr_module_init, spsr_module_finish, spsr_inst_open,
@@ -169,6 +170,9 @@ spsr_win32_read(SPSR_INFO_ST *p, DWORD *bytesWrite, OVERLAPPED *olReadWrite,
 typedef void *(*SPSR_THREAD_ROUTINE)(void *);
 static int
 spsr_init_trigger(void *);
+
+static void 
+set_rts_dtr(int fd, char rts_dtr);
 
 static int
 spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt);
@@ -826,9 +830,11 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 
 			wrs = WriteFile(p->handle, buf->data, buf->pl,
 			    pbytesWrite, polReadWrite);
+			
 			if (wrs) {
 				if (buf->pl == (int)(*pbytesWrite)) {
-					spsr_dbg("Write DONE, %d.", buf->pl);
+					spsr_inf("Write DONE, %d, data: %s.", 
+						buf->pl, buf->data);
 					wroteRes = 1;
 					buf->pl = 0;
 				} else {
@@ -2145,7 +2151,12 @@ spsr_px_add(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt, int epollfd)
 			l = strlen(input->port_name);
 			ret = spsr_open_fd(
 			    input->port_name, input->baudrate, &fd);
-
+			if(input->rts || input->dtr) {
+				char rts_dtr = 0;
+				rts_dtr |= (!!input->rts) ? 0x01 : 0x00;
+				rts_dtr |= (!!input->dtr) ? 0x02 : 0x00;
+				set_rts_dtr(fd, rts_dtr);
+			}
 			if (ret) {
 				if (input->cb_evt_fn) {
 					spsr_invoke_cb(
@@ -2556,8 +2567,8 @@ spsr_px_write(SPSR_GENERIC_ST *item, SPSR_GENERIC_ST *evt)
 			break;
 		}
 		wrote = 1;
-		spsr_dbg("write DONE, fd: %d, nwrote: %d, wlen: %d.", fd,
-		    nwrote, wlen);
+		spsr_inf("write DONE, fd: %d, nwrote: %d, wlen: %d, data: %s.", fd,
+		    nwrote, wlen, p);
 		break;
 
 	} while (0);
@@ -2858,6 +2869,10 @@ spsr_verify_info(SPSR_INPUT_ST *p)
 		item->cb_evt_fn = p->cb_evt_fn;
 		item->cb_obj = p->cb_obj;
 		item->t_delay = p->t_delay;
+
+		item->rts = p->rts;
+		item->dtr = p->dtr;
+
 		node->item = item;
 
 		/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -3012,7 +3027,30 @@ spsr_clear_hash()
 }
 
 /*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+void set_rts_dtr(int fd, char rts_dtr)
+{
+    int status = 0;
+    if (ioctl(fd, TIOCMGET, &status) == -1) {
+        spsr_err("ioctl TIOCMGET");
+        return;
+    }
+	if(0x01 & rts_dtr) {
+    	status |= TIOCM_RTS; 
+		spsr_all("RTS was found.\n");
+	}
+	if(0x02 & rts_dtr) {
+    	status |= TIOCM_DTR;
+		spsr_all("DTR was found.\n");
+	}
 
+    if (ioctl(fd, TIOCMSET, &status) == -1) {
+        spsr_err("ioctl TIOCMSET");
+        return;
+    }
+
+    spsr_all("RTS và DTR were on already.\n");
+}
+/*+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 int
 spsr_open_fd(char *port_name, int baudrate, int *outfd)
 {

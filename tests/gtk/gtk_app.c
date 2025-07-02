@@ -2,6 +2,7 @@
 #include <serialmodule.h>
 #include <stdio.h>
 #include <simplelog.h>
+#include <regex.h>
 
 int is_master = 0;
 int baudrate = 0;
@@ -14,6 +15,8 @@ int myusleep = 0;
 #define __ISCFG__					"--is_cfg="
 #define __ISBAUDRATE__				"--is_baudrate="
 #define __IS_USLEEP__				"--is_usleep="
+
+GtkWidget *gbtextview = 0;
 char *test_spsr_list_ports[100];
 int TEST_CALLBACK_OBJ = 179;
 int spsr_test_callback(void *data) ;
@@ -21,6 +24,7 @@ static int spsr_call_back_read(void *data);
 static gboolean update_ui(gpointer data);
 GtkWidget *entries[7];
 void *arr_obj[10];
+char* remove_ansi_escape(const char *input);
 
 void on_button_clicked_00(GtkWidget *widget, gpointer data) {
     int i = 0;
@@ -43,8 +47,9 @@ void on_button_clicked_00(GtkWidget *widget, gpointer data) {
 	obj->baudrate = baudrate; 
     //obj->cb_evt_fn = spsr_call_back_read;
     obj->cb_evt_fn = spsr_test_callback;
-    obj->cb_obj = entries[4];
-    obj->t_delay = 55;
+    obj->cb_obj = gbtextview;
+    obj->t_delay = 100;
+    obj->offDSR = 1;
     
     spllog(0, "baudrate:=========================++++++++++++> %d, portname: %s", 
         obj->baudrate, obj->port_name);
@@ -63,20 +68,25 @@ void on_button_clicked_01(GtkWidget *widget, gpointer data) {
 void on_button_clicked_02(GtkWidget *widget, gpointer data) {
     int ret = 0;
     int i , n;
+    char commandd[1024] = {0};
     char *datawrtite = (char*)gtk_entry_get_text(GTK_ENTRY(entries[3])); 
     char *portname = (char*)gtk_entry_get_text(GTK_ENTRY(entries[2])); 
     spllog(0, "Button %s clicked, portname: %s, data: %s!\n", (char *)data, portname, datawrtite);
     //ret = spsr_inst_del((char*)portname);
-    n = strlen(datawrtite);
+    snprintf(commandd, 1024, "%s\n", datawrtite);
+    n = strlen(commandd);
+    spllog(2, "commd: %s", commandd);
     if(myusleep > 0) {
         for(i = 0; i < n; ++i) 
         {
-            ret = spsr_inst_write(portname, datawrtite + i, 1);
+            //snprintf(commandd, 1024, "%s\n", datawrtite);
+            ret = spsr_inst_write(portname, commandd + i, 1);
             usleep(myusleep);
         }
     } 
     else {
-        ret = spsr_inst_write(portname, datawrtite, n);
+        //snprintf(commandd, 1024, "%s\n", datawrtite);
+        ret = spsr_inst_write(portname, commandd, n);
     }
 
     spllog(0, "ret %d!\n", ret);
@@ -166,15 +176,45 @@ int main(int argc, char *argv[]) {
             else if(i == 6) {
                 //g_signal_connect(buttons[i], "clicked", G_CALLBACK(on_button_clicked_01), labels[i]);
             }       
+            if (i < 4) {
+                entries[i] = gtk_entry_new();
 
-            entries[i] = gtk_entry_new();
+                gtk_grid_attach(GTK_GRID(grid), buttons[i], 0, i, 1, 1);
+                gtk_grid_attach(GTK_GRID(grid), entries[i], 1, i, 1, 1);
+                if(i < 4) {
+                    gtk_entry_set_text(GTK_ENTRY(entries[i]), "/dev/ttyUSB0");
+                } else {
+                    gtk_widget_set_size_request(entries[i], 1600, 300); // Width: 300px, Height: 30px
+                }
+            } 
+            else if ( i == 4) {
+#if 1                
+                GtkWidget *scrolled_window;
+                GtkWidget *textview = 0;
+                textview = gtk_text_view_new();
+                gbtextview = textview;
+                
+                scrolled_window = gtk_scrolled_window_new(NULL, NULL);
+                entries[i] = scrolled_window;
+                gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_window),
+                               GTK_POLICY_AUTOMATIC,  // horizontal
+                               GTK_POLICY_AUTOMATIC); // vertical
+                gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(gbtextview), GTK_WRAP_NONE);
+                gtk_container_add(GTK_CONTAINER(scrolled_window), gbtextview);
 
-            gtk_grid_attach(GTK_GRID(grid), buttons[i], 0, i, 1, 1);
-            gtk_grid_attach(GTK_GRID(grid), entries[i], 1, i, 1, 1);
-            if(i < 4) {
-                gtk_entry_set_text(GTK_ENTRY(entries[i]), "/dev/ttyUSB0");
-            } else {
-                gtk_widget_set_size_request(entries[i], 1600, 300); // Width: 300px, Height: 30px
+                gtk_grid_attach(GTK_GRID(grid), buttons[i], 0, i, 1, 1);
+                gtk_grid_attach(GTK_GRID(grid), entries[i], 1, i, 1, 1);    
+                gtk_widget_set_size_request(entries[i], 1600, 300); // Width: 300px, Height: 30px            
+#else
+                entries[i] = gtk_entry_new();
+                gtk_grid_attach(GTK_GRID(grid), buttons[i], 0, i, 1, 1);
+                gtk_grid_attach(GTK_GRID(grid), entries[i], 1, i, 1, 1);
+                if(i < 4) {
+                    gtk_entry_set_text(GTK_ENTRY(entries[i]), "/dev/ttyUSB0");
+                } else {
+                    gtk_widget_set_size_request(entries[i], 1600, 300); // Width: 300px, Height: 30px
+                }  
+#endif              
             }
         }
 
@@ -197,10 +237,10 @@ gboolean update_ui(void* data) {
     char *realdata = 0;
     int datalen = 0;
     char text[GTK_TEST_BUF];
-    char text_total[GTK_TEST_BUF * 4];
+    char text_total[GTK_TEST_BUF * 100];
     const char *cur_text = 0;
     do {
-        spllog(SPL_LOG_DEBUG, "evt->data: %s", evt->data + evt->pc);
+        spllog(SPL_LOG_INFO, "evt->data: %s", evt->data + evt->pc);
         if (sizeof(void*) == sizeof(unsigned int)) {
             /* 32 bit */
             unsigned int* temp = (unsigned int*)evt->data;
@@ -220,13 +260,23 @@ gboolean update_ui(void* data) {
         do {
             if (evt->type == SPSR_EVENT_READ_BUF) {
                 /* Read data.*/
-                snprintf(text, GTK_TEST_BUF,"SPSR_EVENT_READ_BUF, realdata: %s, datalen: %d", realdata, datalen);
+            #if 1
+                snprintf(text, GTK_TEST_BUF, "\t\t%s", realdata);            
+            #else
+                snprintf(text, GTK_TEST_BUF,
+                    "SPSR_EVENT_READ_BUF, datalen: %d, realdata: \n\n------>>>\n\n%s\n\n<<<<------------\n\n", 
+                    datalen, realdata);
+            #endif
                 break;
             }
             
             if (evt->type == SPSR_EVENT_WRITE_OK) {
                 /* Port name .*/
+            #if 0
+                snprintf(text, GTK_TEST_BUF, "SPSR_EVENT_WRITE_OK, datalen: %d", datalen);
+            #else
                 snprintf(text, GTK_TEST_BUF, "SPSR_EVENT_WRITE_OK, realdata: %s, datalen: %d", realdata, datalen);
+            #endif
                 break;
             }
             if (evt->type == SPSR_EVENT_WRITE_ERROR) {
@@ -264,9 +314,27 @@ gboolean update_ui(void* data) {
                 break;
             }                   
         }   while(0);  
+#if 1 
+        GtkTextIter start, end;
+        gchar *gggtext;
+        GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(obj));
+        gtk_text_buffer_get_start_iter(buffer, &start);
+        gtk_text_buffer_get_end_iter(buffer, &end);
+        // Extract the text (returns a newly allocated string)
+        gggtext = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
+        char *rpltext = remove_ansi_escape(text);
+        snprintf(text_total, GTK_TEST_BUF * 100, "%s\n", rpltext);
+        //gtk_text_buffer_set_text(buffer, text_total, -1);   
+        gtk_text_buffer_insert(buffer, &end, text_total, -1); // Append the text at the end
+
+        // Free the memory when done
+        g_free(gggtext);
+        free(rpltext);
+#else       
         cur_text = gtk_entry_get_text(GTK_ENTRY(obj));
         snprintf(text_total, GTK_TEST_BUF * 4, "%s\n%s", text, cur_text);
         gtk_entry_set_text( GTK_ENTRY(obj), text_total);
+#endif
     } while(0);
 
     spsr_free(evt);
@@ -313,4 +381,37 @@ int spsr_test_callback(void *data) {
 
 
     return 0;
+}
+
+#include <regex.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+char* remove_ansi_escape(const char *input) {
+    regex_t regex;
+    regmatch_t match;
+    const char *pattern = "\x1B\\[[0-9;]*[A-Za-z]";
+
+    if (regcomp(&regex, pattern, REG_EXTENDED) != 0) {
+        return NULL;
+    }
+
+    char *output = malloc(strlen(input) + 1);
+    if (!output) return NULL;
+    output[0] = '\0';
+
+    const char *cursor = input;
+    while (*cursor) {
+        if (regexec(&regex, cursor, 1, &match, 0) == 0) {
+            strncat(output, cursor, match.rm_so);
+            cursor += match.rm_eo;
+        } else {
+            strcat(output, cursor);
+            break;
+        }
+    }
+
+    regfree(&regex);
+    return output;
 }
