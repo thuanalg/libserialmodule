@@ -31,8 +31,10 @@ Link: [Example](https://github.com/thuanalg/libserialmodule/tree/main/tests/cons
 [License](https://github.com/thuanalg/libserialmodule/blob/main/LICENSE.txt)
 
 ## Contributions
-Contributions are welcome! Feel free to submit issues or pull requests to enhance functionality.
-
+Contributions are welcome! Feel free to submit issues or pull requests to enhance functionality.  
+---  
+[![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://paypal.me/ThaiThuan81)
+---  
 ## Reference & Dedication
 
    - [UNIX Network Programming, Volume 2: Interprocess Communications, Second Edition](https://www.amazon.com/UNIX-Network-Programming-Interprocess-Communications/dp/0130810819)
