@@ -819,9 +819,7 @@ spsr_win32_write(SPSR_INFO_ST *p, SPSR_GENERIC_ST *buf, DWORD *pbytesWrite,
 		}
 		tbuffer = ecb_buf->data + sizeof(void *);
 		connected = p->offDSR ? 1 : spsr_win32_connected(p->handle);
-#if 0
-		connected = spsr_win32_connected(p->handle);
-#endif
+
 		while (buf->pl > 0) {
 			if (!connected) {
 				spsr_err("Remote unconnected! "
