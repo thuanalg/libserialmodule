@@ -291,12 +291,15 @@ typedef struct __SPSR_GENERIC_ST__ {
 typedef struct __SPSR_INPUT_ST__ {
 	int t_delay; /* It depends on a specific case. */
 	int baudrate;
+
 	/*offDSR.
 	- Set 0 (full-duplex): UART, RS-232.
 	- Set 1 (half-duplex): RS-485.*/
-	char offDSR;
-	char rts;
-	char dtr;
+	char offDSR; /*Data Set Ready*/
+	char rts; /*Ready to Send (RTS)*/
+	char cts; /*Clear To Send / Ready To Receive*/
+	char dtr; /*DTR = Data Terminal Ready*/
+
 	char port_name[SPSR_PORT_LEN];
 
 	SPSR_module_cb cb_evt_fn;
@@ -313,9 +316,11 @@ typedef struct __SPSR_INFO_ST__ {
 	/*offDSR.
 	- Set 0 (full-duplex): UART, RS-232.
 	- Set 1 (half-duplex): RS-485.*/
-	char offDSR;
-	char rts;
-	char dtr;	
+	char offDSR; /*Data Set Ready*/
+	char rts; /*Ready to Send (RTS)*/
+	char cts; /*Clear To Send / Ready To Receive*/
+	char dtr; /*DTR = Data Terminal Ready*/
+
 	char port_name[SPSR_PORT_LEN];
 
 #ifndef UNIX_LINUX

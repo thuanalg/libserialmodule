@@ -431,14 +431,22 @@ spsr_module_openport(void *obj)
 		/* dcbSerialParams.StopBits */
 
 		/* Enable hardware flow control (RTS/CTS) */
-		dcbSerialParams.fOutxCtsFlow = TRUE;
+		dcbSerialParams.fOutxCtsFlow = !!p->cts;
+		if (p->rts) {
+			dcbSerialParams.fRtsControl = RTS_CONTROL_ENABLE; 
+		}
+		/* Enable DTR */
+		if (p->dtr) {
+			dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE;
+		}
 		/* Enable CTS output flow control */
 		/* dcbSerialParams.fCtsHandshake = TRUE; */
-#if 1
-		dcbSerialParams.fOutxDsrFlow = p->offDSR ? 0 : 1;
-#else
-		dcbSerialParams.fOutxDsrFlow = FALSE;
-#endif
+		/* Disable DSR output flow control */
+
+		dcbSerialParams.fDsrSensitivity = !p->offDSR;
+		dcbSerialParams.fOutxDsrFlow = !!p->offDSR;
+
+#if 0
 		/* Disable DSR output flow control */
 		dcbSerialParams.fDsrSensitivity = FALSE;
 		/* DSR sensitivity disabled */
@@ -446,7 +454,7 @@ spsr_module_openport(void *obj)
 		/* Enable DTR */
 		dcbSerialParams.fRtsControl = RTS_CONTROL_ENABLE;
 		/* Enable RTS */
-
+#endif
 		/* Enable software flow control (XON/XOFF) */
 		dcbSerialParams.fInX = TRUE;
 		/* Enable XON/XOFF input flow control */
@@ -2871,6 +2879,7 @@ spsr_verify_info(SPSR_INPUT_ST *p)
 		item->t_delay = p->t_delay;
 
 		item->rts = p->rts;
+		item->cts = p->cts;
 		item->dtr = p->dtr;
 
 		node->item = item;
