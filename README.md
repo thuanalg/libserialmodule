@@ -40,10 +40,14 @@ Contributions are welcome! Feel free to submit issues or pull requests to enhanc
    - [UNIX Network Programming, Volume 2: Interprocess Communications, Second Edition](https://www.amazon.com/UNIX-Network-Programming-Interprocess-Communications/dp/0130810819)
    - [Unix Network Programming: The Sockets Networking API](https://www.amazon.com/Unix-Network-Programming-Sockets-Networking/dp/0131411551)
    - My ex-colleagues: Lê Duy Cường, Bùi Khánh Duy, Nguyễn Công Đức , ... .
-   - Jan Flik from [Intel Corp.](https://www.intel.com).
+   - [Jan Flik](https://www.linkedin.com/in/jan-flik/) from [Intel Corp.](https://www.intel.com).
 
 ### Contact:
 - [Email](mailto:nguyenthaithuanalg@gmail.com)
 
-### Used by:
-- [meta-voltumna](https://layers.openembedded.org/layerindex/branch/master/layer/meta-voltumna/) from [Elettra-Sincrotrone Trieste](https://www.elettra.eu/)
+### Contributed to / Used by:
+- [meta-voltumna](https://layers.openembedded.org/layerindex/branch/master/layer/meta-voltumna/) from [Elettra-Sincrotrone Trieste](https://www.elettra.eu/)  
+- [meta-openembedded](https://layers.openembedded.org/layerindex/recipe/448765/)  
+- [openBMC](https://github.com/openbmc/openbmc/tree/master/meta-openembedded/meta-oe/recipes-support/libserialmodule)
+- [Google](https://gbmc.googlesource.com/openbmc/+/refs/heads/master/meta-openembedded/meta-oe/recipes-support/libserialmodule)
+
