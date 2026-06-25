@@ -47,7 +47,7 @@ Contributions are welcome! Feel free to submit issues or pull requests to enhanc
 
 ### Contributed to / Used by:
 - [meta-voltumna](https://layers.openembedded.org/layerindex/branch/master/layer/meta-voltumna/) from [Elettra-Sincrotrone Trieste](https://www.elettra.eu/)  
-- [meta-openembedded](https://layers.openembedded.org/layerindex/recipe/448765/)  
-- [openBMC](https://github.com/openbmc/openbmc/tree/master/meta-openembedded/meta-oe/recipes-support/libserialmodule)
-- [Google](https://gbmc.googlesource.com/openbmc/+/refs/heads/master/meta-openembedded/meta-oe/recipes-support/libserialmodule)
+- [meta-openembedded/LTS Wrynose/Yocto](https://layers.openembedded.org/layerindex/recipe/448765/)  
+- [openBMC](https://github.com/openbmc/openbmc/tree/master/upstream-layers/meta-openembedded/meta-oe/recipes-support/libserialmodule)
+- [Google's gBMC](https://gbmc.googlesource.com/openbmc/+/refs/heads/master/upstream-layers/meta-openembedded/meta-oe/recipes-support/libserialmodule/)
 
